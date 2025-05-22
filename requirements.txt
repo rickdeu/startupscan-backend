@@ -1,0 +1,35 @@
+# CORE
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.4.2
+tqdm==4.66.4
+# MODELOS
+xgboost==2.0.3
+
+# PROCESSAMENTO DE ÁUDIO
+whisper
+librosa==0.10.1
+soundfile==0.12.1
+speechrecognition==3.10.1
+
+# PROCESSAMENTO DE VÍDEO
+opencv-python==4.9.0.80
+mediapipe
+deepface==0.0.83
+moviepy==1.0.3
+
+# NLP
+transformers==4.39.3
+textstat==0.7.3
+
+# VISUALIZAÇÃO
+matplotlib==3.8.4
+seaborn==0.13.2
+
+# SUPORTE GERAL
+python-dotenv==1.0.1
+openai==1.23.2
+
+# COMPATIBILIDADE
+protobuf
+emoji==0.6.0

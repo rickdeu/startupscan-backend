@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-pvc
+  namespace: startupscan
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: vultr-block-storage
+  resources:
+    requests:
+      storage: 20Gi

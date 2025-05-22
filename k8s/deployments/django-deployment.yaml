@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment
+  namespace: startupscan
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+      - name: django
+        image: ghcr.io/your-repo/startupscan:IMAGE_TAG
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        volumeMounts:
+        - name: media-volume
+          mountPath: /app/media
+        - name: static-volume
+          mountPath: /app/staticfiles
+        - name: models-volume
+          mountPath: /app/ai_models
+        livenessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+      volumes:
+      - name: media-volume
+        persistentVolumeClaim:
+          claimName: media-pvc
+      - name: static-volume
+        emptyDir: {}
+      - name: models-volume
+        emptyDir: {}
