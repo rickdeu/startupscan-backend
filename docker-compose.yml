@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - startupscan_network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - startupscan_network
+
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: bash -c "python manage.py migrate && gunicorn startupscan.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+      - ai_models_volume:/app/ai_models
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+    networks:
+      - startupscan_network
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: celery/Dockerfile
+    command: bash -c "celery -A startupscan worker --loglevel=info"
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+      - ai_models_volume:/app/ai_models
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+      - web
+    networks:
+      - startupscan_network
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: celery/Dockerfile
+    command: bash -c "celery -A startupscan beat --loglevel=info"
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+      - ai_models_volume:/app/ai_models
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+      - web
+    networks:
+      - startupscan_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_volume:
+  static_volume:
+  ai_models_volume:
+
+networks:
+  startupscan_network:
+    driver: bridge

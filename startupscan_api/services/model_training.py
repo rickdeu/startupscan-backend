@@ -1,0 +1,129 @@
+import os
+from django.core import management
+from django.conf import settings
+from startupscan_api.data_loader import load_training_data
+from startupscan_api.utils import train_and_evaluate
+from celery import shared_task
+import logging
+import joblib
+import pickle
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+#@shared_task(bind=True)
+#def train_model_task(self):
+def train_model_task():
+
+    """Tarefa Celery para treinamento do modelo em background"""
+    try:
+        logger.info("Iniciando treinamento do modelo em background...")
+        
+        # Chamar o command de treinamento
+        management.call_command(
+            'train_model',
+            '--model-output', os.path.join(settings.AI_MODELS_DIR, 'pitch_model.pkl')
+        )
+        
+        return {"status": "completed", "message": "Model trained successfully"}
+    except Exception as e:
+        logger.error(f"Erro no treinamento: {str(e)}")
+        #raise self.retry(exc=e, countdown=60)
+
+
+def ensure_model_exists():
+    """
+    Garante que o modelo existe, treinando um novo se necessário.
+    Retorna o modelo carregado ou None em caso de falha.
+    """
+    model_path = os.path.join(settings.AI_MODELS_DIR, 'pitch_model.pkl')
+    
+    try:
+        # Tentar carregar modelo existente
+        if os.path.exists(model_path):
+            return joblib.load(model_path)
+        
+        # Se não existir, treinar novo modelo
+        logger.info("Model not found. Training new model...")
+        
+  
+        
+        #pitches_df, financial_df = load_training_data()
+        pitches_path, financials_path = load_training_data()
+
+        pitches_df = pd.read_csv(pitches_path)
+        financial_df = pd.read_csv(financials_path)
+        
+        if pitches_df is None or financial_df is None:
+            logger.error("Training data not available")
+            return None
+            
+        model, _ = train_and_evaluate(pitches_df, financial_df)
+        
+        # Garantir que o diretório existe
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        joblib.dump(model, model_path)
+        
+        return model
+        
+    except Exception as e:
+        logger.error(f"Failed to load or train model: {str(e)}", exc_info=True)
+        return None
+
+
+
+
+
+def ensure_model_exists_backuo():
+    model_path = os.path.join(settings.AI_MODELS_DIR, 'pitch_model.pkl')
+    
+    try:
+        # Verificação robusta do arquivo
+        if os.path.exists(model_path) and os.path.getsize(model_path) > 0:
+            try:
+                with open(model_path, 'rb') as f:
+                    model = pickle.load(f)
+                    # Verificação básica do modelo carregado
+                    if hasattr(model, 'predict'):  # Verifica se é um modelo válido
+                        return model
+            except Exception as load_error:
+                logger.warning(f"Failed to load existing model, will retrain: {load_error}")
+                os.remove(model_path)  # Remove o arquivo corrompido
+        
+        # Treinar novo modelo se o carregamento falhar
+        logger.info("Training new model...")
+        pitches_path, financials_path = load_training_data()
+
+        pitches_df = pd.read_csv(pitches_path)
+        financial_df = pd.read_csv(financials_path)
+        
+        
+        if pitches_df is None or financial_df is None:
+            logger.error("Training data not available")
+            return None
+            
+        model, _ = train_and_evaluate(pitches_df, financial_df)
+        
+        # Garantir que o diretório existe
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        
+        # Salvar com verificação
+        temp_path = model_path + '.tmp'
+        with open(temp_path, 'wb') as f:
+            pickle.dump(model, f, protocol=4)
+        
+        # Verificar se o novo arquivo é válido
+        try:
+            with open(temp_path, 'rb') as f:
+                pickle.load(f)  # Testar carregamento
+            os.replace(temp_path, model_path)  # Substitui o arquivo antigo
+        except Exception as verify_error:
+            logger.error(f"Failed to verify new model: {verify_error}")
+            os.remove(temp_path)
+            return None
+        
+        return model
+        
+    except Exception as e:
+        logger.error(f"Failed to load or train model: {str(e)}", exc_info=True)
+        return None

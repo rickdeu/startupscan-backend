@@ -1,0 +1,67 @@
+{% extends "analyzer/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="jumbotron text-center">
+        <h1 class="display-4">Startup Pitch Analyzer</h1>
+        <p class="lead">Analise seu pitch de startup com nosso sistema multimodal avançado</p>
+        <hr class="my-4">
+        <p>Obtenha insights valiosos sobre seu pitch com nossa análise de texto, áudio, vídeo e dados financeiros sobre a tua <b> startup</b>. </p>
+        <a class="btn btn-primary btn-lg" href="{% url 'pitch_form' %}" role="button">Analisar Novo Pitch</a>
+    </div>
+
+    {% if user.is_authenticated %}
+
+
+    {% if recent_analyses %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Análises Recentes</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Data</th>
+                            <th>Score</th>
+                            <th>Receita</th>
+                            <th>Crescimento</th>
+                            <th>Margem</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analysis in recent_analyses %}
+                        <tr>
+                            <td>{{ analysis.id }}</td>
+                            <td>{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="badge badge-{% if analysis.success_score >= 7.5 %}success{% elif analysis.success_score >= 5 %}warning{% else %}danger{% endif %}">
+                                    {{ analysis.success_score|floatformat:1 }}
+                                </span>
+                            </td>
+                            <td>AOA {{ analysis.revenue|floatformat:2 }}</td>
+                            <td>{{ analysis.growth_rate|floatformat:2 }}%</td>
+                            <td>{{ analysis.profit_margin|floatformat:2 }}%</td>
+                            <td>
+                                <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-info">Ver</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+  <p>Por favor, <a href="{% url 'login' %}">faça login</a> para ver seu dashboard.</p>
+    {% endif %}
+
+
+
+</div>
+{% endblock %}

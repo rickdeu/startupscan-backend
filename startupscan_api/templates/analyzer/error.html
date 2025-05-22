@@ -1,0 +1,31 @@
+{% extends "analyzer/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h2 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>Erro no Processamento</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h4 class="alert-heading">Ocorreu um erro durante a análise</h4>
+                <p>{{ error }}</p>
+                <hr>
+                <p class="mb-0">Por favor, tente novamente mais tarde ou entre em contato com o suporte técnico se o problema persistir.</p>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-primary mr-3">
+                    <i class="fas fa-home mr-2"></i> Voltar ao Dashboard
+                </a>
+                <a href="{% url 'pitch_form' %}" class="btn btn-secondary">
+                    <i class="fas fa-redo mr-2"></i> Tentar Novamente
+                </a>
+            </div>
+        </div>
+        <div class="card-footer text-muted">
+            Erro ocorrido em {% now "d/m/Y H:i" %}
+        </div>
+    </div>
+</div>
+{% endblock %}
