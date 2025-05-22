@@ -435,8 +435,8 @@ def generate_interpretable_report(score, metadata):
     print("\n💡 Recomendações Personalizadas pelo ChatGPT:")
 
     try:
-        import openai
-        openai.api_key = "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"
+        #import openai
+        #openai.api_key = "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"
 
         # Construir o contexto para o ChatGPT
         context = f"""
