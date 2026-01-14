@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Use dj_database_url to parse the DATABASE_URL into Django's DATABASES configuration
 DB_USERNAME = os.getenv('POSTGRES_USER', 'vultradmin')
-DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'AVNS_Q5RnhlsUE9GN63FjbAc')
+DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '$sR77Rg!nUD(oy5r_HSD6VSK')
 DB_DATABASE = os.getenv('POSTGRES_DB', 'temp_database')
 DB_HOST = os.getenv('POSTGRES_HOST', 'vultr-prod-6417c5e2-c5ac-4dd5-bb0e-c2dfed3c4c54-vultr-prod-7668.vultrdb.com')
 DB_PORT = os.getenv('POSTGRES_PORT', '16751')

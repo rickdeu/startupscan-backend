@@ -63,7 +63,7 @@ class StartupPitchAnalyzer(APIView):
                 
                 # 4. Extrair features
                 features, metadata = prepare_features(pitch_data, financial_data)
-                
+                 
                 # 5. Fazer previsão
                 prediction = model.predict([features])[0]
                 
