@@ -435,8 +435,8 @@ def generate_interpretable_report(score, metadata):
     print("\n💡 Recomendações Personalizadas pelo ChatGPT:")
 
     try:
-        import openai
-
+        #import openai
+       
         # Construir o contexto para o ChatGPT
         context = f"""
         Como especialista em análise de pitches de startups, forneça recomendações concisas e acionáveis baseadas nos seguintes dados:
@@ -466,23 +466,36 @@ def generate_interpretable_report(score, metadata):
         3. 2 sugestões específicas para cada área
         4. 2 estratégia de apresentação recomendada
         """
+      
+        API_KEY = "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"
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Você é um consultor especializado em análise e melhoria de pitches para startups."},
-                {"role": "user", "content": context}
-            ],
-            temperature=0.7,
-            max_tokens=500
+
+     
+        
+
+        from openai import OpenAI
+        client = OpenAI(api_key=API_KEY)
+
+        response = client.chat.completions.create(
+        model="gpt-4.1",
+        messages=[
+                    {"role": "system", "content": "Você é um consultor especializado em análise e melhoria de pitches para startups."},
+                    {"role": "user", "content": context}
+                ],
         )
 
-        recommendations = response.choices[0].message['content'].strip()
+
+
+        
+
+    
+        #recommendations = response.choices[0].message['content'].strip()
+        recommendations = response.choices[0].message.content
         print(recommendations)
         return recommendations
 
     except Exception as e:
-        #logging.error(f"Erro ao consultar ChatGPT: {str(e)}")
+        logging.error(f"Erro ao consultar ChatGPT: {str(e)}")
         print("\n⚠️ Sistema de recomendações avançado indisponível. Recomendações básicas:")
         recommendations = {
         "status": "Sistema de recomendações avançado indisponível.",
