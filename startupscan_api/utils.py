@@ -467,8 +467,7 @@ def generate_interpretable_report(score, metadata):
         4. 2 estratégia de apresentação recomendada
         """
       
-        API_KEY = "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"
-
+        API_KEY = ""
 
      
         
