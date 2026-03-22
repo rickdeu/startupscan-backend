@@ -9,7 +9,12 @@ from rest_framework import status
 from django.conf import settings
 from startupscan_api.forms import RegisterForm
 from startupscan_api.models import PitchAnalysis
-from startupscan_api.services.model_training import ensure_model_exists, train_model_task
+from startupscan_api.services.model_training import (
+    ensure_model_exists,
+    predict_pitch_score,
+    train_model_task,
+)
+from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.util.file_management import TempFileManager
 
 import joblib
@@ -17,11 +22,7 @@ from celery.result import AsyncResult
 from django.conf import settings
 
 from .utils import (
-    process_audio,
-    process_video,
-    analyze_text,
     prepare_features,
-    train_and_evaluate,
     generate_interpretable_report
 )
 
@@ -41,14 +42,9 @@ class StartupPitchAnalyzer(APIView):
             audio_file = request.FILES.get('audio')
             video_file = request.FILES.get('video')
             financial_data = request.data.get('financial_data', {})
-            
-            # 1. Garantir que o modelo existe
-            model = ensure_model_exists()
-            if model is None:
-                return Response(
-                    {'error': 'Model not available and could not be trained'},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE
-                )
+            model_source = str(request.data.get("model_source", "local")).strip().lower()
+            if model_source not in {"local", "gpt"}:
+                model_source = "local"
             
             # 2. Processar arquivos temporários (context manager recomendado)
             with TempFileManager(audio_file, video_file) as file_paths:
@@ -63,17 +59,41 @@ class StartupPitchAnalyzer(APIView):
                 
                 # 4. Extrair features
                 features, metadata = prepare_features(pitch_data, financial_data)
-                 
-                # 5. Fazer previsão
-                prediction = model.predict([features])[0]
-                
-                # 6. Gerar relatório
-                report = generate_interpretable_report(prediction, metadata)
+                metadata["analysis_engine_requested"] = model_source
+
+                prediction = None
+                report = None
+                engine_used = model_source
+
+                # 5. Fazer previsão por GPT quando solicitado
+                if model_source == "gpt":
+                    prediction, report, engine_used = analyze_with_gpt(text, financial_data, metadata)
+
+                # 6. Fallback para modelo local treinado
+                if prediction is None:
+                    model = ensure_model_exists()
+                    if model is None:
+                        return Response(
+                            {'error': 'Model not available and could not be trained'},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE
+                        )
+                    prediction = predict_pitch_score(
+                        model=model,
+                        pitch_data=pitch_data,
+                        financial_data=financial_data,
+                        precomputed_features=features,
+                    )
+                    report = generate_interpretable_report(prediction, metadata)
+                    engine_used = "local"
+
+                report = ensure_report_dict(report, prediction)
+                metadata["analysis_engine_used"] = engine_used
                 
                 return Response({
                     'success_score': float(prediction),
                     'report': report,
-                    'metadata': metadata
+                    'metadata': metadata,
+                    'engine_used': engine_used,
                 }, status=status.HTTP_200_OK)
             
         except Exception as e:
@@ -397,7 +417,8 @@ class PitchFormView(View):
         """Exibe o formulário vazio"""
         context = {
             'default_date': datetime.now().strftime('%Y-%m-%d'),
-            'max_file_size': 50  # MB
+            'max_file_size': 50,  # MB
+            'form_data': {'model_source': 'local'},
         }
         return render(request, 'analyzer/pitch_form.html', context)
 
@@ -455,13 +476,19 @@ class PitchFormView(View):
                 messages.error(request, f"Dados financeiros inválidos: {str(e)}")
                 return self._render_form_with_data(request)
             
-            # 4. Verificação do modelo
-            model = ensure_model_exists()
-            if model is None:
-                logger.critical("Modelo de análise não disponível")
-                return render(request, 'analyzer/error.html', {
-                    'error': 'Sistema temporariamente indisponível. Por favor, tente mais tarde.'
-                }, status=503)
+            # 4. Estratégia de análise escolhida pelo usuário
+            model_source = str(request.POST.get("model_source", "local")).strip().lower()
+            if model_source not in {"local", "gpt"}:
+                model_source = "local"
+
+            model = None
+            if model_source == "local":
+                model = ensure_model_exists()
+                if model is None:
+                    logger.critical("Modelo de análise não disponível")
+                    return render(request, 'analyzer/error.html', {
+                        'error': 'Sistema temporariamente indisponível. Por favor, tente mais tarde.'
+                    }, status=503)
             
             # 5. Processamento dos arquivos temporários
             try:
@@ -479,12 +506,34 @@ class PitchFormView(View):
                     # 7. Extração de features
                     features, metadata = prepare_features(pitch_data, financial_data)
                     
-                    # 8. Realização da predição
-                    prediction = model.predict([features])[0]
-                    prediction = max(0, min(10, prediction))  # Garante score entre 0-10
-                    
-                    # 9. Geração do relatório
-                    report = generate_interpretable_report(prediction, metadata)
+                    metadata["analysis_engine_requested"] = model_source
+                    prediction = None
+                    report = None
+                    engine_used = model_source
+
+                    # 8. Realização da predição com GPT (quando solicitado)
+                    if model_source == "gpt":
+                        prediction, report, engine_used = analyze_with_gpt(text, financial_data, metadata)
+
+                    # 9. Fallback local para garantir resposta consistente
+                    if prediction is None:
+                        if model is None:
+                            model = ensure_model_exists()
+                        if model is None:
+                            raise RuntimeError("Modelo local indisponível para fallback")
+
+                        prediction = predict_pitch_score(
+                            model=model,
+                            pitch_data=pitch_data,
+                            financial_data=financial_data,
+                            precomputed_features=features,
+                        )
+                        report = generate_interpretable_report(prediction, metadata)
+                        engine_used = "local"
+
+                    prediction = max(0, min(10, float(prediction)))  # Garante score entre 0-10
+                    report = ensure_report_dict(report, prediction)
+                    metadata["analysis_engine_used"] = engine_used
                      
                     # 10. Salvamento da análise
                     analysis = self._save_analysis(
@@ -581,6 +630,7 @@ class PitchFormView(View):
             'revenue': request.POST.get('revenue', ''),
             'growth_rate': request.POST.get('growth_rate', ''),
             'profit_margin': request.POST.get('profit_margin', ''),
+            'model_source': request.POST.get('model_source', 'local'),
             'audio_file': request.FILES.get('audio'),
             'video_file': request.FILES.get('video')
         }

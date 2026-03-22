@@ -141,6 +141,21 @@
                         </div>
                     </div>
                 </div>
+
+                <h4 class="mt-4 mb-3">Motor de Análise</h4>
+                <div class="form-group">
+                    <select class="form-control" id="model_source" name="model_source">
+                        <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>
+                            Modelo treinado localmente (mais estável, sem API externa)
+                        </option>
+                        <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>
+                            Modelo GPT existente (se OPENAI_API_KEY estiver configurada)
+                        </option>
+                    </select>
+                    <small class="form-text text-muted">
+                        Se GPT não estiver disponível no servidor, o sistema faz fallback automático para o modelo local.
+                    </small>
+                </div>
                 
                 <div class="mt-4 text-center">
                     <button type="submit" class="btn btn-primary btn-lg">

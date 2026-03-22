@@ -1,9 +1,8 @@
 import os
-from django.core import management
+import uuid
 from django.conf import settings
 from startupscan_api.data_loader import load_training_data
-from startupscan_api.utils import train_and_evaluate
-from celery import shared_task
+from startupscan_api.modeling import train_and_evaluate, predict_success_score
 import logging
 import joblib
 import pickle
@@ -18,16 +17,25 @@ def train_model_task():
     """Tarefa Celery para treinamento do modelo em background"""
     try:
         logger.info("Iniciando treinamento do modelo em background...")
-        
-        # Chamar o command de treinamento
-        management.call_command(
-            'train_model',
-            '--model-output', os.path.join(settings.AI_MODELS_DIR, 'pitch_model.pkl')
-        )
-        
-        return {"status": "completed", "message": "Model trained successfully"}
+
+        model_path = os.path.join(settings.AI_MODELS_DIR, "pitch_model.pkl")
+        pitches_path, financials_path = load_training_data()
+        pitches_df = pd.read_csv(pitches_path)
+        financial_df = pd.read_csv(financials_path)
+
+        model, metrics = train_and_evaluate(pitches_df, financial_df)
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        joblib.dump(model, model_path)
+
+        return {
+            "status": "completed",
+            "message": "Model trained successfully",
+            "task_id": str(uuid.uuid4()),
+            "metrics": metrics,
+        }
     except Exception as e:
         logger.error(f"Erro no treinamento: {str(e)}")
+        raise
         #raise self.retry(exc=e, countdown=60)
 
 
@@ -76,6 +84,18 @@ def ensure_model_exists():
     except Exception as e:
         logger.error(f"Failed to load or train model: {str(e)}", exc_info=True)
         return None
+
+
+def predict_pitch_score(model, pitch_data, financial_data, precomputed_features=None):
+    """
+    Wrapper único para predição do score de sucesso, compatível com versões de modelo.
+    """
+    return predict_success_score(
+        model_obj=model,
+        pitch_data=pitch_data,
+        financial_data=financial_data,
+        precomputed_features=precomputed_features,
+    )
 
 
 

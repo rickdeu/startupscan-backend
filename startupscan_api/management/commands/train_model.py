@@ -2,7 +2,7 @@ import os
 import joblib
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from startupscan_api.utils import train_and_evaluate
+from startupscan_api.modeling import train_and_evaluate
 import pandas as pd
 
 
