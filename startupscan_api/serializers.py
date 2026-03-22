@@ -5,6 +5,11 @@ class PitchAnalysisSerializer(serializers.Serializer):
     audio = serializers.FileField(required=False)
     video = serializers.FileField(required=False)
     financial_data = serializers.JSONField(required=False)
+    model_source = serializers.ChoiceField(
+        choices=["local", "gpt"],
+        required=False,
+        default="local",
+    )
 
 
 
