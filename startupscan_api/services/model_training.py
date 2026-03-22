@@ -39,18 +39,25 @@ def ensure_model_exists():
     model_path = os.path.join(settings.AI_MODELS_DIR, 'pitch_model.pkl')
     
     try:
-        # Tentar carregar modelo existente
+        # Tentar carregar modelo existente.
         if os.path.exists(model_path):
-            return joblib.load(model_path)
+            try:
+                return joblib.load(model_path)
+            except Exception as load_error:
+                # Modelo incompatível/corrompido: remove e força retreino.
+                logger.warning(
+                    "Failed to load existing model. Retraining a new one. Error: %s",
+                    str(load_error),
+                    exc_info=True,
+                )
+                try:
+                    os.remove(model_path)
+                except OSError:
+                    logger.warning("Could not remove invalid model file: %s", model_path)
         
-        # Se não existir, treinar novo modelo
-        logger.info("Model not found. Training new model...")
-        
-  
-        
-        #pitches_df, financial_df = load_training_data()
+        # Se não existir (ou foi removido), treinar novo modelo.
+        logger.info("Model not found or invalid. Training new model...")
         pitches_path, financials_path = load_training_data()
-
         pitches_df = pd.read_csv(pitches_path)
         financial_df = pd.read_csv(financials_path)
         
@@ -60,7 +67,7 @@ def ensure_model_exists():
             
         model, _ = train_and_evaluate(pitches_df, financial_df)
         
-        # Garantir que o diretório existe
+        # Garantir que o diretório existe.
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         joblib.dump(model, model_path)
         

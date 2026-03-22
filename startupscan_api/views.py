@@ -92,14 +92,16 @@ class ModelRetrainView(APIView):
     
     def post(self, request):
         try:
-            # Disparar tarefa assíncrona
-            task = train_model_task() #.delay()
-            
+            # Execução síncrona no ambiente atual.
+            result = train_model_task()
+            task_id = result.get("task_id") if isinstance(result, dict) else None
+
             return Response(
                 {
-                    "message": "Model training started in background",
-                    "task_id": task,
-                    "status_endpoint": f"/api/training/status/{task}/"
+                    "message": "Model training executed",
+                    "task_id": task_id,
+                    "result": result,
+                    "status_endpoint": f"/training/status/{task_id}/" if task_id else None
                 },
                 status=status.HTTP_202_ACCEPTED
             )
@@ -117,6 +119,17 @@ class TrainingStatusView(APIView):
     
     def get(self, request, task_id):
         try:
+            if not task_id or str(task_id).lower() in {"none", "null"}:
+                return Response(
+                    {
+                        "task_id": task_id,
+                        "status": "COMPLETED",
+                        "ready": True,
+                        "result": {"message": "Training was executed synchronously"}
+                    },
+                    status=status.HTTP_200_OK
+                )
+
             task = AsyncResult(task_id)
             
             response = {
@@ -132,9 +145,15 @@ class TrainingStatusView(APIView):
                 
             return Response(response, status=status.HTTP_200_OK)
         except Exception as e:
+            logger.warning("Training status backend unavailable for task %s: %s", task_id, str(e))
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    "task_id": task_id,
+                    "status": "UNAVAILABLE",
+                    "ready": False,
+                    "error": "Task backend unavailable in current runtime"
+                },
+                status=status.HTTP_200_OK
             )
 
 
@@ -175,22 +194,37 @@ class BatchAnalysisView(APIView):
                 for chunk in file.chunks():
                     destination.write(chunk)
             
-            # 4. Iniciar tarefa assíncrona
-            task = process_batch_analysis.delay(temp_file_path, batch_id)
-            
-            # 5. Armazenar metadados no cache (expira em 24h)
-            cache.set(f'batch_analysis:{batch_id}', {
+            cache_key = f'batch_analysis:{batch_id}'
+            # 4. Armazenar metadados iniciais no cache (expira em 24h)
+            cache.set(cache_key, {
                 'status': 'PENDING',
                 'total_items': 0,
                 'processed_items': 0,
                 'results_file': None,
-                'task_id': task.id
+                'task_id': None
             }, 86400)  # 24 horas
+
+            # 5. Iniciar tarefa assíncrona, com fallback síncrono sem broker
+            execution_mode = "async"
+            try:
+                task = process_batch_analysis.delay(temp_file_path, batch_id)
+            except Exception:
+                logger.warning(
+                    "Celery broker unavailable. Running batch analysis synchronously.",
+                    exc_info=True
+                )
+                execution_mode = "sync"
+                task = process_batch_analysis.apply(args=[temp_file_path, batch_id])
+
+            status_data = cache.get(cache_key) or {}
+            status_data['task_id'] = getattr(task, 'id', None)
+            cache.set(cache_key, status_data, 86400)
             
             return Response({
                 'batch_id': batch_id,
-                'status_url': f'/api/batch/status/{batch_id}/',
-                'message': 'Batch analysis started'
+                'status_url': f'/batch/status/{batch_id}/',
+                'message': 'Batch analysis started',
+                'mode': execution_mode
             }, status=status.HTTP_202_ACCEPTED)
             
         except Exception as e:
