@@ -1,0 +1,10 @@
+{
+  "rows_original": 20,
+  "rows_augmented": 400,
+  "augmentation_factor": 20,
+  "best_model": "extra_trees",
+  "cv_r2": 0.9964600343429882,
+  "consistency_accuracy": 1.0,
+  "consistency_accuracy_pct": 100.0,
+  "trained_at": "2026-03-22T12:28:55.581781Z"
+}
