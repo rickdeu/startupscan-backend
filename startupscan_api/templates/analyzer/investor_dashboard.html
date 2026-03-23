@@ -109,7 +109,12 @@
                     </div>
                     <p class="small text-muted mb-2">Analisada em {{ analysis.created_at|date:"d/m/Y H:i" }}</p>
                     <p class="small text-muted mb-2">
-                        Empreendedor: {{ analysis.user.first_name|default:analysis.user.username|default:"Não associado" }}
+                        Empreendedor:
+                        {% if analysis.user %}
+                            {{ analysis.user.first_name|default:analysis.user.username }}
+                        {% else %}
+                            Não associado
+                        {% endif %}
                     </p>
                     <p class="mb-2"><strong>Tese:</strong> {{ analysis.investor_pitch.investment_thesis }}</p>
                     <p class="mb-2"><strong>Prontidão:</strong> {{ analysis.investor_pitch.funding_readiness }}</p>
