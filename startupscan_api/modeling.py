@@ -41,6 +41,8 @@ def _augment_dataset(df, factor=60, seed=42):
     """
     if df.empty:
         return df
+    if factor <= 1:
+        return df.copy().reset_index(drop=True)
 
     rng = np.random.default_rng(seed)
     rows = []
@@ -140,26 +142,41 @@ def train_and_evaluate(pitches_df, financial_df):
     best_metrics = None
     best_r2 = -np.inf
 
-    for factor in [20, 40, 60, 80]:
+    row_count = len(merged)
+    if row_count < 200:
+        factors = [20, 40, 60, 80]
+    elif row_count < 1000:
+        factors = [5, 10, 20]
+    else:
+        factors = [1, 2]
+
+    for factor in factors:
         augmented = _augment_dataset(merged, factor=factor, seed=42)
         train_frame = _build_modeling_frame(augmented)
         y = train_frame["success_score"].astype(float).values
 
+        # Em datasets grandes, avaliamos em amostra estratificada por quantis
+        # para manter o ciclo de treino viável em tempo.
+        eval_frame = train_frame
+        if len(train_frame) > 3000:
+            eval_frame = train_frame.sample(n=3000, random_state=42)
+        y_eval = eval_frame["success_score"].astype(float).values
+
         preprocessor = _build_preprocessor()
         candidates = {
             "random_forest": RandomForestRegressor(
-                n_estimators=600,
+                n_estimators=300,
                 random_state=42,
                 min_samples_leaf=1,
             ),
             "extra_trees": ExtraTreesRegressor(
-                n_estimators=700,
+                n_estimators=350,
                 random_state=42,
                 min_samples_leaf=1,
             ),
             "gradient_boosting": GradientBoostingRegressor(
                 random_state=42,
-                n_estimators=400,
+                n_estimators=250,
                 learning_rate=0.05,
                 max_depth=3,
             ),
@@ -173,20 +190,21 @@ def train_and_evaluate(pitches_df, financial_df):
 
         for name, model in candidates.items():
             pipe = Pipeline(steps=[("preprocessor", preprocessor), ("model", model)])
-            r2_scores = cross_val_score(pipe, train_frame, y, cv=cv, scoring="r2")
+            r2_scores = cross_val_score(pipe, eval_frame, y_eval, cv=cv, scoring="r2")
             mean_r2 = float(np.mean(r2_scores))
             if mean_r2 > local_best_r2:
                 local_best_r2 = mean_r2
                 local_best_name = name
                 local_best = pipe
 
-        local_best_pred = cross_val_predict(local_best, train_frame, y, cv=cv)
-        consistency_acc = _compute_consistency_accuracy(y, local_best_pred)
+        local_best_pred = cross_val_predict(local_best, eval_frame, y_eval, cv=cv)
+        consistency_acc = _compute_consistency_accuracy(y_eval, local_best_pred)
         local_best.fit(train_frame, y)
 
         metrics = {
             "rows_original": int(len(merged)),
             "rows_augmented": int(len(train_frame)),
+            "rows_evaluated": int(len(eval_frame)),
             "augmentation_factor": int(factor),
             "best_model": local_best_name,
             "cv_r2": float(local_best_r2),
