@@ -32,6 +32,7 @@ seaborn==0.13.2
 # SUPORTE GERAL
 python-dotenv==1.0.1
 openai==1.23.2
+requests>=2.32.0
 
 # COMPATIBILIDADE
 protobuf

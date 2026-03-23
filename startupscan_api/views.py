@@ -1237,16 +1237,22 @@ class PitchExplainerVideoGenerateView(View):
             temp_output = os.path.join(temp_dir, f"explainer_{analysis.id}_{timestamp}.mp4")
 
             presenter_path = None
+            presenter_url = None
             if analysis.presenter_face_image_file:
                 try:
                     presenter_path = analysis.presenter_face_image_file.path
                 except Exception:
                     presenter_path = None
+                try:
+                    presenter_url = request.build_absolute_uri(analysis.presenter_face_image_file.url)
+                except Exception:
+                    presenter_url = None
 
             video_meta = generate_explainer_video(
                 analysis,
                 temp_output,
                 presenter_image_path=presenter_path,
+                presenter_image_url=presenter_url,
             )
 
             final_name = f"explainer_{analysis.id}.mp4"
