@@ -16,6 +16,9 @@ def process_audio(audio_path):
         return audio_features
 
     try:
+        ensure_audio_imports()
+        if whisper is None or librosa is None:
+            raise RuntimeError("libs de áudio indisponíveis")
         # Transcrição do texto
         whisper_model = whisper.load_model("base")
         result = whisper_model.transcribe(audio_path)
@@ -37,6 +40,10 @@ def process_audio(audio_path):
         logging.error(f"Erro no processamento de áudio: {str(e)}")
         try:
             # Fallback usando speech_recognition
+            if sr is None:
+                ensure_audio_imports()
+            if sr is None:
+                raise RuntimeError("speech_recognition indisponível")
             r = sr.Recognizer()
             with sr.AudioFile(audio_path) as source:
                 audio_data = r.record(source)
@@ -67,6 +74,9 @@ def process_video(video_path):
         return video_features
 
     try:
+        ensure_video_imports()
+        if cv2 is None or mp is None or mp_editor is None:
+            raise RuntimeError("libs base de vídeo indisponíveis")
         # Extrair áudio do vídeo primeiro
         temp_audio_path = "temp_audio.wav"
         clip = mp_editor.VideoFileClip(video_path)
@@ -99,9 +109,10 @@ def process_video(video_path):
 
                     if results.detections:
                         # Análise com DeepFace
-                        result = DeepFace.analyze(rgb_frame, actions=['emotion'], enforce_detection=False)
-                        emotions.append(result[0]['dominant_emotion'])
-                        confidence_scores.append(result[0]['face_confidence'])
+                        if DeepFace is not None:
+                            result = DeepFace.analyze(rgb_frame, actions=['emotion'], enforce_detection=False)
+                            emotions.append(result[0]['dominant_emotion'])
+                            confidence_scores.append(result[0]['face_confidence'])
                 except Exception as e:
                     logging.error(f"Erro no frame {frame_count}: {str(e)}")
 
@@ -148,6 +159,7 @@ def analyze_text(text):
         return text_features
 
     try:
+        ensure_nlp_imports()
         pipeline_fn = globals().get("pipeline")
         textstat_module = globals().get("textstat")
 
@@ -287,6 +299,7 @@ def train_and_evaluate(df, financial_df):
 
 # ⚙️ FUNÇÃO DE TREINAMENTO COM RANDOM FOREST
 def train_with_random_forest(df, financial_df):
+    ensure_plot_imports()
     X, y, metadata = [], [], []
 
     for idx, row in tqdm(df.iterrows(), total=len(df), desc="Treinando com Random Forest"):
@@ -318,27 +331,29 @@ def train_with_random_forest(df, financial_df):
     logging.info(f"Random Forest - MSE: {mse:.2f}, R2: {r2:.2f}")
 
     # Gráfico de desempenho
-    plt.figure()
-    plt.scatter(y_test, predictions, alpha=0.7)
-    plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], 'r--')
-    plt.xlabel('Valor Real')
-    plt.ylabel('Predição')
-    plt.title('Random Forest: Real vs Previsto')
-    plt.grid(True)
-    plt.show()
+    if plt is not None:
+        plt.figure()
+        plt.scatter(y_test, predictions, alpha=0.7)
+        plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], 'r--')
+        plt.xlabel('Valor Real')
+        plt.ylabel('Predição')
+        plt.title('Random Forest: Real vs Previsto')
+        plt.grid(True)
+        plt.show()
 
     # Matriz de Confusão Multiclasse
     y_true_class = np.clip(np.round(y_test), 1, 10).astype(int)
     y_pred_class = np.clip(np.round(predictions), 1, 10).astype(int)
 
     cm = confusion_matrix(y_true_class, y_pred_class, labels=range(1, 11))
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=range(1, 11))
-    disp.plot(cmap=plt.cm.Blues, values_format='d')
-    plt.title("Matriz de Confusão Multiclasse - Random Forest")
-    plt.xlabel("Previsto")
-    plt.ylabel("Real")
-    plt.grid(False)
-    plt.show()
+    if plt is not None:
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=range(1, 11))
+        disp.plot(cmap=plt.cm.Blues, values_format='d')
+        plt.title("Matriz de Confusão Multiclasse - Random Forest")
+        plt.xlabel("Previsto")
+        plt.ylabel("Real")
+        plt.grid(False)
+        plt.show()
 
     return model, metadata
 
@@ -350,6 +365,7 @@ def train_with_random_forest(df, financial_df):
 
 # ⚙️ FUNÇÃO DE TREINAMENTO COM XGBOOST
 def train_with_xgboost(df, financial_df):
+    ensure_plot_imports()
     X, y, metadata = [], [], []
 
     for idx, row in tqdm(df.iterrows(), total=len(df), desc="Treinando com XGBoost"):
@@ -381,27 +397,29 @@ def train_with_xgboost(df, financial_df):
     logging.info(f"XGBoost - MSE: {mse:.2f}, R2: {r2:.2f}")
 
     # Gráfico de desempenho
-    plt.figure()
-    plt.scatter(y_test, predictions, alpha=0.6, color='orange')
-    plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], 'b--')
-    plt.xlabel("Real")
-    plt.ylabel("Previsto")
-    plt.title("XGBoost: Real vs Previsto")
-    plt.grid(True)
-    plt.show()
+    if plt is not None:
+        plt.figure()
+        plt.scatter(y_test, predictions, alpha=0.6, color='orange')
+        plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], 'b--')
+        plt.xlabel("Real")
+        plt.ylabel("Previsto")
+        plt.title("XGBoost: Real vs Previsto")
+        plt.grid(True)
+        plt.show()
 
     # Matriz de Confusão Multiclasse
     y_true_class = np.clip(np.round(y_test), 1, 10).astype(int)
     y_pred_class = np.clip(np.round(predictions), 1, 10).astype(int)
 
     cm = confusion_matrix(y_true_class, y_pred_class, labels=range(1, 11))
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=range(1, 11))
-    disp.plot(cmap=plt.cm.Blues, values_format='d')
-    plt.title("Matriz de Confusão Multiclasse - XGBoost")
-    plt.xlabel("Previsto")
-    plt.ylabel("Real")
-    plt.grid(False)
-    plt.show()
+    if plt is not None:
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=range(1, 11))
+        disp.plot(cmap=plt.cm.Blues, values_format='d')
+        plt.title("Matriz de Confusão Multiclasse - XGBoost")
+        plt.xlabel("Previsto")
+        plt.ylabel("Real")
+        plt.grid(False)
+        plt.show()
 
     return model, metadata
 
@@ -550,6 +568,10 @@ def generate_interpretable_report(score, metadata):
 # 📈 14. Função de Visualização
 def plot_feature_importance(model, feature_names):
     """Visualiza a importância das features"""
+    ensure_plot_imports()
+    if plt is None:
+        logging.warning("Matplotlib indisponível no runtime para plotagem.")
+        return
     if hasattr(model.named_steps['regressor'], 'feature_importances_'):
         importances = model.named_steps['regressor'].feature_importances_
         indices = np.argsort(importances)[::-1]
