@@ -405,19 +405,37 @@ class DashboardView(View):
         else:
             recent_analyses = PitchAnalysis.objects.filter(user=request.user).order_by('-created_at')[:8]
 
-        global_stats = PitchAnalysis.objects.exclude(success_score__isnull=True).aggregate(
+        all_scored = PitchAnalysis.objects.exclude(success_score__isnull=True)
+        global_stats = all_scored.aggregate(
             avg_score=Avg("success_score"),
             total=Count("id"),
             best=Max("success_score"),
         )
         models = _list_available_models()
         active_model = next((m for m in models if m["is_active"]), None)
+
+        history = list(all_scored.order_by("-created_at")[:24])
+        history.reverse()
+        chart_labels = [f"#{item.id}" for item in history]
+        chart_scores = [float(item.success_score or 0) for item in history]
+        chart_revenues = [float(item.revenue or 0) for item in history]
+        chart_growth = [float(item.growth_rate or 0) for item in history]
+        score_distribution = [
+            all_scored.filter(success_score__lt=5).count(),
+            all_scored.filter(success_score__gte=5, success_score__lt=7.5).count(),
+            all_scored.filter(success_score__gte=7.5).count(),
+        ]
         
         return render(request, 'analyzer/dashboard.html', {
             'recent_analyses': recent_analyses,
             'global_stats': global_stats,
             'active_model': active_model,
             'models_count': len(models),
+            'chart_labels_json': json.dumps(chart_labels),
+            'chart_scores_json': json.dumps(chart_scores),
+            'chart_revenues_json': json.dumps(chart_revenues),
+            'chart_growth_json': json.dumps(chart_growth),
+            'chart_distribution_json': json.dumps(score_distribution),
         })
 
 class PitchFormView(View):
@@ -887,6 +905,12 @@ class InvestorDashboardView(View):
         )
         high_potential = analyses.filter(success_score__gte=7.5).count()
 
+        recent_investor = list(analyses[:20])
+        investor_labels = [f"#{a.id}" for a in recent_investor]
+        investor_scores = [float(a.success_score or 0) for a in recent_investor]
+        investor_revenue = [float(a.revenue or 0) for a in recent_investor]
+        investor_growth = [float(a.growth_rate or 0) for a in recent_investor]
+
         context = {
             "analyses": top_analyses,
             "kpi_total": total,
@@ -894,6 +918,10 @@ class InvestorDashboardView(View):
             "kpi_avg_score": round(float(summary["avg_score"] or 0), 2),
             "kpi_max_score": round(float(summary["max_score"] or 0), 2),
             "active_model": get_active_model_name(),
+            "investor_labels_json": json.dumps(investor_labels),
+            "investor_scores_json": json.dumps(investor_scores),
+            "investor_revenue_json": json.dumps(investor_revenue),
+            "investor_growth_json": json.dumps(investor_growth),
         }
         return render(request, "analyzer/investor_dashboard.html", context)
 

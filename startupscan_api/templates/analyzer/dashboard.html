@@ -60,6 +60,44 @@
     </div>
 </div>
 
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Evolução de Score das Startups</h5>
+                <span class="small text-muted">últimas análises</span>
+            </div>
+            <div class="card-body">
+                <canvas id="scoreTrendChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Distribuição de Potencial</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="distributionChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Tração Financeira (Receita vs Crescimento)</h5>
+                <div class="small text-muted">ajuda a priorizar deals com melhor momentum</div>
+            </div>
+            <div class="card-body">
+                <canvas id="financialMomentumChart" height="95"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if user.is_authenticated %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -117,4 +155,102 @@
     <a href="{% url 'login' %}" class="btn btn-primary">Entrar</a>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const labels = {{ chart_labels_json|safe }};
+    const scores = {{ chart_scores_json|safe }};
+    const revenues = {{ chart_revenues_json|safe }};
+    const growth = {{ chart_growth_json|safe }};
+    const distribution = {{ chart_distribution_json|safe }};
+
+    const commonGrid = { color: "rgba(148,163,184,0.22)" };
+
+    const scoreTrendCtx = document.getElementById("scoreTrendChart");
+    if (scoreTrendCtx) {
+        new Chart(scoreTrendCtx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Score",
+                    data: scores,
+                    borderColor: "#2563eb",
+                    backgroundColor: "rgba(37,99,235,0.16)",
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 10, grid: commonGrid },
+                    x: { grid: commonGrid }
+                }
+            }
+        });
+    }
+
+    const distributionCtx = document.getElementById("distributionChart");
+    if (distributionCtx) {
+        new Chart(distributionCtx, {
+            type: "doughnut",
+            data: {
+                labels: ["Baixo (<5)", "Médio (5-7.4)", "Alto (>=7.5)"],
+                datasets: [{
+                    data: distribution,
+                    backgroundColor: ["#ef4444", "#f59e0b", "#10b981"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                plugins: { legend: { position: "bottom" } }
+            }
+        });
+    }
+
+    const momentumCtx = document.getElementById("financialMomentumChart");
+    if (momentumCtx) {
+        new Chart(momentumCtx, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: "bar",
+                        label: "Receita (AOA)",
+                        data: revenues,
+                        yAxisID: "yRevenue",
+                        backgroundColor: "rgba(16,185,129,0.45)",
+                        borderColor: "#059669",
+                        borderWidth: 1
+                    },
+                    {
+                        type: "line",
+                        label: "Crescimento (%)",
+                        data: growth,
+                        yAxisID: "yGrowth",
+                        borderColor: "#7c3aed",
+                        backgroundColor: "rgba(124,58,237,0.15)",
+                        tension: 0.35,
+                        pointRadius: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: "index", intersect: false },
+                scales: {
+                    yRevenue: { type: "linear", position: "left", grid: commonGrid },
+                    yGrowth: { type: "linear", position: "right", grid: { display: false } },
+                    x: { grid: commonGrid }
+                }
+            }
+        });
+    }
+</script>
 {% endblock %}
