@@ -272,14 +272,26 @@ def _run_explainer_video_job(
             status="RUNNING",
             progress=35,
             phase="renderizacao",
-            message="Criando roteiro, cenas e narração",
+            message="Criando roteiro executivo e iniciando renderização",
         )
+
+        def _video_progress_callback(progress_pct: int, phase: str, message: str):
+            bounded = max(35, min(94, int(progress_pct)))
+            _write_video_generation_state(
+                job_id,
+                status="RUNNING",
+                progress=bounded,
+                phase=phase or "renderizacao",
+                message=message or "Processando vídeo...",
+            )
+
         video_meta = generate_explainer_video(
             analysis,
             temp_output,
             presenter_image_path=presenter_path,
             presenter_image_url=presenter_url,
             presenter_source_urls=presenter_source_urls or [],
+            progress_callback=_video_progress_callback,
         )
 
         _write_video_generation_state(
@@ -1469,6 +1481,68 @@ class PitchResultsView(View):
         })
 
 
+def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
+    report = analysis.report or {}
+    investor_pitch = report.get("investor_pitch", {}) if isinstance(report, dict) else {}
+    strengths = report.get("strengths", []) if isinstance(report, dict) else []
+    weaknesses = report.get("weaknesses", []) if isinstance(report, dict) else []
+    recommendations = report.get("recommendations", []) if isinstance(report, dict) else []
+    summary = str(report.get("summary", "") if isinstance(report, dict) else "").strip()
+
+    startup_name = analysis.startup_name or f"Startup {analysis.id}"
+    industry_label = analysis.get_industry_display() if hasattr(analysis, "get_industry_display") else (analysis.industry or "mercado")
+    one_liner = summary.split(".")[0].strip() if summary else f"{startup_name} resolve problemas críticos no setor {industry_label}."
+
+    def _join_list(values, fallback):
+        values = values if isinstance(values, list) else []
+        cleaned = [str(v).strip() for v in values if str(v).strip()]
+        return " ".join(cleaned[:3]) if cleaned else fallback
+
+    revenue = float(analysis.revenue or 0)
+    growth_rate = float(analysis.growth_rate or 0)
+    profit_margin = float(analysis.profit_margin or 0)
+    success_score = float(analysis.success_score or 0)
+
+    funding_goal_aoa = max(8_000_000, int(max(revenue * 0.55, 0)))
+    funding_goal = f"AOA {funding_goal_aoa:,.0f} para acelerar escala e execução comercial."
+
+    return {
+        "startup_name": startup_name,
+        "one_liner": one_liner,
+        "problem": _join_list(
+            weaknesses,
+            f"Baixa eficiência e oportunidade de modernização no setor {industry_label}.",
+        ),
+        "solution": _join_list(
+            strengths,
+            "Solução com foco em eficiência operacional, crescimento e previsibilidade de resultados.",
+        ),
+        "target_customer": f"Empresas e decisores estratégicos no setor {industry_label}.",
+        "market_size": investor_pitch.get("investment_thesis", "") or "Mercado em expansão com espaço para liderança regional.",
+        "business_model": (
+            "Modelo orientado a geração de receita recorrente e expansão comercial disciplinada."
+        ),
+        "competitive_advantage": _join_list(
+            strengths,
+            "Execução rápida, leitura de métricas e adaptação contínua ao mercado.",
+        ),
+        "traction": (
+            f"Score {success_score:.1f}/10, receita AOA {revenue:,.0f}, "
+            f"crescimento {growth_rate:.1f}% e margem {profit_margin:.1f}%."
+        ),
+        "team": "Equipe focada em execução e melhoria contínua com orientação a metas de crescimento.",
+        "funding_goal": investor_pitch.get("suggested_ticket", "") or funding_goal,
+        "use_of_funds": _join_list(
+            investor_pitch.get("capital_use_plan", []),
+            "Produto, aquisição de clientes e fortalecimento da operação para escala.",
+        ),
+        "call_to_action": _join_list(
+            recommendations,
+            "Proposta para avançar para reunião de investimento com plano de execução detalhado.",
+        ),
+    }
+
+
 class PitchReportPDFView(View):
     """Exporta relatório de análise em PDF."""
 
@@ -1495,6 +1569,59 @@ class PitchReportPDFView(View):
             filename=f"relatorio_pitch_{analysis.id}.pdf",
             content_type="application/pdf",
         )
+
+
+class PitchInvestorPDFView(View):
+    """Gera PDF de pitch (com slides) a partir da avaliação da startup."""
+
+    def get(self, request, analysis_id):
+        analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
+        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+            return redirect("dashboard")
+
+        try:
+            payload = _build_pitch_payload_from_analysis(analysis)
+            model_source = (request.GET.get("model_source", "") or "").strip().lower()
+            if model_source not in {"local", "gpt"}:
+                model_source = "gpt" if os.getenv("OPENAI_API_KEY") else "local"
+
+            pitch_payload = generate_pitch_from_idea(payload, model_source=model_source)
+
+            media_root = settings.MEDIA_ROOT
+            try:
+                os.makedirs(media_root, exist_ok=True)
+            except OSError:
+                media_root = os.path.join(settings.BASE_DIR, "media")
+                os.makedirs(media_root, exist_ok=True)
+
+            pitch_dir = os.path.join(media_root, "analysis_pitches")
+            os.makedirs(pitch_dir, exist_ok=True)
+            startup_name = analysis.startup_name or f"startup_{analysis.id}"
+            safe_name = "".join(ch if ch.isalnum() else "_" for ch in startup_name).strip("_").lower()
+            safe_name = safe_name or "startup"
+            output_path = os.path.join(pitch_dir, f"pitch_resultado_{safe_name}_{analysis.id}.pdf")
+            export_pitch_pdf(pitch_payload, output_path)
+
+            metadata = analysis.metadata or {}
+            metadata["last_generated_pitch_payload"] = {
+                "generated_at": timezone.now().isoformat(),
+                "engine_used": pitch_payload.get("engine_used", model_source),
+                "slide_count": len((pitch_payload.get("pitch_deck") or [])),
+                "narrative_uniqueness_key": pitch_payload.get("narrative_uniqueness_key", ""),
+            }
+            analysis.metadata = metadata
+            analysis.save(update_fields=["metadata", "updated_at"])
+
+            return FileResponse(
+                open(output_path, "rb"),
+                as_attachment=True,
+                filename=f"pitch_investidor_{safe_name}_{analysis.id}.pdf",
+                content_type="application/pdf",
+            )
+        except Exception as exc:
+            logger.error("Falha ao gerar pitch PDF a partir do resultado: %s", str(exc), exc_info=True)
+            messages.error(request, f"Falha ao gerar pitch PDF: {_safe_exception_message(exc)}")
+            return redirect("pitch_results", analysis_id=analysis.id)
 
 
 class PitchExplainerVideoGenerateView(View):
