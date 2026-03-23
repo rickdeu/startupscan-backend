@@ -239,11 +239,22 @@ def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, ou
     try:
         create_resp = requests.post(create_url, headers=headers, data=json.dumps(payload), timeout=120)
         if create_resp.status_code >= 400:
-            return None
+            body_preview = (create_resp.text or "")[:400]
+            return {
+                "provider": "did",
+                "status": "failed",
+                "voice_id": voice_id,
+                "error": f"create_failed:{create_resp.status_code}:{body_preview}",
+            }
         create_data = create_resp.json() if create_resp.content else {}
         talk_id = create_data.get("id")
         if not talk_id:
-            return None
+            return {
+                "provider": "did",
+                "status": "failed",
+                "voice_id": voice_id,
+                "error": "missing_talk_id",
+            }
 
         status_url = f"{create_url}/{talk_id}"
         result_url = None
@@ -252,6 +263,7 @@ def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, ou
         for _ in range(90):
             poll_resp = requests.get(status_url, headers=headers, timeout=60)
             if poll_resp.status_code >= 400:
+                error_message = f"poll_failed:{poll_resp.status_code}:{(poll_resp.text or '')[:300]}"
                 break
             poll_data = poll_resp.json() if poll_resp.content else {}
             status_value = str(poll_data.get("status", "")).lower()
@@ -264,11 +276,23 @@ def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, ou
             time.sleep(2.2)
 
         if not result_url:
-            return None
+            return {
+                "provider": "did",
+                "talk_id": talk_id,
+                "status": status_value or "failed",
+                "voice_id": voice_id,
+                "error": error_message or "no_result_url",
+            }
 
         ok = _download_binary_file(result_url, output_path)
         if not ok:
-            return None
+            return {
+                "provider": "did",
+                "talk_id": talk_id,
+                "status": "failed",
+                "voice_id": voice_id,
+                "error": "result_download_failed",
+            }
 
         return {
             "provider": "did",
@@ -278,8 +302,13 @@ def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, ou
             "voice_id": voice_id,
             "error": error_message,
         }
-    except Exception:
-        return None
+    except Exception as exc:
+        return {
+            "provider": "did",
+            "status": "failed",
+            "voice_id": voice_id,
+            "error": f"exception:{exc}",
+        }
 
 
 def _prepare_presenter_image(image_path: str | None):
@@ -412,7 +441,7 @@ def generate_explainer_video(
         source_image_url=presenter_image_url or "",
         output_path=output_path,
     )
-    if realistic_meta:
+    if realistic_meta and realistic_meta.get("status") == "done":
         return {
             "output_path": output_path,
             "engine_used": f"{plan.engine_used}+did",
@@ -490,4 +519,7 @@ def generate_explainer_video(
         "generated_at": timezone.now().isoformat(),
         "narration_preview": plan.narration[:300],
         "presenter_image_used": bool(presenter_image),
+        "did_attempted": bool(realistic_meta),
+        "did_status": (realistic_meta or {}).get("status"),
+        "did_error": (realistic_meta or {}).get("error"),
     }
