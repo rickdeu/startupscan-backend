@@ -197,6 +197,13 @@
                             Personagem: {{ analysis.metadata.explainer_video.character_name|default:analysis.startup_name }} |
                             Voz: {{ analysis.metadata.explainer_video.voice_engine|default:"auto" }}
                         </small>
+                        {% if analysis.metadata.explainer_video.realistic_style_mode %}
+                        <small class="d-block mt-1 text-muted">
+                            Estilo premium: {{ analysis.metadata.explainer_video.realistic_style_mode }} |
+                            Segmentos: {{ analysis.metadata.explainer_video.realistic_segment_count|default:"1" }} |
+                            Fontes visuais: {{ analysis.metadata.explainer_video.realistic_source_count|default:analysis.metadata.explainer_video_source_images|default:"1" }}
+                        </small>
+                        {% endif %}
                         {% endif %}
                     </div>
                 </div>

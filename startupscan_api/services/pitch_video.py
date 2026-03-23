@@ -217,18 +217,24 @@ def _download_binary_file(url: str, output_path: str) -> bool:
         return False
 
 
-def _split_script_for_did(script_text: str, max_segments: int = 3) -> list[str]:
+def _split_script_for_did(script_text: str, max_segments: int = 4) -> list[str]:
     clean = " ".join((script_text or "").strip().split())
     if not clean:
         return []
 
     # Divide por frases primeiro; se texto curto mantém bloco único.
     sentence_chunks = [s.strip() for s in re.split(r"(?<=[\.\!\?])\s+", clean) if s.strip()]
-    if len(clean.split()) < 65 or max_segments <= 1:
+    if len(clean.split()) < 55 or max_segments <= 1:
         return [clean]
 
-    segment_count = min(max_segments, max(2, len(clean.split()) // 55))
-    segment_count = min(segment_count, 3)
+    words_count = len(clean.split())
+    if words_count >= 145:
+        dynamic_segments = 4
+    elif words_count >= 90:
+        dynamic_segments = 3
+    else:
+        dynamic_segments = 2
+    segment_count = min(max_segments, dynamic_segments)
 
     segments = []
     if len(sentence_chunks) >= segment_count:
@@ -247,10 +253,37 @@ def _split_script_for_did(script_text: str, max_segments: int = 3) -> list[str]:
 
     trimmed = []
     for seg in segments[:segment_count]:
-        if len(seg) > 580:
-            seg = seg[:580].rsplit(" ", 1)[0] + "."
+        if len(seg) > 520:
+            seg = seg[:520].rsplit(" ", 1)[0] + "."
         trimmed.append(seg)
     return [s for s in trimmed if s]
+
+
+def _stylize_stage_cinematic_text(script_text: str) -> str:
+    """
+    Ajusta ritmo da locução para keynote: frases curtas, pausas e cadência de palco.
+    Não altera semântica principal, apenas a musicalidade.
+    """
+    text = " ".join((script_text or "").strip().split())
+    if not text:
+        return ""
+    sentence_chunks = [s.strip() for s in re.split(r"(?<=[\.\!\?])\s+", text) if s.strip()]
+    stylized = []
+    for idx, sentence in enumerate(sentence_chunks):
+        sentence = sentence.rstrip(" .")
+        if not sentence:
+            continue
+        # Introduz pausas pontuais de oratória sem exagerar.
+        if idx % 3 == 0:
+            stylized.append(f"{sentence}.")
+        elif idx % 3 == 1:
+            stylized.append(f"{sentence}... ")
+        else:
+            stylized.append(f"{sentence}. ")
+    merged = " ".join(stylized).strip()
+    if len(merged) > 1700:
+        merged = merged[:1700].rsplit(" ", 1)[0] + "."
+    return merged
 
 
 def _did_create_and_download_talk(
@@ -359,7 +392,8 @@ def _try_generate_realistic_video_did(
     }
 
     try:
-        segments = _split_script_for_did(plan.narration, max_segments=min(3, len(did_sources)))
+        stage_script = _stylize_stage_cinematic_text(plan.narration)
+        segments = _split_script_for_did(stage_script, max_segments=min(4, max(1, len(did_sources))))
         if not segments:
             return {
                 "provider": "did",
@@ -463,6 +497,7 @@ def _try_generate_realistic_video_did(
             "voice_id": voice_id,
             "segment_count": len(segments),
             "source_count": len(did_sources),
+            "style_mode": "cinematic_stage_keynote",
             "error": "",
         }
     except Exception as exc:
@@ -516,6 +551,8 @@ def _render_did_fullbody_source_image(
     Serve para transformar foto meio-corpo em um visual de apresentador completo.
     """
     width, height = 1024, 1536
+    shot_profiles = ["wide", "left", "right", "close", "hero"]
+    profile = shot_profiles[pose_index % len(shot_profiles)]
     img = Image.new("RGB", (width, height), (10, 17, 31))
     draw = ImageDraw.Draw(img)
 
@@ -528,8 +565,9 @@ def _render_did_fullbody_source_image(
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
     # Luzes e tela institucional
-    draw.polygon([(0, 0), (220, 0), (80, 420)], outline=(68, 124, 196))
-    draw.polygon([(width, 0), (width - 220, 0), (width - 80, 420)], outline=(68, 124, 196))
+    beam_shift = {"wide": 0, "left": -36, "right": 36, "close": 0, "hero": 20}.get(profile, 0)
+    draw.polygon([(0 + beam_shift, 0), (220 + beam_shift, 0), (80 + beam_shift, 420)], outline=(68, 124, 196))
+    draw.polygon([(width - beam_shift, 0), (width - 220 - beam_shift, 0), (width - 80 - beam_shift, 420)], outline=(68, 124, 196))
     draw.rounded_rectangle((250, 115, width - 70, 285), radius=20, fill=(20, 38, 68), outline=(92, 156, 230), width=3)
     draw.text((280, 160), "Global Startup Summit", fill=(224, 236, 255), font=_load_font(34))
     draw.text((280, 208), "Palestra para grande audiência", fill=(178, 201, 232), font=_load_font(24))
@@ -550,6 +588,17 @@ def _render_did_fullbody_source_image(
     # Personagem corpo inteiro
     cx = width // 2
     top = 340
+    if profile == "left":
+        cx -= 74
+        top = 332
+    elif profile == "right":
+        cx += 74
+        top = 332
+    elif profile == "close":
+        top = 298
+    elif profile == "hero":
+        cx += 28
+        top = 314
     skin = (212, 164, 136)
     suit_dark = (18, 30, 56)
     suit_mid = (28, 47, 84)
@@ -574,21 +623,31 @@ def _render_did_fullbody_source_image(
     # Braços em 3 poses para dar sensação de gestos entre segmentos D-ID
     left_shoulder = (cx - 90, top + 266)
     right_shoulder = (cx + 90, top + 266)
-    if pose_index % 3 == 0:
+    if pose_index % 5 == 0:
         left_elbow = (cx - 208, top + 326)
         left_hand = (cx - 256, top + 280)
         right_elbow = (cx + 188, top + 236)
         right_hand = (cx + 256, top + 200)
-    elif pose_index % 3 == 1:
+    elif pose_index % 5 == 1:
         left_elbow = (cx - 182, top + 266)
         left_hand = (cx - 246, top + 242)
         right_elbow = (cx + 176, top + 296)
         right_hand = (cx + 238, top + 334)
-    else:
+    elif pose_index % 5 == 2:
         left_elbow = (cx - 158, top + 350)
         left_hand = (cx - 204, top + 420)
         right_elbow = (cx + 172, top + 256)
         right_hand = (cx + 236, top + 228)
+    elif pose_index % 5 == 3:
+        left_elbow = (cx - 195, top + 292)
+        left_hand = (cx - 254, top + 258)
+        right_elbow = (cx + 194, top + 334)
+        right_hand = (cx + 256, top + 372)
+    else:
+        left_elbow = (cx - 170, top + 308)
+        left_hand = (cx - 212, top + 344)
+        right_elbow = (cx + 206, top + 272)
+        right_hand = (cx + 278, top + 248)
 
     draw.line([left_shoulder, left_elbow], fill=suit_mid, width=34, joint="curve")
     draw.line([left_elbow, left_hand], fill=suit_mid, width=26, joint="curve")
@@ -650,7 +709,7 @@ def build_did_presenter_source_urls(
         url_base = presenter_image_url.rsplit("/", 1)[0]
         urls = []
 
-        for pose_index in range(3):
+        for pose_index in range(5):
             file_name = f"{base_name}_did_fullbody_pose_{pose_index + 1}.png"
             file_path = os.path.join(source_dir, file_name)
             _render_did_fullbody_source_image(
@@ -1031,6 +1090,7 @@ def generate_explainer_video(
             "realistic_talk_ids": realistic_meta.get("talk_ids", []),
             "realistic_segment_count": realistic_meta.get("segment_count", 1),
             "realistic_source_count": realistic_meta.get("source_count", len(presenter_source_urls or [])),
+            "realistic_style_mode": realistic_meta.get("style_mode", "cinematic_stage_keynote"),
         }
 
     clips = []
