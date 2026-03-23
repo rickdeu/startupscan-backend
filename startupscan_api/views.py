@@ -1743,11 +1743,15 @@ class PitchExplainerVideoGenerateView(View):
                     presenter_url = None
 
             if presenter_path and presenter_url:
-                presenter_source_urls = build_did_presenter_source_urls(
-                    presenter_image_path=presenter_path,
-                    presenter_image_url=presenter_url,
-                    startup_name=analysis.startup_name or "Startup",
-                )
+                if video_mode == "did_only":
+                    # Modo D-ID estrito: usa somente a imagem real enviada (sem composição de fundo/poses).
+                    presenter_source_urls = [presenter_url]
+                else:
+                    presenter_source_urls = build_did_presenter_source_urls(
+                        presenter_image_path=presenter_path,
+                        presenter_image_url=presenter_url,
+                        startup_name=analysis.startup_name or "Startup",
+                    )
 
             if video_mode == "did_only" and not presenter_url:
                 messages.error(
@@ -1773,6 +1777,7 @@ class PitchExplainerVideoGenerateView(View):
             metadata["explainer_video_job_id"] = job_id
             metadata["explainer_video_job_status"] = "PENDING"
             metadata["explainer_video_source_images"] = len(presenter_source_urls or [])
+            metadata["explainer_video_real_image_only"] = bool(video_mode == "did_only")
             metadata["explainer_video_mode"] = video_mode
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])

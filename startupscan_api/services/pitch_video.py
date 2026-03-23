@@ -735,6 +735,7 @@ def _try_generate_realistic_video_did(
     output_path: str,
     source_image_urls: list[str] | None = None,
     presenter_gender: str | None = None,
+    real_image_only: bool = False,
     progress_callback=None,
 ):
     """
@@ -742,13 +743,17 @@ def _try_generate_realistic_video_did(
     Retorna metadados ou None em caso de falha/sem configuração.
     """
     api_key = os.getenv("DID_API_KEY", "").strip()
-    did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
     original_source = (source_image_url or "").strip()
-    # Mantém fallback do source original ativo por padrão para reduzir falhas em poses dinâmicas.
-    allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "1").strip().lower() in {"1", "true", "yes"}
-    if original_source and original_source not in did_sources:
-        if not did_sources or allow_original_fallback:
-            did_sources.append(original_source)
+    did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
+    if real_image_only:
+        # Modo estrito: usa apenas a imagem real original enviada pelo usuário (sem montagens/poses).
+        did_sources = [original_source] if original_source else []
+    else:
+        # Mantém fallback do source original ativo por padrão para reduzir falhas em poses dinâmicas.
+        allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "1").strip().lower() in {"1", "true", "yes"}
+        if original_source and original_source not in did_sources:
+            if not did_sources or allow_original_fallback:
+                did_sources.append(original_source)
     # Dedup mantendo ordem.
     did_sources = list(dict.fromkeys(did_sources))
 
@@ -853,7 +858,8 @@ def _try_generate_realistic_video_did(
                                 "voice_gender_target": voice_profile.get("gender", "unknown"),
                                 "segment_count": 1,
                                 "source_count": len(did_sources),
-                                "style_mode": "cinematic_stage_presenter_rescue",
+                                "style_mode": "did_real_image_only" if real_image_only else "cinematic_stage_presenter_rescue",
+                                "real_image_only": bool(real_image_only),
                                 "error": "",
                             }
                         rescue_error = rescue_meta.get("error", "rescue_unknown_error")
@@ -927,7 +933,8 @@ def _try_generate_realistic_video_did(
             "voice_gender_target": voice_profile.get("gender", "unknown"),
             "segment_count": len(segments),
             "source_count": len(did_sources),
-            "style_mode": "cinematic_stage_presenter",
+            "style_mode": "did_real_image_only" if real_image_only else "cinematic_stage_presenter",
+            "real_image_only": bool(real_image_only),
             "error": "",
         }
     except Exception as exc:
@@ -1522,6 +1529,7 @@ def generate_explainer_video(
             output_path=output_path,
             source_image_urls=presenter_source_urls or [],
             presenter_gender=presenter_gender,
+            real_image_only=(mode == "did_only"),
             progress_callback=progress_callback,
         )
     if realistic_meta and realistic_meta.get("status") == "done":
@@ -1543,6 +1551,7 @@ def generate_explainer_video(
             "realistic_segment_count": realistic_meta.get("segment_count", 1),
             "realistic_source_count": realistic_meta.get("source_count", len(presenter_source_urls or [])),
             "realistic_style_mode": realistic_meta.get("style_mode", "cinematic_stage_presenter"),
+            "realistic_real_image_only": bool(realistic_meta.get("real_image_only")),
             "target_duration_sec": _plan_total_duration_seconds(plan),
             "duration_range_sec": [MIN_VIDEO_SECONDS, MAX_VIDEO_SECONDS],
             "generation_mode": mode,
