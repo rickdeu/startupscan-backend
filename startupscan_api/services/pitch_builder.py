@@ -1,6 +1,7 @@
 import json
 import os
 import hashlib
+import colorsys
 from datetime import datetime
 
 from reportlab.lib import colors
@@ -210,52 +211,209 @@ def _truncate_text(text: str, max_chars: int = 340) -> str:
     return (cut or text[:max_chars]).rstrip() + "..."
 
 
-def _palette_for_slide(index: int) -> dict:
-    palettes = [
-        {
-            "bg": colors.HexColor("#060B1A"),
-            "band": colors.HexColor("#1D4ED8"),
-            "card": colors.HexColor("#0F172A"),
-            "text": colors.HexColor("#F8FAFC"),
-            "muted": colors.HexColor("#BFDBFE"),
-            "accent": colors.HexColor("#22D3EE"),
-            "shape1": colors.HexColor("#172554"),
-            "shape2": colors.HexColor("#1E3A8A"),
-        },
-        {
-            "bg": colors.HexColor("#0B1020"),
-            "band": colors.HexColor("#7C3AED"),
-            "card": colors.HexColor("#111827"),
-            "text": colors.HexColor("#F8FAFC"),
-            "muted": colors.HexColor("#DDD6FE"),
-            "accent": colors.HexColor("#F472B6"),
-            "shape1": colors.HexColor("#312E81"),
-            "shape2": colors.HexColor("#4C1D95"),
-        },
-        {
-            "bg": colors.HexColor("#09121B"),
-            "band": colors.HexColor("#0EA5E9"),
-            "card": colors.HexColor("#0F172A"),
-            "text": colors.HexColor("#F8FAFC"),
-            "muted": colors.HexColor("#BAE6FD"),
-            "accent": colors.HexColor("#2DD4BF"),
-            "shape1": colors.HexColor("#164E63"),
-            "shape2": colors.HexColor("#155E75"),
-        },
+def _hsv_color(hue_deg: float, saturation: float, value: float) -> colors.Color:
+    h = (float(hue_deg) % 360.0) / 360.0
+    s = max(0.0, min(1.0, float(saturation)))
+    v = max(0.0, min(1.0, float(value)))
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    return colors.Color(r, g, b)
+
+
+def _mix_colors(color_a: colors.Color, color_b: colors.Color, ratio: float) -> colors.Color:
+    r = max(0.0, min(1.0, float(ratio)))
+    return colors.Color(
+        (color_a.red * (1 - r)) + (color_b.red * r),
+        (color_a.green * (1 - r)) + (color_b.green * r),
+        (color_a.blue * (1 - r)) + (color_b.blue * r),
+    )
+
+
+def _collect_pitch_text_blob(pitch_payload: dict) -> str:
+    bits = [
+        _safe_str(pitch_payload.get("title"), ""),
+        _safe_str(pitch_payload.get("slogan"), ""),
+        _safe_str(pitch_payload.get("elevator_pitch"), ""),
+        _safe_str(pitch_payload.get("closing"), ""),
     ]
-    return palettes[index % len(palettes)]
+    for section in (pitch_payload.get("sections", []) or []):
+        bits.append(_safe_str(section.get("title"), ""))
+        bits.append(_safe_str(section.get("content"), ""))
+    for deck in (pitch_payload.get("pitch_deck", []) or []):
+        bits.append(_safe_str(deck.get("title"), ""))
+        for bullet in (deck.get("bullets", []) or []):
+            bits.append(_safe_str(bullet, ""))
+    return " ".join(bit for bit in bits if bit).lower()
 
 
-def _draw_background(pdf: canvas.Canvas, width: float, height: float, palette: dict):
+def _infer_pitch_context(pitch_payload: dict) -> str:
+    blob = _collect_pitch_text_blob(pitch_payload)
+    contexts = {
+        "fintech": ["fintech", "finance", "pagamento", "credito", "banco", "wallet", "fatura"],
+        "saude": ["saude", "health", "clinica", "hospital", "medico", "paciente", "telemedicina"],
+        "educacao": ["educacao", "ensino", "aluno", "universidade", "escola", "edtech", "curso"],
+        "energia": ["energia", "solar", "eletrica", "bateria", "sustentavel", "renovavel", "grid"],
+        "logistica": ["logistica", "supply", "cadeia", "transporte", "entrega", "estoque", "warehouse"],
+        "agro": ["agro", "fazenda", "agricola", "agritech", "campo", "safra", "produtor"],
+        "retail": ["retail", "ecommerce", "loja", "consumidor", "varejo", "marketplace", "cliente final"],
+    }
+    scores = {}
+    for context_name, words in contexts.items():
+        score = 0
+        for word in words:
+            score += blob.count(word)
+        scores[context_name] = score
+    winner = max(scores, key=lambda k: scores[k]) if scores else "geral"
+    return winner if scores.get(winner, 0) > 0 else "geral"
+
+
+def _context_display_name(context_name: str) -> str:
+    labels = {
+        "fintech": "Fintech",
+        "saude": "HealthTech",
+        "educacao": "EdTech",
+        "energia": "EnergyTech",
+        "logistica": "LogTech",
+        "agro": "AgriTech",
+        "retail": "RetailTech",
+        "geral": "BusinessTech",
+    }
+    return labels.get(context_name, "BusinessTech")
+
+
+def _build_pitch_design_profile(pitch_payload: dict) -> dict:
+    context = _infer_pitch_context(pitch_payload)
+    raw_signature = _safe_str(pitch_payload.get("narrative_uniqueness_key"), "")
+    if not raw_signature:
+        raw_signature = hashlib.sha256(
+            json.dumps(pitch_payload or {}, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest()[:14]
+    seed = int(hashlib.sha256(raw_signature.encode("utf-8")).hexdigest()[:12], 16)
+
+    base_hues = {
+        "fintech": 214,
+        "saude": 171,
+        "educacao": 256,
+        "energia": 49,
+        "logistica": 206,
+        "agro": 112,
+        "retail": 323,
+        "geral": 231,
+    }
+    template_by_context = {
+        "fintech": ["grid", "orbit", "diagonal"],
+        "saude": ["wave", "orbit", "grid"],
+        "educacao": ["diagonal", "grid", "wave"],
+        "energia": ["wave", "diagonal", "orbit"],
+        "logistica": ["grid", "diagonal", "orbit"],
+        "agro": ["wave", "grid", "orbit"],
+        "retail": ["orbit", "diagonal", "grid"],
+        "geral": ["orbit", "grid", "wave", "diagonal"],
+    }
+    layout_options = ["focus", "split", "timeline"]
+
+    base_hue = float(base_hues.get(context, 231)) + float((seed % 19) - 9)
+    accent_hue = (base_hue + 28 + (seed % 17)) % 360.0
+    band_hue = (base_hue + 10 + (seed % 9)) % 360.0
+    template_list = template_by_context.get(context, template_by_context["geral"])
+    template_name = template_list[seed % len(template_list)]
+
+    return {
+        "context": context,
+        "context_label": _context_display_name(context),
+        "seed": seed,
+        "base_hue": base_hue,
+        "accent_hue": accent_hue,
+        "band_hue": band_hue,
+        "template_name": template_name,
+        "layout_seed": seed % len(layout_options),
+        "layout_options": layout_options,
+    }
+
+
+def _palette_for_slide(index: int, design_profile: dict) -> dict:
+    slide_offset = float(index * 4 + (design_profile.get("seed", 0) % 11))
+    base_h = float(design_profile.get("base_hue", 231.0)) + (slide_offset * 0.35)
+    band_h = float(design_profile.get("band_hue", 241.0)) + (slide_offset * 0.8)
+    accent_h = float(design_profile.get("accent_hue", 271.0)) + (slide_offset * 1.1)
+    bg = _hsv_color(base_h, 0.58, 0.12)
+    card = _hsv_color(base_h + 6, 0.42, 0.20)
+    band = _hsv_color(band_h, 0.72, 0.83)
+    accent = _hsv_color(accent_h, 0.75, 0.96)
+    shape1 = _hsv_color(base_h - 9, 0.62, 0.24)
+    shape2 = _hsv_color(base_h + 13, 0.61, 0.30)
+    muted = _mix_colors(band, colors.white, 0.72)
+    return {
+        "bg": bg,
+        "band": band,
+        "card": card,
+        "text": colors.HexColor("#F8FAFC"),
+        "muted": muted,
+        "accent": accent,
+        "shape1": shape1,
+        "shape2": shape2,
+    }
+
+
+def _draw_background(
+    pdf: canvas.Canvas,
+    width: float,
+    height: float,
+    palette: dict,
+    template_name: str,
+    design_seed: int,
+):
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
-
-    pdf.setFillColor(palette["shape1"])
-    pdf.circle(width * 0.92, height * 0.82, 90, stroke=0, fill=1)
-    pdf.setFillColor(palette["shape2"])
-    pdf.circle(width * 0.84, height * 0.68, 130, stroke=0, fill=1)
     pdf.setFillColor(palette["band"])
     pdf.rect(0, height - 42, width, 42, stroke=0, fill=1)
+
+    template = (template_name or "orbit").strip().lower()
+    seed_shift = (design_seed % 37) - 18
+    if template == "grid":
+        pdf.setStrokeColor(_mix_colors(palette["shape1"], palette["shape2"], 0.5))
+        pdf.setLineWidth(0.6)
+        step = 26 + (design_seed % 7)
+        y = 0
+        while y < height:
+            pdf.line(0, y, width, y + (seed_shift * 0.25))
+            y += step
+        x = 0
+        while x < width:
+            pdf.line(x, 0, x + (seed_shift * 0.3), height)
+            x += step
+    elif template == "wave":
+        pdf.setFillColor(palette["shape1"])
+        for idx in range(5):
+            radius = 230 + (idx * 66)
+            cx = (width * 0.18) + (idx * 82) + (seed_shift * 0.8)
+            cy = (-40) + (idx * 34)
+            pdf.circle(cx, cy, radius, stroke=0, fill=1)
+        pdf.setFillColor(palette["shape2"])
+        for idx in range(4):
+            radius = 210 + (idx * 72)
+            cx = width - 80 - (idx * 72)
+            cy = height - 40 + (idx * 20)
+            pdf.circle(cx, cy, radius, stroke=0, fill=1)
+    elif template == "diagonal":
+        pdf.setFillColor(palette["shape1"])
+        pdf.saveState()
+        pdf.translate(-140 + seed_shift, -80)
+        pdf.rotate(17 + (design_seed % 7))
+        for idx in range(9):
+            pdf.roundRect(0, idx * 66, width + 260, 42, 9, stroke=0, fill=1)
+        pdf.restoreState()
+        pdf.setFillColor(palette["shape2"])
+        pdf.saveState()
+        pdf.translate(width * 0.4, -120)
+        pdf.rotate(17 + (design_seed % 7))
+        for idx in range(7):
+            pdf.roundRect(0, idx * 74, width + 120, 26, 7, stroke=0, fill=1)
+        pdf.restoreState()
+    else:
+        pdf.setFillColor(palette["shape1"])
+        pdf.circle(width * 0.92, height * 0.82, 90 + (design_seed % 22), stroke=0, fill=1)
+        pdf.setFillColor(palette["shape2"])
+        pdf.circle(width * 0.84, height * 0.68, 130 + (design_seed % 26), stroke=0, fill=1)
 
 
 def _draw_footer(
@@ -285,6 +443,8 @@ def _draw_cover_slide(
     startup_name: str,
     subtitle: str,
     palette: dict,
+    context_label: str,
+    template_name: str,
 ):
     pdf.setFillColor(palette["text"])
     pdf.setFont("Helvetica-Bold", 35)
@@ -307,8 +467,9 @@ def _draw_cover_slide(
     pdf.setFillColor(palette["text"])
     pdf.setFont("Helvetica", 12)
     pdf.drawString(72, 160, f"Startup: {startup_name}")
-    pdf.drawString(72, 140, subtitle)
-    pdf.drawString(72, 120, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    pdf.drawString(72, 140, subtitle or "Deck estrategico para investidores")
+    pdf.drawString(72, 122, f"Contexto visual: {context_label} | Template: {template_name}")
+    pdf.drawString(72, 103, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
     initials = (_safe_str(startup_name, "ST")[:2]).upper()
     pdf.setFillColor(palette["band"])
@@ -363,6 +524,7 @@ def _draw_content_slide(
     subtitle: str,
     bullets: list[str],
     palette: dict,
+    layout_mode: str,
 ):
     pdf.setFillColor(palette["text"])
     pdf.setFont("Helvetica-Bold", 27)
@@ -388,33 +550,96 @@ def _draw_content_slide(
     pdf.setFillColor(palette["band"])
     pdf.roundRect(card_x, card_y + card_h - 32, card_w, 32, 16, stroke=0, fill=1)
 
-    left_x = card_x + 24
-    left_y = card_y + card_h - 54
-    pdf.setFillColor(palette["text"])
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(left_x, left_y, "Pontos-chave")
+    mode = (layout_mode or "focus").strip().lower()
+    if mode == "split":
+        split_x = card_x + (card_w * 0.58)
+        pdf.setStrokeColor(_mix_colors(palette["accent"], colors.white, 0.45))
+        pdf.setLineWidth(1.1)
+        pdf.line(split_x, card_y + 14, split_x, card_y + card_h - 44)
 
-    text_y = left_y - 24
-    pdf.setFont("Helvetica", 11)
-    for raw_bullet in bullets[:6]:
-        bullet = _truncate_text(_safe_str(raw_bullet, "Sem informacao"), 180)
-        wrapped = _wrap_text_lines(bullet, max_chars=56)[:3]
-        if text_y < card_y + 30:
-            break
-        pdf.setFillColor(palette["accent"])
-        pdf.circle(left_x + 2, text_y + 5, 2.4, stroke=0, fill=1)
         pdf.setFillColor(palette["text"])
-        if wrapped:
-            pdf.drawString(left_x + 12, text_y, wrapped[0])
-            text_y -= 15
-        for extra_line in wrapped[1:]:
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(card_x + 24, card_y + card_h - 54, "Teses principais")
+        pdf.drawString(split_x + 18, card_y + card_h - 54, "Notas de execucao")
+
+        half = max(1, (len(bullets) + 1) // 2)
+        left_items = bullets[:half]
+        right_items = bullets[half:]
+
+        def _draw_bullet_column(items, start_x, start_y, max_chars):
+            y_cursor = start_y
+            pdf.setFont("Helvetica", 10.5)
+            for raw in items[:5]:
+                if y_cursor < card_y + 32:
+                    break
+                wrapped = _wrap_text_lines(_truncate_text(_safe_str(raw, "Sem informacao"), 160), max_chars=max_chars)[:3]
+                pdf.setFillColor(palette["accent"])
+                pdf.circle(start_x + 2, y_cursor + 4.5, 2.3, stroke=0, fill=1)
+                pdf.setFillColor(palette["text"])
+                for line in wrapped:
+                    if y_cursor < card_y + 32:
+                        break
+                    pdf.drawString(start_x + 11, y_cursor, line)
+                    y_cursor -= 13
+                y_cursor -= 8
+
+        _draw_bullet_column(left_items, card_x + 24, card_y + card_h - 80, 40)
+        _draw_bullet_column(right_items, split_x + 18, card_y + card_h - 80, 31)
+        _draw_visual_metrics(pdf, title, width, card_y, card_h, palette)
+    elif mode == "timeline":
+        line_x = card_x + 84
+        top_y = card_y + card_h - 68
+        bottom_y = card_y + 38
+        pdf.setStrokeColor(_mix_colors(palette["accent"], colors.white, 0.3))
+        pdf.setLineWidth(2.0)
+        pdf.line(line_x, bottom_y, line_x, top_y)
+        pdf.setFillColor(palette["text"])
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(card_x + 24, card_y + card_h - 54, "Fluxo da narrativa")
+
+        step_y = top_y - 18
+        for idx, raw in enumerate(bullets[:6], start=1):
+            if step_y < bottom_y + 6:
+                break
+            wrapped = _wrap_text_lines(_truncate_text(_safe_str(raw, "Sem informacao"), 180), max_chars=58)[:2]
+            pdf.setFillColor(palette["accent"])
+            pdf.circle(line_x, step_y + 4, 5, stroke=0, fill=1)
+            pdf.setFillColor(colors.white)
+            pdf.setFont("Helvetica-Bold", 8)
+            pdf.drawCentredString(line_x, step_y + 1.5, str(idx))
+            pdf.setFillColor(palette["text"])
+            pdf.setFont("Helvetica", 10.5)
+            for line in wrapped:
+                pdf.drawString(line_x + 18, step_y, line)
+                step_y -= 13
+            step_y -= 11
+    else:
+        left_x = card_x + 24
+        left_y = card_y + card_h - 54
+        pdf.setFillColor(palette["text"])
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(left_x, left_y, "Pontos-chave")
+
+        text_y = left_y - 24
+        pdf.setFont("Helvetica", 11)
+        for raw_bullet in bullets[:6]:
+            bullet = _truncate_text(_safe_str(raw_bullet, "Sem informacao"), 180)
+            wrapped = _wrap_text_lines(bullet, max_chars=56)[:3]
             if text_y < card_y + 30:
                 break
-            pdf.drawString(left_x + 12, text_y, extra_line)
-            text_y -= 14
-        text_y -= 8
-
-    _draw_visual_metrics(pdf, title, width, card_y, card_h, palette)
+            pdf.setFillColor(palette["accent"])
+            pdf.circle(left_x + 2, text_y + 5, 2.4, stroke=0, fill=1)
+            pdf.setFillColor(palette["text"])
+            if wrapped:
+                pdf.drawString(left_x + 12, text_y, wrapped[0])
+                text_y -= 15
+            for extra_line in wrapped[1:]:
+                if text_y < card_y + 30:
+                    break
+                pdf.drawString(left_x + 12, text_y, extra_line)
+                text_y -= 14
+            text_y -= 8
+        _draw_visual_metrics(pdf, title, width, card_y, card_h, palette)
 
 
 def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
@@ -521,11 +746,19 @@ def export_pitch_pdf(pitch_payload: dict, output_path: str):
     pdf = canvas.Canvas(output_path, pagesize=page_size)
     engine_used = _safe_str(pitch_payload.get("engine_used"), "local")
     uniqueness_key = _safe_str(pitch_payload.get("narrative_uniqueness_key"), "")
+    design_profile = _build_pitch_design_profile(pitch_payload)
     total_pages = len(slides)
 
     for idx, slide in enumerate(slides, start=1):
-        palette = _palette_for_slide(idx - 1)
-        _draw_background(pdf, width, height, palette)
+        palette = _palette_for_slide(idx - 1, design_profile)
+        _draw_background(
+            pdf,
+            width,
+            height,
+            palette,
+            design_profile.get("template_name", "orbit"),
+            int(design_profile.get("seed", 0)),
+        )
 
         if slide.get("kind") == "cover":
             _draw_cover_slide(
@@ -537,8 +770,12 @@ def export_pitch_pdf(pitch_payload: dict, output_path: str):
                 startup_name=_safe_str(slide.get("startup_name"), "Startup"),
                 subtitle=_safe_str(slide.get("subtitle"), ""),
                 palette=palette,
+                context_label=_safe_str(design_profile.get("context_label"), "BusinessTech"),
+                template_name=_safe_str(design_profile.get("template_name"), "orbit").upper(),
             )
         else:
+            layout_options = design_profile.get("layout_options") or ["focus"]
+            layout_idx = (int(design_profile.get("layout_seed", 0)) + idx - 1) % len(layout_options)
             _draw_content_slide(
                 pdf=pdf,
                 width=width,
@@ -547,6 +784,7 @@ def export_pitch_pdf(pitch_payload: dict, output_path: str):
                 subtitle=_safe_str(slide.get("subtitle"), ""),
                 bullets=[str(b) for b in (slide.get("bullets") or [])],
                 palette=palette,
+                layout_mode=layout_options[layout_idx],
             )
 
         _draw_footer(pdf, width, idx, total_pages, engine_used, uniqueness_key, palette)
