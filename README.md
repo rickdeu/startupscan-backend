@@ -169,11 +169,20 @@ python3 docs/generate_engineering_pdf.py
 Arquivo gerado:
 - `docs/Documentacao_Engenharia_Software.pdf`
 
+### Gerar DOCX de engenharia
+```bash
+python3 docs/generate_engineering_docx.py
+```
+
+Arquivo gerado:
+- `docs/Documentacao_Engenharia_Software.docx`
+
 ### Atualizar documentação completa (README + PDF + envio webhook)
 Fluxo recomendado:
 1. Atualizar `README.md`.
 2. Executar `python3 docs/generate_engineering_pdf.py`.
-3. Enviar PDF para o webhook do Discord com `curl`.
+3. Executar `python3 docs/generate_engineering_docx.py`.
+4. Enviar PDF e DOCX para o webhook do Discord com `curl`.
 
 ---
 
