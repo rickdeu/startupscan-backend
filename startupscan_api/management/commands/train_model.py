@@ -1,8 +1,10 @@
 import os
+import json
 import joblib
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from startupscan_api.modeling import train_and_evaluate
+from startupscan_api.services.model_registry import get_metrics_path
 import pandas as pd
 
 
@@ -55,10 +57,16 @@ class Command(BaseCommand):
             model_path = options['model_output']
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             joblib.dump(model, model_path)
+
+            # 5. Salvar métricas ao lado do modelo
+            metrics_path = get_metrics_path(os.path.basename(model_path))
+            with open(metrics_path, "w", encoding="utf-8") as fh:
+                json.dump(metrics, fh, ensure_ascii=False, indent=2)
             
             self.stdout.write(
                 self.style.SUCCESS(f"✅ Model successfully trained and saved to {model_path}")
             )
+            self.stdout.write(f"Metrics file: {metrics_path}")
             self.stdout.write(f"Training metrics:\n{metrics}")
             
             return "Training completed successfully"

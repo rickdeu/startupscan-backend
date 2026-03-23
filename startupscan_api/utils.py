@@ -398,138 +398,79 @@ def train_with_xgboost(df, financial_df):
 
 # 📝 15. Função de Geração de Relatório com ChatGPT
 def generate_interpretable_report(score, metadata):
-    """Gera um relatório detalhado e interpretável com recomendações do ChatGPT"""
-    print("\n📊 Relatório Detalhado:")
-    print(f"Pontuação Geral Prevista: {score:.2f}/10")
+    """Gera relatório orientado a investidores, com fallback local robusto."""
+    score = float(max(0.0, min(10.0, score)))
+    financial = metadata.get("financial", {}) if isinstance(metadata, dict) else {}
+    revenue = float(financial.get("revenue", 0) or 0)
+    growth_rate = float(financial.get("growth_rate", 0) or 0)
+    profit_margin = float(financial.get("profit_margin", 0) or 0)
 
-    # Seção de Texto
-    print("\n🔍 Análise de Texto:")
-    print(f"- Sentimento: {metadata['text']['sentiment']} (confiança: {metadata['text']['sentiment_score']:.2f})")
-    print(f"- Tópico Dominante: {metadata['text']['dominant_topic']} (score: {metadata['text']['topic_score']:.2f})")
-    print(f"- Legibilidade: {metadata['text']['readability']:.1f} (escala 0-100)")
+    maturity = "Inicial"
+    if score >= 7.5:
+        maturity = "Pronta para escala"
+    elif score >= 5.0:
+        maturity = "Em validação comercial"
 
-    # Seção de Áudio
-    print("\n🎧 Análise de Áudio:")
-    print(f"- Taxa de Fala: {metadata['audio']['speech_rate']:.1f} palavras/min")
-    print(f"- Variação de Tom: {metadata['audio']['pitch_variation']:.2f}")
-    if 'transcription' in metadata['audio']:
-        print("\n📝 Transcrição (resumo):")
-        print(metadata['audio']['transcription'][:200] + "...")
+    base_strengths = [
+        f"Score preditivo de sucesso em {score:.1f}/10.",
+        f"Crescimento reportado de {growth_rate:.1f}% com margem de {profit_margin:.1f}%.",
+        "Estrutura de pitch com dados financeiros objetivos.",
+    ]
+    base_weaknesses = [
+        "Necessidade de ampliar previsibilidade de receita recorrente.",
+        "Risco de execução em expansão sem governança operacional robusta.",
+        "Dependência de melhoria contínua do storytelling para captação.",
+    ]
+    base_recommendations = [
+        "Apresentar roadmap de 12 meses com marcos trimestrais e KPIs de tração.",
+        "Demonstrar unit economics com CAC, LTV e payback por canal de aquisição.",
+        "Priorizar investimento em receita previsível e retenção de clientes estratégicos.",
+    ]
 
-    # Seção de Vídeo
-    print("\n🎬 Análise de Vídeo:")
-    print(f"- Emoção Dominante: {metadata['video']['dominant_emotion']}")
-    print(f"- Confiança na Detecção: {metadata['video']['emotion_confidence']:.2f}")
+    investment_thesis = (
+        "Startup com sinais claros de escalabilidade e capacidade de geração de valor."
+        if score >= 7.5
+        else "Startup com potencial relevante, recomendada para rodada com metas condicionadas."
+        if score >= 5
+        else "Startup em estágio inicial, indicada para investimento de risco controlado."
+    )
+    suggested_ticket = (
+        "Rodada growth/seed+ com participação estratégica"
+        if score >= 7.5
+        else "Rodada seed com cláusulas de performance e governança"
+        if score >= 5
+        else "Pré-seed com foco em validação de produto e mercado"
+    )
 
-    # Seção Financeira
-    print("\n💰 Análise Financeira:")
-    financial = metadata.get('financial', {})
-    if 'revenue' in financial:
-        print(f"- Receita: ${financial['revenue']:,.2f}")
-    if 'growth_rate' in financial:
-        print(f"- Taxa de Crescimento: {financial['growth_rate']}%")
-    if 'profit_margin' in financial:
-        print(f"- Margem de Lucro: {financial['profit_margin']}%")
-
-    # Recomendações via ChatGPT
-    print("\n💡 Recomendações Personalizadas pelo ChatGPT:")
-
-    try:
-        #import openai
-       
-        # Construir o contexto para o ChatGPT
-        context = f"""
-        Como especialista em análise de pitches de startups, forneça recomendações concisas e acionáveis baseadas nos seguintes dados:
-
-        Pontuação Geral: {score:.2f}/10
-        Análise de Texto:
-        - Sentimento: {metadata['text']['sentiment']}
-        - Tópico Dominante: {metadata['text']['dominant_topic']}
-        - Legibilidade: {metadata['text']['readability']}/100
-
-        Análise de Áudio:
-        - Taxa de Fala: {metadata['audio']['speech_rate']} palavras/min
-        - Variação de Tom: {metadata['audio']['pitch_variation']}
-
-        Análise de Vídeo:
-        - Emoção Dominante: {metadata['video']['dominant_emotion']}
-        - Confiança: {metadata['video']['emotion_confidence']:.2f}
-
-        Dados Financeiros:
-        - Receita: ${financial.get('revenue', 'N/A')}
-        - Crescimento: {financial.get('growth_rate', 'N/A')}%
-        - Margem: {financial.get('profit_margin', 'N/A')}%
-
-        Por favor, forneça:
-        1. 5 pontos fortes identificados
-        2. 5 áreas prioritárias para melhoria
-        3. 2 sugestões específicas para cada área
-        4. 2 estratégia de apresentação recomendada
-        """
-      
-        API_KEY = ""
-
-     
-        
-
-        from openai import OpenAI
-        client = OpenAI(api_key=API_KEY)
-
-        response = client.chat.completions.create(
-        model="gpt-4.1",
-        messages=[
-                    {"role": "system", "content": "Você é um consultor especializado em análise e melhoria de pitches para startups."},
-                    {"role": "user", "content": context}
-                ],
-        )
-
-
-
-        
-
-    
-        #recommendations = response.choices[0].message['content'].strip()
-        recommendations = response.choices[0].message.content
-        print(recommendations)
-        return recommendations
-
-    except Exception as e:
-        logging.error(f"Erro ao consultar ChatGPT: {str(e)}")
-        print("\n⚠️ Sistema de recomendações avançado indisponível. Recomendações básicas:")
-        recommendations = {
-        "status": "Sistema de recomendações avançado indisponível.",
-        "recommendations": []
-            }
-
-        if score < 5:
-            print("- Revisar proposta de valor e diferenciação")
-            print("- Melhorar clareza da comunicação")
-            print("- Reavaliar modelo financeiro")
-            recommendations["recommendations"] = [
-                "Revisar proposta de valor e diferenciação",
-                "Melhorar clareza da comunicação",
-                "Reavaliar modelo financeiro"
-            ]
-        elif score < 7.5:
-            print("- Aumentar entusiasmo na apresentação")
-            print("- Refinar métricas financeiras")
-            print("- Melhorar estrutura do pitch")
-            recommendations["recommendations"] = [
-                "Aumentar entusiasmo na apresentação",
-                "Refinar métricas financeiras",
-                "Melhorar estrutura do pitch"
-            ]
-        else:
-            print("- Aprimorar storytelling")
-            print("- Adicionar dados de tração adicional")
-            print("- Preparar respostas para objeções comuns")
-            recommendations["recommendations"] = [
-                "Aprimorar storytelling",
-                "Adicionar dados de tração adicional",
-                "Preparar respostas para objeções comuns"
-            ]
-
-        return recommendations
+    return {
+        "status": "local_report",
+        "summary": (
+            f"Classificação: {maturity}. O modelo indica score {score:.1f}/10, "
+            f"com crescimento de {growth_rate:.1f}% e margem de {profit_margin:.1f}%."
+        ),
+        "strengths": base_strengths,
+        "weaknesses": base_weaknesses,
+        "recommendations": base_recommendations,
+        "investor_pitch": {
+            "investment_thesis": investment_thesis,
+            "funding_readiness": maturity,
+            "suggested_ticket": suggested_ticket,
+            "capital_use_plan": [
+                "Acelerar aquisição de clientes com foco em canais de maior ROI.",
+                "Fortalecer produto para elevar retenção e expansão de receita.",
+                "Estruturar governança e eficiência operacional para escala.",
+            ],
+            "risk_mitigation": [
+                "Definir metas de unit economics com monitoramento mensal.",
+                "Estabelecer ritos de governança e prestação de contas aos investidores.",
+                "Validar hipóteses comerciais com experimentos controlados.",
+            ],
+            "investor_fit": [
+                "Fundos seed/growth com atuação ativa em GTM.",
+                "Investidores com experiência em SaaS/fintech B2B.",
+            ],
+        },
+    }
 
 
 

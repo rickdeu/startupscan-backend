@@ -1,8 +1,10 @@
 import os
+import json
 import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from pathlib import Path
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,10 +18,20 @@ from startupscan_api.services.model_training import (
 )
 from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.util.file_management import TempFileManager
+from startupscan_api.services.model_registry import (
+    get_active_model_name,
+    get_meta_path,
+    get_metrics_path,
+    get_model_path,
+    set_active_model,
+)
 
 import joblib
 from celery.result import AsyncResult
 from django.conf import settings
+from django.core.management import call_command
+from django.db.models import Avg, Count, Max
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .utils import (
     prepare_features,
@@ -28,6 +40,76 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_slug_model_name(raw_name):
+    name = (raw_name or "").strip().lower()
+    sanitized = []
+    for ch in name:
+        if ch.isalnum() or ch in {"-", "_"}:
+            sanitized.append(ch)
+        else:
+            sanitized.append("-")
+    cleaned = "".join(sanitized).strip("-_")
+    if not cleaned:
+        cleaned = "pitch-model"
+    if not cleaned.endswith(".pkl"):
+        cleaned = f"{cleaned}.pkl"
+    return cleaned
+
+
+def _read_json_file(path):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_json_file(path, payload):
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, ensure_ascii=False, indent=2)
+
+
+def _list_available_models():
+    os.makedirs(settings.AI_MODELS_DIR, exist_ok=True)
+    active_model = get_active_model_name()
+    models = []
+
+    for file_path in sorted(Path(settings.AI_MODELS_DIR).glob("*.pkl")):
+        model_name = file_path.name
+        metrics = _read_json_file(get_metrics_path(model_name))
+        meta = _read_json_file(get_meta_path(model_name))
+        consistency = metrics.get("consistency_accuracy_pct")
+        cv_r2 = metrics.get("cv_r2")
+        models.append(
+            {
+                "name": model_name,
+                "display_name": meta.get("display_name", model_name.replace(".pkl", "").replace("-", " ").title()),
+                "description": meta.get("description", ""),
+                "is_active": model_name == active_model,
+                "size_mb": round(file_path.stat().st_size / (1024 * 1024), 2),
+                "updated_at": datetime.fromtimestamp(file_path.stat().st_mtime),
+                "metrics": metrics,
+                "consistency_accuracy_pct": consistency if consistency is not None else None,
+                "cv_r2_pct": round(float(cv_r2) * 100, 2) if cv_r2 is not None else None,
+            }
+        )
+    return models
+
+
+def _run_training_for_model(model_name, dataset_source="default"):
+    model_path = get_model_path(model_name)
+    cmd_args = ["--model-output", str(model_path)]
+
+    if dataset_source == "enhanced":
+        pitches = Path(settings.DATA_DIR) / "pitches_dataset_enhanced.csv"
+        financials = Path(settings.DATA_DIR) / "financials_dataset_enhanced.csv"
+        if pitches.exists() and financials.exists():
+            cmd_args.extend(["--pitches-data", str(pitches), "--financials-data", str(financials)])
+
+    call_command("train_model", *cmd_args)
+    return model_path
 
 
 class StartupPitchAnalyzer(APIView):
@@ -321,10 +403,21 @@ class DashboardView(View):
         if not request.user.is_authenticated:
             recent_analyses = PitchAnalysis.objects.none()
         else:
-            recent_analyses = PitchAnalysis.objects.filter(user=request.user).order_by('-created_at')[:5]
+            recent_analyses = PitchAnalysis.objects.filter(user=request.user).order_by('-created_at')[:8]
+
+        global_stats = PitchAnalysis.objects.exclude(success_score__isnull=True).aggregate(
+            avg_score=Avg("success_score"),
+            total=Count("id"),
+            best=Max("success_score"),
+        )
+        models = _list_available_models()
+        active_model = next((m for m in models if m["is_active"]), None)
         
         return render(request, 'analyzer/dashboard.html', {
-            'recent_analyses': recent_analyses
+            'recent_analyses': recent_analyses,
+            'global_stats': global_stats,
+            'active_model': active_model,
+            'models_count': len(models),
         })
 
 class PitchFormView(View):
@@ -658,6 +751,151 @@ class PitchResultsView(View):
         return render(request, 'analyzer/result.html', {
             'analysis': analysis
         })
+
+
+class ModelManagementView(LoginRequiredMixin, View):
+    """Painel para gestão de modelos treinados"""
+
+    def get(self, request):
+        models = _list_available_models()
+        context = {
+            "models": models,
+            "active_model": get_active_model_name(),
+            "enhanced_available": (
+                (Path(settings.DATA_DIR) / "pitches_dataset_enhanced.csv").exists()
+                and (Path(settings.DATA_DIR) / "financials_dataset_enhanced.csv").exists()
+            ),
+        }
+        return render(request, "analyzer/model_management.html", context)
+
+    def post(self, request):
+        action = request.POST.get("action", "").strip()
+
+        try:
+            if action == "fetch_external":
+                call_command("fetch_external_dataset", "--combine-with-default", "--output-prefix", "enhanced")
+                messages.success(request, "Dataset externo importado e combinado com sucesso.")
+
+            elif action == "train_new":
+                model_name = _safe_slug_model_name(request.POST.get("model_name"))
+                dataset_source = request.POST.get("dataset_source", "default")
+                _run_training_for_model(model_name, dataset_source=dataset_source)
+                set_active_model(model_name)
+                messages.success(request, f"Novo modelo treinado e ativado: {model_name}")
+
+            elif action == "retrain":
+                model_name = request.POST.get("model_name", "")
+                dataset_source = request.POST.get("dataset_source", "default")
+                if not model_name:
+                    raise ValueError("Modelo não informado para retreino.")
+                _run_training_for_model(model_name, dataset_source=dataset_source)
+                messages.success(request, f"Modelo retreinado com sucesso: {model_name}")
+
+            elif action == "set_active":
+                model_name = request.POST.get("model_name", "")
+                if not model_name:
+                    raise ValueError("Modelo não informado para ativação.")
+                if not get_model_path(model_name).exists():
+                    raise FileNotFoundError(f"Modelo não encontrado: {model_name}")
+                set_active_model(model_name)
+                messages.success(request, f"Modelo ativo atualizado para: {model_name}")
+
+            elif action == "save_meta":
+                model_name = request.POST.get("model_name", "")
+                display_name = request.POST.get("display_name", "").strip()
+                description = request.POST.get("description", "").strip()
+                if not model_name:
+                    raise ValueError("Modelo não informado para edição.")
+                meta_path = get_meta_path(model_name)
+                payload = _read_json_file(meta_path)
+                payload["display_name"] = display_name
+                payload["description"] = description
+                _write_json_file(meta_path, payload)
+                messages.success(request, f"Metadados atualizados para {model_name}.")
+
+            elif action == "delete":
+                model_name = request.POST.get("model_name", "")
+                if not model_name:
+                    raise ValueError("Modelo não informado para exclusão.")
+
+                models = _list_available_models()
+                if len(models) <= 1:
+                    raise ValueError("Não é possível excluir o único modelo disponível.")
+
+                file_paths = [
+                    get_model_path(model_name),
+                    get_metrics_path(model_name),
+                    get_meta_path(model_name),
+                ]
+                for file_path in file_paths:
+                    try:
+                        if Path(file_path).exists():
+                            os.remove(file_path)
+                    except OSError:
+                        pass
+
+                if get_active_model_name() == model_name:
+                    remaining = _list_available_models()
+                    if remaining:
+                        set_active_model(remaining[0]["name"])
+
+                messages.success(request, f"Modelo removido: {model_name}")
+
+            else:
+                messages.error(request, "Ação inválida no painel de modelos.")
+
+        except Exception as exc:
+            logger.error("Model management action failed: %s", str(exc), exc_info=True)
+            messages.error(request, f"Falha ao executar ação: {str(exc)}")
+
+        return redirect("model_management")
+
+
+class InvestorDashboardView(View):
+    """Dashboard público para investidores visualizarem potenciais de startups"""
+
+    def get(self, request):
+        analyses = PitchAnalysis.objects.exclude(success_score__isnull=True).order_by("-created_at")
+        top_analyses = list(analyses[:12])
+
+        for analysis in top_analyses:
+            report = analysis.report or {}
+            investor_pitch = report.get("investor_pitch", {}) if isinstance(report, dict) else {}
+            if not investor_pitch:
+                score = float(analysis.success_score or 0.0)
+                thesis = "Oportunidade em monitoramento"
+                if score >= 8:
+                    thesis = "Tese de alto crescimento com potencial de escala acelerada"
+                elif score >= 6:
+                    thesis = "Tese com boa tração e espaço para ganho de eficiência"
+
+                investor_pitch = {
+                    "investment_thesis": thesis,
+                    "funding_readiness": "Alta" if score >= 7.5 else ("Média" if score >= 5 else "Inicial"),
+                    "capital_use_plan": [
+                        "Expansão comercial orientada por dados",
+                        "Fortalecimento de produto e retenção de clientes",
+                        "Otimização de operações e margem",
+                    ],
+                }
+            analysis.investor_pitch = investor_pitch
+
+        total = analyses.count()
+        summary = analyses.aggregate(
+            avg_score=Avg("success_score"),
+            max_score=Max("success_score"),
+        )
+        high_potential = analyses.filter(success_score__gte=7.5).count()
+
+        context = {
+            "analyses": top_analyses,
+            "kpi_total": total,
+            "kpi_high_potential": high_potential,
+            "kpi_avg_score": round(float(summary["avg_score"] or 0), 2),
+            "kpi_max_score": round(float(summary["max_score"] or 0), 2),
+            "active_model": get_active_model_name(),
+        }
+        return render(request, "analyzer/investor_dashboard.html", context)
 
 
 

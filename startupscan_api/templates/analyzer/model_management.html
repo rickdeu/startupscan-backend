@@ -1,0 +1,129 @@
+{% extends "analyzer/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Gestão de Modelos</h2>
+        <p class="text-muted mb-0">Treinar, editar, ativar, retreinar e remover modelos de avaliação.</p>
+    </div>
+    <span class="badge rounded-pill bg-primary">Ativo: {{ active_model }}</span>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">Treinar novo modelo</div>
+            <div class="card-body">
+                <form method="post" class="row g-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="train_new">
+                    <div class="col-12">
+                        <label class="form-label">Nome do modelo</label>
+                        <input class="form-control" type="text" name="model_name" placeholder="ex: modelo-growth-v1" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Base de treino</label>
+                        <select class="form-select" name="dataset_source">
+                            <option value="default">Dataset padrão</option>
+                            <option value="enhanced" {% if not enhanced_available %}disabled{% endif %}>Dataset enhanced (externo + interno)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" type="submit">
+                            <i class="fas fa-gears me-1"></i>Treinar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">Atualização de dataset externo</div>
+            <div class="card-body">
+                <p class="text-muted">Importa um dataset externo público e gera versão combinada para treinos mais robustos.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="fetch_external">
+                    <button class="btn btn-outline-primary" type="submit">
+                        <i class="fas fa-cloud-download-alt me-1"></i>Importar Dataset Externo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Modelos disponíveis</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th>Acurácia de consistência</th>
+                        <th>CV R²</th>
+                        <th>Tamanho</th>
+                        <th>Atualização</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model in models %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ model.display_name }}</div>
+                            <div class="small text-muted">{{ model.name }}</div>
+                            {% if model.is_active %}
+                            <span class="badge bg-success mt-1">Ativo</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ model.consistency_accuracy_pct|default:"N/A" }}%</td>
+                        <td>{{ model.cv_r2_pct|default:"N/A" }}%</td>
+                        <td>{{ model.size_mb }} MB</td>
+                        <td>{{ model.updated_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="set_active">
+                                    <input type="hidden" name="model_name" value="{{ model.name }}">
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Ativar</button>
+                                </form>
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="retrain">
+                                    <input type="hidden" name="model_name" value="{{ model.name }}">
+                                    <input type="hidden" name="dataset_source" value="enhanced">
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Retreinar</button>
+                                </form>
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="model_name" value="{{ model.name }}">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deletar</button>
+                                </form>
+                            </div>
+                            <details class="mt-2">
+                                <summary class="small text-muted">Editar metadados</summary>
+                                <form method="post" class="mt-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="save_meta">
+                                    <input type="hidden" name="model_name" value="{{ model.name }}">
+                                    <input class="form-control form-control-sm mb-1" type="text" name="display_name" value="{{ model.display_name }}" placeholder="Nome de exibição">
+                                    <textarea class="form-control form-control-sm mb-1" name="description" rows="2" placeholder="Descrição do modelo">{{ model.description }}</textarea>
+                                    <button class="btn btn-sm btn-secondary" type="submit">Salvar</button>
+                                </form>
+                            </details>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4">Nenhum modelo encontrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

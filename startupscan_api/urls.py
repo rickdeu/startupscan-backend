@@ -3,6 +3,8 @@ from .views import (
     BatchAnalysisResultsView,
     BatchAnalysisStatusView,
     DashboardView,
+    InvestorDashboardView,
+    ModelManagementView,
     PitchFormView,
     PitchResultsView,
     StartupPitchAnalyzer,
@@ -20,6 +22,8 @@ urlpatterns = [
     path('batch/analyze/', BatchAnalysisView.as_view(), name='batch-analyze'),
     path('batch/status/<uuid:batch_id>/', BatchAnalysisStatusView.as_view(), name='batch-status'),
     path('batch/results/<uuid:batch_id>/', BatchAnalysisResultsView.as_view(), name='batch-results'),
+    path('models/', ModelManagementView.as_view(), name='model_management'),
+    path('investors/', InvestorDashboardView.as_view(), name='investor_dashboard'),
 
     path('', DashboardView.as_view(), name='dashboard'),
     path('analyze/form/', PitchFormView.as_view(), name='pitch_form'),

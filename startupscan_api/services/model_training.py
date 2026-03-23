@@ -3,6 +3,13 @@ import uuid
 from django.conf import settings
 from startupscan_api.data_loader import load_training_data
 from startupscan_api.modeling import train_and_evaluate, predict_success_score
+from startupscan_api.services.model_registry import (
+    get_active_model_name,
+    get_metrics_path,
+    get_model_path,
+    set_active_model,
+    write_json,
+)
 import logging
 import joblib
 import pickle
@@ -18,7 +25,8 @@ def train_model_task():
     try:
         logger.info("Iniciando treinamento do modelo em background...")
 
-        model_path = os.path.join(settings.AI_MODELS_DIR, "pitch_model.pkl")
+        active_model_name = get_active_model_name()
+        model_path = get_model_path(active_model_name)
         pitches_path, financials_path = load_training_data()
         pitches_df = pd.read_csv(pitches_path)
         financial_df = pd.read_csv(financials_path)
@@ -26,11 +34,14 @@ def train_model_task():
         model, metrics = train_and_evaluate(pitches_df, financial_df)
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         joblib.dump(model, model_path)
+        write_json(get_metrics_path(active_model_name), metrics)
+        set_active_model(active_model_name)
 
         return {
             "status": "completed",
             "message": "Model trained successfully",
             "task_id": str(uuid.uuid4()),
+            "model_name": active_model_name,
             "metrics": metrics,
         }
     except Exception as e:
@@ -44,11 +55,12 @@ def ensure_model_exists():
     Garante que o modelo existe, treinando um novo se necessário.
     Retorna o modelo carregado ou None em caso de falha.
     """
-    model_path = os.path.join(settings.AI_MODELS_DIR, 'pitch_model.pkl')
+    active_model_name = get_active_model_name()
+    model_path = get_model_path(active_model_name)
     
     try:
         # Tentar carregar modelo existente.
-        if os.path.exists(model_path):
+        if model_path.exists():
             try:
                 return joblib.load(model_path)
             except Exception as load_error:
