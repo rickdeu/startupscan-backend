@@ -833,10 +833,11 @@ def _try_generate_realistic_video_did(
     original_source = (source_image_url or "").strip()
     did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
     if real_image_only:
-        # Modo estrito: usa apenas uma fonte visual real-only, sem alternar para outras imagens.
-        primary_real_source = (did_sources[0] if did_sources else original_source).strip()
-        original_source = primary_real_source or original_source
-        did_sources = [primary_real_source] if primary_real_source else []
+        # Modo estrito: usa apenas fontes reais sem composição de cenário.
+        real_only_sources = [u for u in did_sources if u]
+        if original_source:
+            real_only_sources = [original_source] + [u for u in real_only_sources if u != original_source]
+        did_sources = list(dict.fromkeys(real_only_sources))
     else:
         # Mantém fallback do source original ativo por padrão para reduzir falhas em poses dinâmicas.
         allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "1").strip().lower() in {"1", "true", "yes"}
