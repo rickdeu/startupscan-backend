@@ -746,8 +746,10 @@ def _try_generate_realistic_video_did(
     original_source = (source_image_url or "").strip()
     did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
     if real_image_only:
-        # Modo estrito: usa apenas a imagem real original enviada pelo usuário (sem montagens/poses).
-        did_sources = [original_source] if original_source else []
+        # Modo estrito: usa apenas uma fonte visual real-only, sem alternar para outras imagens.
+        primary_real_source = (did_sources[0] if did_sources else original_source).strip()
+        original_source = primary_real_source or original_source
+        did_sources = [primary_real_source] if primary_real_source else []
     else:
         # Mantém fallback do source original ativo por padrão para reduzir falhas em poses dinâmicas.
         allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "1").strip().lower() in {"1", "true", "yes"}
@@ -1178,23 +1180,33 @@ def build_did_real_image_only_source_url(
         return None
 
     try:
-        presenter_image = _prepare_presenter_image(presenter_image_path)
-        if presenter_image is None:
-            return presenter_image_url
-
-        face_patch = _extract_face_patch(presenter_image)
+        raw_image = Image.open(presenter_image_path)
         source_dir = os.path.dirname(presenter_image_path)
         base_name = Path(presenter_image_path).stem
         file_name = f"{base_name}_did_real_only.png"
         file_path = os.path.join(source_dir, file_name)
         url_base = presenter_image_url.rsplit("/", 1)[0]
 
-        # Sem fundo/cenário: usa somente imagem real enquadrada.
-        if face_patch is not None:
-            source_img = ImageOps.fit(face_patch, (1024, 1024), method=Image.Resampling.LANCZOS)
+        # Sem fundo/cenário: preserva transparência original quando existir.
+        if "A" in raw_image.getbands():
+            source_img = ImageOps.fit(raw_image.convert("RGBA"), (1024, 1024), method=Image.Resampling.LANCZOS)
         else:
-            source_img = ImageOps.fit(presenter_image, (1024, 1024), method=Image.Resampling.LANCZOS)
-        source_img = source_img.filter(ImageFilter.SMOOTH_MORE)
+            presenter_image = raw_image.convert("RGB")
+            face_patch = _extract_face_patch(presenter_image)
+            if face_patch is not None:
+                # Fallback sem alpha: recorte circular com fundo transparente.
+                face_rgba = face_patch.convert("RGBA")
+                alpha = Image.new("L", face_rgba.size, 0)
+                alpha_draw = ImageDraw.Draw(alpha)
+                alpha_draw.ellipse((0, 0, face_rgba.size[0], face_rgba.size[1]), fill=255)
+                face_rgba.putalpha(alpha)
+                face_rgba = face_rgba.filter(ImageFilter.SMOOTH_MORE)
+                source_img = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+                portrait = ImageOps.fit(face_rgba, (860, 860), method=Image.Resampling.LANCZOS)
+                offset = ((1024 - portrait.width) // 2, (1024 - portrait.height) // 2)
+                source_img.paste(portrait, offset, portrait)
+            else:
+                source_img = ImageOps.fit(presenter_image.convert("RGBA"), (1024, 1024), method=Image.Resampling.LANCZOS)
 
         os.makedirs(source_dir, exist_ok=True)
         source_img.save(file_path, format="PNG", optimize=True)
