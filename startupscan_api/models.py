@@ -93,6 +93,12 @@ class PitchAnalysis(models.Model):
         blank=True,
         verbose_name="Vídeo Explicativo IA"
     )
+    presenter_face_image_file = models.FileField(
+        upload_to='pitches/presenter/%Y/%m/%d/',
+        null=True,
+        blank=True,
+        verbose_name="Rosto do Apresentador"
+    )
     document_file = models.FileField(
         upload_to='pitches/docs/%Y/%m/%d/',
         null=True,
@@ -229,6 +235,8 @@ class PitchAnalysis(models.Model):
             links['video'] = self.video_file.url
         if self.explainer_video_file:
             links['explainer_video'] = self.explainer_video_file.url
+        if self.presenter_face_image_file:
+            links['presenter_face'] = self.presenter_face_image_file.url
         if self.document_file:
             links['document'] = self.document_file.url
         return links
