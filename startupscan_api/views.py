@@ -900,7 +900,7 @@ class BatchAnalysisResultsView(APIView):
 
 class DashboardView(RoleRequiredMixin, View):
     """Dashboard inicial"""
-    allowed_roles = {ROLE_PUBLICO, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_PUBLICO, ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
     def get(self, request):
         role = get_user_role(request.user)
         if request.user.is_authenticated and request.path == "/" and role_home_url_name(role) != "dashboard":
@@ -927,6 +927,9 @@ class DashboardView(RoleRequiredMixin, View):
             max_score = min_score
 
         all_scored = PitchAnalysis.objects.exclude(success_score__isnull=True)
+        if request.user.is_authenticated and role == ROLE_EMPREENDEDOR:
+            # Empreendedor visualiza o seu próprio histórico/ações.
+            all_scored = all_scored.filter(user=request.user)
         if days > 0:
             all_scored = all_scored.filter(created_at__gte=timezone.now() - timedelta(days=days))
         if engine != "all":

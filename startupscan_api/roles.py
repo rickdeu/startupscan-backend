@@ -58,7 +58,7 @@ def role_home_url_name(role: str) -> str:
     if role == ROLE_INVESTIDOR:
         return "investor_dashboard"
     if role == ROLE_EMPREENDEDOR:
-        return "pitch_form"
+        return "dashboard"
     if role == ROLE_ANALISTA:
         return "dashboard"
     if role == ROLE_ADMIN:
@@ -81,7 +81,7 @@ def role_access_matrix(role: str) -> dict:
     can_pitch = is_admin or is_analista or is_empreendedor
     can_investor = is_admin or is_analista or is_investidor
     can_models = is_admin or is_analista
-    can_dashboard = is_admin or is_analista or is_publico
+    can_dashboard = is_admin or is_analista or is_publico or is_empreendedor
     can_idea_builder = can_pitch
 
     return {
