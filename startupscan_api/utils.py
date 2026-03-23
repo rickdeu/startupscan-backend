@@ -404,6 +404,29 @@ def generate_interpretable_report(score, metadata):
     revenue = float(financial.get("revenue", 0) or 0)
     growth_rate = float(financial.get("growth_rate", 0) or 0)
     profit_margin = float(financial.get("profit_margin", 0) or 0)
+    text_meta = metadata.get("text", {}) if isinstance(metadata, dict) else {}
+    readability = float(text_meta.get("readability", 50) or 50)
+    sentiment_score = float(text_meta.get("sentiment_score", 0.5) or 0.5)
+
+    clarity = max(0.0, min(10.0, (readability / 10.0)))
+    proposta_valor = max(0.0, min(10.0, score * 0.95 + sentiment_score))
+    inovacao = max(0.0, min(10.0, score * 0.9 + 0.8))
+    viabilidade = max(0.0, min(10.0, (growth_rate / 20.0) + (profit_margin / 18.0) + 2.5))
+    escalabilidade = max(0.0, min(10.0, (growth_rate / 16.0) + 2.8))
+    mercado_alvo = max(0.0, min(10.0, score * 0.8 + 1.5))
+    equipe_fundadora = max(0.0, min(10.0, score * 0.75 + 1.8))
+    sustentabilidade = max(0.0, min(10.0, (profit_margin / 15.0) + 3.2))
+
+    category_scores = {
+        "clareza_da_ideia": round(clarity, 1),
+        "proposta_de_valor": round(proposta_valor, 1),
+        "inovacao": round(inovacao, 1),
+        "viabilidade_tecnica_financeira": round(viabilidade, 1),
+        "escalabilidade": round(escalabilidade, 1),
+        "mercado_alvo": round(mercado_alvo, 1),
+        "equipe_fundadora": round(equipe_fundadora, 1),
+        "sustentabilidade": round(sustentabilidade, 1),
+    }
 
     maturity = "Inicial"
     if score >= 7.5:
@@ -414,6 +437,7 @@ def generate_interpretable_report(score, metadata):
     base_strengths = [
         f"Score preditivo de sucesso em {score:.1f}/10.",
         f"Crescimento reportado de {growth_rate:.1f}% com margem de {profit_margin:.1f}%.",
+        f"Clareza do pitch estimada em {category_scores['clareza_da_ideia']:.1f}/10.",
         "Estrutura de pitch com dados financeiros objetivos.",
     ]
     base_weaknesses = [
@@ -425,6 +449,7 @@ def generate_interpretable_report(score, metadata):
         "Apresentar roadmap de 12 meses com marcos trimestrais e KPIs de tração.",
         "Demonstrar unit economics com CAC, LTV e payback por canal de aquisição.",
         "Priorizar investimento em receita previsível e retenção de clientes estratégicos.",
+        "Reforçar o pitch com provas de mercado (pilotos, LOIs e cases de clientes).",
     ]
 
     investment_thesis = (
@@ -448,6 +473,8 @@ def generate_interpretable_report(score, metadata):
             f"Classificação: {maturity}. O modelo indica score {score:.1f}/10, "
             f"com crescimento de {growth_rate:.1f}% e margem de {profit_margin:.1f}%."
         ),
+        "final_score": round(score, 1),
+        "category_scores": category_scores,
         "strengths": base_strengths,
         "weaknesses": base_weaknesses,
         "recommendations": base_recommendations,

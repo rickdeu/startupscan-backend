@@ -9,6 +9,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from django.shortcuts import render, redirect
+from django.views import View
+from django.core.files.storage import FileSystemStorage
+from django.contrib import messages
+from django.contrib.auth import login
 from startupscan_api.forms import RegisterForm
 from startupscan_api.models import PitchAnalysis
 from startupscan_api.services.model_training import (
@@ -25,14 +30,16 @@ from startupscan_api.services.model_registry import (
     get_model_path,
     set_active_model,
 )
+from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
+from startupscan_api.services.report_export import export_analysis_pdf
 
 import joblib
 from celery.result import AsyncResult
-from django.conf import settings
 from django.core.management import call_command
 from django.db.models import Avg, Count, Max
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
+from django.http import FileResponse
 
 from .utils import (
     prepare_features,
@@ -122,12 +129,22 @@ class StartupPitchAnalyzer(APIView):
         try:
             # Extrair dados da requisição
             text = request.data.get('text', '')
+            text_file = request.FILES.get('text_file')
             audio_file = request.FILES.get('audio')
             video_file = request.FILES.get('video')
+            youtube_url = (request.data.get("youtube_url", "") or "").strip()
             financial_data = request.data.get('financial_data', {})
             model_source = str(request.data.get("model_source", "local")).strip().lower()
             if model_source not in {"local", "gpt"}:
                 model_source = "local"
+
+            extracted_text = extract_text_from_uploaded_file(text_file)
+            text = merge_pitch_text(text, extracted_text, youtube_url)
+            if not text:
+                return Response(
+                    {"error": "Pitch text not provided. Send text or upload a document."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             
             # 2. Processar arquivos temporários (context manager recomendado)
             with TempFileManager(audio_file, video_file) as file_paths:
@@ -137,7 +154,8 @@ class StartupPitchAnalyzer(APIView):
                 pitch_data = {
                     'text': text,
                     'audio_path': audio_path,
-                    'video_path': video_path
+                    'video_path': video_path,
+                    'youtube_url': youtube_url,
                 }
                 
                 # 4. Extrair features
@@ -171,9 +189,16 @@ class StartupPitchAnalyzer(APIView):
 
                 report = ensure_report_dict(report, prediction)
                 metadata["analysis_engine_used"] = engine_used
+                metadata["sources"] = {
+                    "text_file_name": text_file.name if text_file else "",
+                    "youtube_url": youtube_url,
+                    "has_audio": bool(audio_file),
+                    "has_video": bool(video_file),
+                }
                 
                 return Response({
                     'success_score': float(prediction),
+                    'category_scores': report.get("category_scores", {}),
                     'report': report,
                     'metadata': metadata,
                     'engine_used': engine_used,
@@ -394,10 +419,6 @@ class BatchAnalysisResultsView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-# web form
-from django.shortcuts import render, redirect
-from django.views import View
-
 class DashboardView(View):
     """Dashboard inicial"""
     def get(self, request):
@@ -460,6 +481,24 @@ class DashboardView(View):
             all_scored.filter(success_score__gte=5, success_score__lt=7.5).count(),
             all_scored.filter(success_score__gte=7.5).count(),
         ]
+
+        industry_labels_map = dict(PitchAnalysis.INDUSTRY_CHOICES)
+        sector_rows = list(
+            all_scored.values("industry").annotate(avg_score=Avg("success_score"), total=Count("id")).order_by("-avg_score")
+        )
+        sector_labels = [industry_labels_map.get(row["industry"], row["industry"]) for row in sector_rows]
+        sector_avg_scores = [round(float(row["avg_score"] or 0), 2) for row in sector_rows]
+        sector_totals = [int(row["total"] or 0) for row in sector_rows]
+
+        user_sector_comparison = {}
+        if request.user.is_authenticated and recent_analyses:
+            latest = recent_analyses[0]
+            sector_avg = all_scored.filter(industry=latest.industry).aggregate(avg=Avg("success_score")).get("avg") or 0
+            user_sector_comparison = {
+                "industry_label": industry_labels_map.get(latest.industry, latest.industry),
+                "latest_score": round(float(latest.success_score or 0), 2),
+                "sector_avg": round(float(sector_avg), 2),
+            }
         
         return render(request, 'analyzer/dashboard.html', {
             'recent_analyses': recent_analyses,
@@ -472,94 +511,15 @@ class DashboardView(View):
             'chart_revenues_json': json.dumps(chart_revenues),
             'chart_growth_json': json.dumps(chart_growth),
             'chart_distribution_json': json.dumps(score_distribution),
+            'chart_sector_labels_json': json.dumps(sector_labels),
+            'chart_sector_avg_json': json.dumps(sector_avg_scores),
+            'chart_sector_total_json': json.dumps(sector_totals),
             'filter_min_score': min_score,
             'filter_max_score': max_score,
             'filter_days': days,
             'filter_engine': engine,
+            'user_sector_comparison': user_sector_comparison,
         })
-
-class PitchFormView(View):
-    """Formulário para inserção de dados do pitch"""
-    def get(self, request):
-        return render(request, 'analyzer/pitch_form.html')
-
-    def post(self, request):
-        try:
-            # Extrair dados do formulário
-            text = request.POST.get('text', '')
-            audio_file = request.FILES.get('audio')
-            video_file = request.FILES.get('video')
-            
-            # Dados financeiros
-            financial_data = {
-                'revenue': float(request.POST.get('revenue', 0)),
-                'growth_rate': float(request.POST.get('growth_rate', 0)),
-                'profit_margin': float(request.POST.get('profit_margin', 0))
-            }
-            
-            # Garantir que o modelo existe
-            model = ensure_model_exists()
-            if model is None:
-                return render(request, 'analyzer/error.html', {
-                    'error': 'Modelo não disponível e não pôde ser treinado'
-                }, status=503)
-            
-            # Processar arquivos temporários
-            with TempFileManager(audio_file, video_file) as file_paths:
-                audio_path, video_path = file_paths
-                
-                # Preparar dados para análise
-                pitch_data = {
-                    'text': text,
-                    'audio_path': audio_path,
-                    'video_path': video_path
-                }
-                
-                # Extrair features
-                features, metadata = prepare_features(pitch_data, financial_data)
-                
-                # Fazer previsão
-                prediction = model.predict([features])[0]
-                
-                # Gerar relatório
-                report = generate_interpretable_report(prediction, metadata)
-                
-                # Salvar análise no banco de dados
-                analysis = PitchAnalysis.objects.create(
-                    user=request.user if request.user.is_authenticated else None,
-                    text=text,
-                    audio_file=audio_file,
-                    video_file=video_file,
-                    revenue=financial_data['revenue'],
-                    growth_rate=financial_data['growth_rate'],
-                    profit_margin=financial_data['profit_margin'],
-                    success_score=float(prediction),
-                    report=report,
-                    metadata=metadata
-                )
-                
-                return redirect('pitch_results', analysis_id=analysis.id)
-            
-        except Exception as e:
-            logger.error(f"Error processing pitch: {str(e)}", exc_info=True)
-            return render(request, 'analyzer/error.html', {
-                'error': 'Ocorreu um erro durante a análise'
-            }, status=500)
-
-
-
-
-from django.shortcuts import render, redirect
-from django.views import View
-from django.core.files.storage import FileSystemStorage
-from django.contrib import messages
-import logging
-from .models import PitchAnalysis
-import tempfile
-import os
-from datetime import datetime
-
-logger = logging.getLogger(__name__)
 
 class PitchFormView(View):
     """Formulário para análise de pitch com tratamento completo de erros"""
@@ -569,6 +529,7 @@ class PitchFormView(View):
         context = {
             'default_date': datetime.now().strftime('%Y-%m-%d'),
             'max_file_size': 50,  # MB
+            'industries': PitchAnalysis.INDUSTRY_CHOICES,
             'form_data': {'model_source': 'local'},
         }
         return render(request, 'analyzer/pitch_form.html', context)
@@ -577,11 +538,30 @@ class PitchFormView(View):
         """Processa o formulário submetido"""
         try:
             # 1. Validação inicial dos dados obrigatórios
-                        # Na validação do texto
-            text = request.POST.get('text', '').strip()
+            startup_name = request.POST.get("startup_name", "").strip()
+            contact_email = request.POST.get("contact_email", "").strip()
+            industry = request.POST.get("industry", "tech").strip() or "tech"
+
+            raw_text = request.POST.get('text', '').strip()
+            text_file = request.FILES.get("text_file")
+            youtube_url = request.POST.get("youtube_url", "").strip()
+            extracted_text = extract_text_from_uploaded_file(text_file)
+            text = merge_pitch_text(raw_text, extracted_text, youtube_url)
+
             if not text or len(text) < 100:
                 messages.error(request, "O texto do pitch deve ter pelo menos 100 caracteres.", extra_tags="text:Texto muito curto")
                 return self._render_form_with_data(request)
+
+            if text_file:
+                allowed = (".txt", ".md", ".csv", ".pdf", ".docx")
+                lower_name = (text_file.name or "").lower()
+                if not lower_name.endswith(allowed):
+                    messages.error(
+                        request,
+                        "Documento de texto inválido. Use TXT, MD, CSV, PDF ou DOCX.",
+                        extra_tags="text_file:Formato inválido",
+                    )
+                    return self._render_form_with_data(request)
 
             # Na validação do áudio
             # 2. Validação dos arquivos
@@ -605,6 +585,18 @@ class PitchFormView(View):
                 if video_file.size > 100 * 1024 * 1024:
                     messages.error(request, "O arquivo de vídeo não pode exceder 100MB.", extra_tags="video_file:Tamanho excedido")
                     return self._render_form_with_data(request)
+
+            if youtube_url and not youtube_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
+                messages.error(
+                    request,
+                    "Link do YouTube inválido.",
+                    extra_tags="youtube_url:URL inválida"
+                )
+                return self._render_form_with_data(request)
+
+            if not video_file and not youtube_url:
+                # vídeo é opcional, mas indicamos na UX quando nenhum envio de vídeo existe
+                pass
            
            
            
@@ -651,6 +643,7 @@ class PitchFormView(View):
                         'text': text,
                         'audio_path': audio_path,
                         'video_path': video_path,
+                        'youtube_url': youtube_url,
                         'submission_date': request.POST.get('submission_date')
                     }
                     
@@ -685,10 +678,19 @@ class PitchFormView(View):
                     prediction = max(0, min(10, float(prediction)))  # Garante score entre 0-10
                     report = ensure_report_dict(report, prediction)
                     metadata["analysis_engine_used"] = engine_used
+                    metadata["sources"] = {
+                        "text_file_name": text_file.name if text_file else "",
+                        "youtube_url": youtube_url,
+                        "has_audio": bool(audio_file),
+                        "has_video": bool(video_file),
+                    }
                      
                     # 10. Salvamento da análise
                     analysis = self._save_analysis(
                         request=request,
+                        startup_name=startup_name,
+                        industry=industry,
+                        contact_email=contact_email,
                         text=text,
                         audio_file=audio_file,
                         video_file=video_file,
@@ -715,13 +717,13 @@ class PitchFormView(View):
     # Métodos auxiliares
     def _is_valid_audio(self, audio_file):
         """Valida o formato do arquivo de áudio"""
-        valid_extensions = ['.mp3', '.wav', '.ogg']
+        valid_extensions = ['.mp3', '.wav', '.ogg', '.webm', '.m4a']
         ext = os.path.splitext(audio_file.name)[1].lower()
         return ext in valid_extensions
 
     def _is_valid_video(self, video_file):
         """Valida o formato do arquivo de vídeo"""
-        valid_extensions = ['.mp4', '.mov', '.avi']
+        valid_extensions = ['.mp4', '.mov', '.avi', '.webm']
         ext = os.path.splitext(video_file.name)[1].lower()
         return ext in valid_extensions
 
@@ -737,9 +739,11 @@ class PitchFormView(View):
             def __enter__(self):
                 fs = FileSystemStorage(location=tempfile.gettempdir())
                 if self.audio:
-                    self.audio_path = fs.save(f"pitch_audio_{tempfile.gettempprefix()}", self.audio)
+                    audio_ext = os.path.splitext(self.audio.name)[1].lower() or ".bin"
+                    self.audio_path = fs.save(f"pitch_audio_{tempfile.gettempprefix()}{audio_ext}", self.audio)
                 if self.video:
-                    self.video_path = fs.save(f"pitch_video_{tempfile.gettempprefix()}", self.video)
+                    video_ext = os.path.splitext(self.video.name)[1].lower() or ".bin"
+                    self.video_path = fs.save(f"pitch_video_{tempfile.gettempprefix()}{video_ext}", self.video)
                 return (self.audio_path, self.video_path)
             
             def __exit__(self, exc_type, exc_val, exc_tb):
@@ -751,11 +755,18 @@ class PitchFormView(View):
         
         return TempFileManager(audio_file, video_file)
 
-    def _save_analysis(self, request, text, audio_file, video_file, 
+    def _save_analysis(self, request, startup_name, industry, contact_email, text, audio_file, video_file, 
                       financial_data, prediction, report, metadata):
         """Salva a análise no banco de dados"""
+        valid_industries = {choice[0] for choice in PitchAnalysis.INDUSTRY_CHOICES}
+        if industry not in valid_industries:
+            industry = "other"
+
         return PitchAnalysis.objects.create(
             user=request.user if request.user.is_authenticated else None,
+            startup_name=startup_name or None,
+            industry=industry,
+            contact_email=contact_email or None,
             text=text,
             audio_file=audio_file,
             video_file=video_file,
@@ -777,11 +788,16 @@ class PitchFormView(View):
     def _render_form_with_data(self, request):
         """Re-renderiza o formulário com os dados submetidos e mensagens de erro"""
         form_data = {
+            'startup_name': request.POST.get('startup_name', ''),
+            'industry': request.POST.get('industry', 'tech'),
+            'contact_email': request.POST.get('contact_email', ''),
             'text': request.POST.get('text', ''),
+            'youtube_url': request.POST.get('youtube_url', ''),
             'revenue': request.POST.get('revenue', ''),
             'growth_rate': request.POST.get('growth_rate', ''),
             'profit_margin': request.POST.get('profit_margin', ''),
             'model_source': request.POST.get('model_source', 'local'),
+            'text_file': request.FILES.get('text_file'),
             'audio_file': request.FILES.get('audio'),
             'video_file': request.FILES.get('video')
         }
@@ -798,7 +814,8 @@ class PitchFormView(View):
             'form_data': form_data,
             'errors': errors,
             'default_date': datetime.now().strftime('%Y-%m-%d'),
-            'max_file_size': 50  # MB
+            'max_file_size': 50,  # MB
+            'industries': PitchAnalysis.INDUSTRY_CHOICES,
         }
         return render(request, 'analyzer/pitch_form.html', context)
 
@@ -809,6 +826,27 @@ class PitchResultsView(View):
         return render(request, 'analyzer/result.html', {
             'analysis': analysis
         })
+
+
+class PitchReportPDFView(View):
+    """Exporta relatório de análise em PDF."""
+
+    def get(self, request, analysis_id):
+        analysis = PitchAnalysis.objects.get(id=analysis_id)
+        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+            return redirect("dashboard")
+
+        reports_dir = os.path.join(settings.MEDIA_ROOT, "reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        output_path = os.path.join(reports_dir, f"analysis_report_{analysis.id}.pdf")
+        export_analysis_pdf(analysis, output_path)
+
+        return FileResponse(
+            open(output_path, "rb"),
+            as_attachment=True,
+            filename=f"relatorio_pitch_{analysis.id}.pdf",
+            content_type="application/pdf",
+        )
 
 
 class ModelManagementView(LoginRequiredMixin, View):
@@ -1000,11 +1038,6 @@ class InvestorDashboardView(View):
 
 
 
-
-# analyzer/views.py
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
-from django.contrib import messages
 
 def register_view(request):
     if request.method == "POST":

@@ -267,17 +267,23 @@ def ensure_report_dict(report, score):
         report.setdefault("status", "ok")
         report.setdefault("summary", f"Pontuação prevista: {float(score):.2f}/10")
         report.setdefault("recommendations", [])
+        report.setdefault("category_scores", {})
+        report.setdefault("final_score", round(float(score), 1))
         return report
     if isinstance(report, str):
         return {
             "status": "ok",
             "summary": report[:600],
             "recommendations": [],
+            "category_scores": {},
+            "final_score": round(float(score), 1),
         }
     return {
         "status": "ok",
         "summary": f"Pontuação prevista: {float(score):.2f}/10",
         "recommendations": [],
+        "category_scores": {},
+        "final_score": round(float(score), 1),
     }
 
 

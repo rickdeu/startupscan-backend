@@ -2,8 +2,10 @@ from rest_framework import serializers
 
 class PitchAnalysisSerializer(serializers.Serializer):
     text = serializers.CharField(required=False)
+    text_file = serializers.FileField(required=False)
     audio = serializers.FileField(required=False)
     video = serializers.FileField(required=False)
+    youtube_url = serializers.URLField(required=False, allow_blank=True)
     financial_data = serializers.JSONField(required=False)
     model_source = serializers.ChoiceField(
         choices=["local", "gpt"],

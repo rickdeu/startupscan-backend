@@ -11,14 +11,16 @@ def TempFileManager(audio_file=None, video_file=None):
     try:
         # Processar áudio
         if audio_file:
-            _, audio_path = tempfile.mkstemp(suffix='.mp3')
+            audio_suffix = os.path.splitext(getattr(audio_file, "name", ""))[1] or ".mp3"
+            _, audio_path = tempfile.mkstemp(suffix=audio_suffix)
             with open(audio_path, 'wb+') as f:
                 for chunk in audio_file.chunks():
                     f.write(chunk)
         
         # Processar vídeo
         if video_file:
-            _, video_path = tempfile.mkstemp(suffix='.mp4')
+            video_suffix = os.path.splitext(getattr(video_file, "name", ""))[1] or ".mp4"
+            _, video_path = tempfile.mkstemp(suffix=video_suffix)
             with open(video_path, 'wb+') as f:
                 for chunk in video_file.chunks():
                     f.write(chunk)
