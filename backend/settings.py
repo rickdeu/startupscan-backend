@@ -67,6 +67,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'startupscan_api.context_processors.user_role_context',
             ],
         },
     },
@@ -194,8 +195,8 @@ MEDIA_URL = '/media/'
 LOGIN_URL = 'login'
 #LOGOUT_REDIRECT_URL = '/'
 
-LOGOUT_REDIRECT_URL = 'dashboard'
-LOGIN_REDIRECT_URL = 'dashboard' 
+LOGOUT_REDIRECT_URL = 'login'
+LOGIN_REDIRECT_URL = 'role_home' 
 
 #STATIC_ROOT = '/app/staticfiles'
 #STATIC_URL = '/static/'

@@ -70,6 +70,19 @@
                                 </div>
                             {% endif %}
                         </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.profile_role.id_for_label }}">Perfil de Utilizador</label>
+                            {{ form.profile_role }}
+                            <small class="form-text text-muted">
+                                Escolha o perfil que melhor representa o seu acesso no sistema.
+                            </small>
+                            {% if form.profile_role.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.profile_role.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
                         
                         <div class="form-group mb-3">
                             <label for="{{ form.password1.id_for_label }}">Senha</label>
@@ -118,7 +131,7 @@
 
 <script>
 // Adiciona classes Bootstrap aos campos do formulário
-document.querySelectorAll('input').forEach(input => {
+document.querySelectorAll('input, select').forEach(input => {
     input.classList.add('form-control');
     
     if (input.errors) {

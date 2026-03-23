@@ -15,26 +15,34 @@
     <div class="app-shell">
         <aside class="app-sidebar" id="appSidebar">
             <div class="sidebar-brand">
-                <a href="{% url 'dashboard' %}" class="brand-link">
+                <a href="{% if user.is_authenticated %}{% url user_role_home_url_name %}{% else %}{% url 'login' %}{% endif %}" class="brand-link">
                     <span class="brand-icon"><i class="fas fa-rocket"></i></span>
                     <span class="brand-text">StartupScan</span>
                 </a>
             </div>
             <div class="sidebar-caption">NAVEGAÇÃO</div>
             <nav class="sidebar-nav">
+                {% if user_role_access.can_dashboard %}
                 <a class="sidebar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'dashboard' %}">
                     <i class="fas fa-chart-pie"></i><span>Painel</span>
                 </a>
+                {% endif %}
+                {% if user_role_access.can_pitch %}
                 <a class="sidebar-link {% if '/analyze/form/' in request.path %}active{% endif %}" href="{% url 'pitch_form' %}">
                     <i class="fas fa-plus-circle"></i><span>Novo Pitch</span>
                 </a>
+                {% endif %}
+                {% if user_role_access.can_idea_builder %}
                 <a class="sidebar-link {% if '/pitch/builder/' in request.path %}active{% endif %}" href="{% url 'idea_pitch_builder' %}">
                     <i class="fas fa-lightbulb"></i><span>Gerar Pitch PDF</span>
                 </a>
+                {% endif %}
+                {% if user_role_access.can_investor %}
                 <a class="sidebar-link {% if '/investors/' in request.path %}active{% endif %}" href="{% url 'investor_dashboard' %}">
                     <i class="fas fa-hand-holding-dollar"></i><span>Investidores</span>
                 </a>
-                {% if user.is_authenticated %}
+                {% endif %}
+                {% if user.is_authenticated and user_role_access.can_models %}
                 <a class="sidebar-link {% if '/models/' in request.path %}active{% endif %}" href="{% url 'model_management' %}">
                     <i class="fas fa-sliders"></i><span>Modelos</span>
                 </a>
@@ -45,6 +53,7 @@
                 {% if user.is_authenticated %}
                 <div class="small text-muted mb-2">Sessão ativa</div>
                 <div class="fw-semibold mb-2">{{ user.first_name|default:user.username }}</div>
+                <div class="small text-muted mb-2">Perfil: {{ user_role_label }}</div>
                 <form action="{% url 'logout' %}" method="post">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-light w-100">Sair</button>

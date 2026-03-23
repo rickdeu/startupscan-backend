@@ -58,8 +58,22 @@ from django.core.cache import cache
 from django.db import close_old_connections
 from django.db.models import Avg, Count, Max
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
 from django.utils import timezone
 from django.http import FileResponse, JsonResponse
+
+from startupscan_api.roles import (
+    ROLE_ADMIN,
+    ROLE_ANALISTA,
+    ROLE_EMPREENDEDOR,
+    ROLE_INVESTIDOR,
+    ROLE_PUBLICO,
+    get_or_create_profile_for_user,
+    get_user_role,
+    role_access_matrix,
+    role_home_url,
+    role_home_url_name,
+)
 
 from .utils import (
     prepare_features,
@@ -90,6 +104,35 @@ def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:
     if len(normalized) > max_len:
         normalized = normalized[: max_len - 3].rstrip() + "..."
     return normalized
+
+
+def _redirect_for_role(request, *, fallback_role: str | None = None):
+    target_role = fallback_role or get_user_role(request.user)
+    return redirect(role_home_url_name(target_role))
+
+
+class RoleRequiredMixin(LoginRequiredMixin):
+    allowed_roles = {ROLE_PUBLICO, ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+
+    def dispatch(self, request, *args, **kwargs):
+        role = get_user_role(request.user)
+        if role not in set(self.allowed_roles or []):
+            messages.error(request, "O seu perfil não tem permissão para acessar esta página.")
+            return _redirect_for_role(request, fallback_role=role)
+        return super().dispatch(request, *args, **kwargs)
+
+
+class RoleBasedLoginView(LoginView):
+    template_name = "analyzer/login.html"
+
+    def get_success_url(self):
+        role = get_user_role(self.request.user)
+        return role_home_url(role)
+
+
+class RoleHomeView(LoginRequiredMixin, View):
+    def get(self, request):
+        return _redirect_for_role(request)
 
 
 def _infer_error_field(error_text: str) -> str:
@@ -855,9 +898,13 @@ class BatchAnalysisResultsView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-class DashboardView(View):
+class DashboardView(RoleRequiredMixin, View):
     """Dashboard inicial"""
+    allowed_roles = {ROLE_PUBLICO, ROLE_ANALISTA, ROLE_ADMIN}
     def get(self, request):
+        role = get_user_role(request.user)
+        if request.user.is_authenticated and request.path == "/" and role_home_url_name(role) != "dashboard":
+            return _redirect_for_role(request, fallback_role=role)
         try:
             min_score = float(request.GET.get("min_score", 0) or 0)
         except ValueError:
@@ -955,13 +1002,15 @@ class DashboardView(View):
             'filter_days': days,
             'filter_engine': engine,
             'user_sector_comparison': user_sector_comparison,
+            'role_access': role_access_matrix(role),
         })
 
 
-class IdeaPitchBuilderView(View):
+class IdeaPitchBuilderView(RoleRequiredMixin, View):
     """
     Formulário simplificado para guardar ideia no banco.
     """
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     required_fields = {
         "startup_name": "Nome da startup",
@@ -1044,10 +1093,11 @@ class IdeaPitchBuilderView(View):
             return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": {}})
 
 
-class IdeaPitchDetailView(View):
+class IdeaPitchDetailView(RoleRequiredMixin, View):
     """
     Página de revisão da ideia guardada + ação de gerar pitch completo.
     """
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     @staticmethod
     def _can_access(request, submission):
@@ -1122,10 +1172,11 @@ class IdeaPitchDetailView(View):
         return redirect("idea_pitch_detail", submission_id=submission.id)
 
 
-class IdeaPitchPDFView(View):
+class IdeaPitchPDFView(RoleRequiredMixin, View):
     """
     Exporta PDF do pitch completo a partir da submissão guardada.
     """
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request, submission_id):
         submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
@@ -1191,8 +1242,9 @@ class IdeaPitchPDFView(View):
         )
 
 
-class PitchFormView(View):
+class PitchFormView(RoleRequiredMixin, View):
     """Formulário para análise de pitch com tratamento completo de erros"""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
     
     def get(self, request):
         """Exibe o formulário vazio"""
@@ -1510,8 +1562,9 @@ class PitchFormView(View):
         }
         return render(request, 'analyzer/pitch_form.html', context)
 
-class PitchResultsView(View):
+class PitchResultsView(RoleRequiredMixin, View):
     """Página de resultados da análise"""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
         last_pitch_meta = (analysis.metadata or {}).get("last_generated_pitch_payload", {})
@@ -1618,8 +1671,9 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
     }
 
 
-class PitchReportPDFView(View):
+class PitchReportPDFView(RoleRequiredMixin, View):
     """Exporta relatório de análise em PDF."""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
@@ -1646,8 +1700,9 @@ class PitchReportPDFView(View):
         )
 
 
-class PitchInvestorPDFView(View):
+class PitchInvestorPDFView(RoleRequiredMixin, View):
     """Gera PDF de pitch (com slides) a partir da avaliação da startup."""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
@@ -1711,8 +1766,9 @@ class PitchInvestorPDFView(View):
             return redirect("pitch_results", analysis_id=analysis.id)
 
 
-class PitchExplainerVideoGenerateView(View):
+class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
     """Gera vídeo explicativo do potencial da startup com base na avaliação."""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
@@ -1813,8 +1869,9 @@ class PitchExplainerVideoGenerateView(View):
         return redirect("pitch_results", analysis_id=analysis.id)
 
 
-class PitchPresenterGenderDetectView(View):
+class PitchPresenterGenderDetectView(RoleRequiredMixin, View):
     """Detecta gênero provável da imagem do apresentador para confirmação no frontend."""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
@@ -1868,8 +1925,9 @@ class PitchPresenterGenderDetectView(View):
                     pass
 
 
-class PitchExplainerVideoProgressView(View):
+class PitchExplainerVideoProgressView(RoleRequiredMixin, View):
     """Endpoint de progresso em tempo real para geração de vídeo explicativo."""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request, analysis_id, job_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
@@ -1886,8 +1944,9 @@ class PitchExplainerVideoProgressView(View):
         return JsonResponse(state, status=200)
 
 
-class ModelManagementView(LoginRequiredMixin, View):
+class ModelManagementView(RoleRequiredMixin, View):
     """Painel para gestão de modelos treinados"""
+    allowed_roles = {ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request):
         models = _list_available_models()
@@ -2001,8 +2060,9 @@ class ModelManagementView(LoginRequiredMixin, View):
         return redirect("model_management")
 
 
-class ModelTrainingProgressView(LoginRequiredMixin, View):
+class ModelTrainingProgressView(RoleRequiredMixin, View):
     """Endpoint de progresso em tempo real para jobs de treino de modelo."""
+    allowed_roles = {ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request, job_id):
         state = cache.get(_model_training_cache_key(job_id))
@@ -2011,8 +2071,9 @@ class ModelTrainingProgressView(LoginRequiredMixin, View):
         return JsonResponse(state, status=200)
 
 
-class InvestorDashboardView(View):
+class InvestorDashboardView(RoleRequiredMixin, View):
     """Dashboard público para investidores visualizarem potenciais de startups"""
+    allowed_roles = {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request):
         try:
@@ -2109,8 +2170,9 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            get_or_create_profile_for_user(user)
             messages.success(request, "Registro realizado com sucesso!")
-            return redirect('dashboard')
+            return _redirect_for_role(request, fallback_role=get_user_role(user))
     else:
         form = RegisterForm()
     
