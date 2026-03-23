@@ -1,187 +1,179 @@
 {% extends "analyzer/base.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h2 class="mb-0">Analisar Pitch de Startup</h2>
-        </div>
-        <div class="card-body">
-            <!-- Exibir mensagens de erro gerais -->
-            {% if messages %}
-            <div class="alert alert-danger">
-                <ul class="mb-0">
-                    {% for message in messages %}
-                    <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h2 class="mb-0">Submeter Pitch Multimodal</h2>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
 
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                
-                <!-- Campo de texto com validação -->
-                <div class="form-group">
-                    <label for="text">Texto do Pitch:</label>
-                    <textarea class="form-control {% if errors.text %}is-invalid{% endif %}" 
-                             id="text" name="text" rows="5" required>{{ form_data.text }}</textarea>
-                    <small class="form-text text-muted">Cole o texto completo do seu pitch aqui (mínimo 100 caracteres).</small>
-                    {% if errors.text %}
-                    <div class="invalid-feedback">
-                        {{ errors.text }}
-                    </div>
-                    {% endif %}
+            <h5 class="mb-3">Informações da Startup</h5>
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label" for="startup_name">Nome da Startup</label>
+                    <input class="form-control" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}">
                 </div>
-                
-                <div class="row mt-4">
-                    <!-- Campo de áudio com validação -->
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="audio">Arquivo de Áudio:</label>
-                            <div class="custom-file">
-                                <input type="file" 
-                                       class="custom-file-input {% if errors.audio_file %}is-invalid{% endif %}" 
-                                       id="audio" 
-                                       name="audio" 
-                                       accept="audio/*">
-                                <label class="custom-file-label" for="audio">
-                                    {% if form_data.audio_file %}{{ form_data.audio_file.name }}{% else %}Escolha o arquivo...{% endif %}
-                                </label>
-                            </div>
-                            <small class="form-text text-muted">Formatos aceitos: MP3, WAV, OGG (até 50MB).</small>
-                            {% if errors.audio_file %}
-                            <div class="invalid-feedback d-block">
-                                {{ errors.audio_file }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <!-- Campo de vídeo com validação -->
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="video">Arquivo de Vídeo:</label>
-                            <div class="custom-file">
-                                <input type="file" 
-                                       class="custom-file-input {% if errors.video_file %}is-invalid{% endif %}" 
-                                       id="video" 
-                                       name="video" 
-                                       accept="video/*">
-                                <label class="custom-file-label" for="video">
-                                    {% if form_data.video_file %}{{ form_data.video_file.name }}{% else %}Escolha o arquivo...{% endif %}
-                                </label>
-                            </div>
-                            <small class="form-text text-muted">Formatos aceitos: MP4, MOV, AVI (até 100MB).</small>
-                            {% if errors.video_file %}
-                            <div class="invalid-feedback d-block">
-                                {{ errors.video_file }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <h4 class="mt-4 mb-3">Dados Financeiros</h4>
-                <div class="row">
-                    <!-- Campo de receita com validação -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="revenue">Receita Anual (AOA):</label>
-                            <input type="number" 
-                                   step="0.01" 
-                                   class="form-control {% if errors.revenue %}is-invalid{% endif %}" 
-                                   id="revenue" 
-                                   name="revenue" 
-                                   value="{{ form_data.revenue|default_if_none:'' }}" 
-                                   required>
-                            {% if errors.revenue %}
-                            <div class="invalid-feedback">
-                                {{ errors.revenue }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <!-- Campo de taxa de crescimento com validação -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="growth_rate">Taxa de Crescimento (%):</label>
-                            <input type="number" 
-                                   step="0.01" 
-                                   class="form-control {% if errors.growth_rate %}is-invalid{% endif %}" 
-                                   id="growth_rate" 
-                                   name="growth_rate" 
-                                   value="{{ form_data.growth_rate|default_if_none:'' }}" 
-                                   required>
-                            {% if errors.growth_rate %}
-                            <div class="invalid-feedback">
-                                {{ errors.growth_rate }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <!-- Campo de margem de lucro com validação -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="profit_margin">Margem de Lucro (%):</label>
-                            <input type="number" 
-                                   step="0.01" 
-                                   class="form-control {% if errors.profit_margin %}is-invalid{% endif %}" 
-                                   id="profit_margin" 
-                                   name="profit_margin" 
-                                   value="{{ form_data.profit_margin|default_if_none:'' }}" 
-                                   required>
-                            {% if errors.profit_margin %}
-                            <div class="invalid-feedback">
-                                {{ errors.profit_margin }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <h4 class="mt-4 mb-3">Motor de Análise</h4>
-                <div class="form-group">
-                    <select class="form-control" id="model_source" name="model_source">
-                        <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>
-                            Modelo treinado localmente (mais estável, sem API externa)
-                        </option>
-                        <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>
-                            Modelo GPT existente (se OPENAI_API_KEY estiver configurada)
-                        </option>
+                <div class="col-md-4">
+                    <label class="form-label" for="industry">Sector</label>
+                    <select class="form-select" id="industry" name="industry">
+                        {% for value, label in industries %}
+                        <option value="{{ value }}" {% if form_data.industry|default:'tech' == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
-                    <small class="form-text text-muted">
-                        Se GPT não estiver disponível no servidor, o sistema faz fallback automático para o modelo local.
-                    </small>
                 </div>
-                
-                <div class="mt-4 text-center">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-chart-line mr-2"></i> Analisar Pitch
+                <div class="col-md-3">
+                    <label class="form-label" for="contact_email">E-mail de contacto</label>
+                    <input class="form-control" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}">
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <h5 class="mb-3">Modalidades</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label" for="text">Texto do Pitch</label>
+                    <textarea class="form-control {% if errors.text %}is-invalid{% endif %}" id="text" name="text" rows="5">{{ form_data.text }}</textarea>
+                    <small class="text-muted">Pode usar apenas texto, documento, áudio, vídeo ou combinação.</small>
+                    {% if errors.text %}<div class="invalid-feedback">{{ errors.text }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="text_file">Documento (TXT/PDF/DOCX)</label>
+                    <input class="form-control {% if errors.text_file %}is-invalid{% endif %}" type="file" id="text_file" name="text_file" accept=".txt,.md,.csv,.pdf,.docx">
+                    {% if errors.text_file %}<div class="invalid-feedback">{{ errors.text_file }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="youtube_url">Link do YouTube (opcional)</label>
+                    <input class="form-control {% if errors.youtube_url %}is-invalid{% endif %}" type="url" id="youtube_url" name="youtube_url" value="{{ form_data.youtube_url }}" placeholder="https://www.youtube.com/watch?v=...">
+                    {% if errors.youtube_url %}<div class="invalid-feedback">{{ errors.youtube_url }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <div class="col-lg-6">
+                    <div class="border rounded p-3">
+                        <label class="form-label" for="audio">Áudio (upload ou gravação)</label>
+                        <input class="form-control mb-2 {% if errors.audio_file %}is-invalid{% endif %}" type="file" id="audio" name="audio" accept="audio/*">
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="startAudioBtn">Gravar áudio</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="stopAudioBtn" disabled>Parar</button>
+                        </div>
+                        <audio id="audioPreview" controls class="w-100"></audio>
+                        {% if errors.audio_file %}<div class="invalid-feedback d-block">{{ errors.audio_file }}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="border rounded p-3">
+                        <label class="form-label" for="video">Vídeo (upload ou gravação)</label>
+                        <input class="form-control mb-2 {% if errors.video_file %}is-invalid{% endif %}" type="file" id="video" name="video" accept="video/*">
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="startVideoBtn">Gravar vídeo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="stopVideoBtn" disabled>Parar</button>
+                        </div>
+                        <video id="videoPreview" controls class="w-100" style="max-height:220px;"></video>
+                        {% if errors.video_file %}<div class="invalid-feedback d-block">{{ errors.video_file }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <h5 class="mb-3">Dados Financeiros</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="revenue">Receita Anual (AOA)</label>
+                    <input type="number" step="0.01" class="form-control {% if errors.revenue %}is-invalid{% endif %}" id="revenue" name="revenue" value="{{ form_data.revenue|default_if_none:'' }}" required>
+                    {% if errors.revenue %}<div class="invalid-feedback">{{ errors.revenue }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="growth_rate">Taxa de Crescimento (%)</label>
+                    <input type="number" step="0.01" class="form-control {% if errors.growth_rate %}is-invalid{% endif %}" id="growth_rate" name="growth_rate" value="{{ form_data.growth_rate|default_if_none:'' }}" required>
+                    {% if errors.growth_rate %}<div class="invalid-feedback">{{ errors.growth_rate }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="profit_margin">Margem de Lucro (%)</label>
+                    <input type="number" step="0.01" class="form-control {% if errors.profit_margin %}is-invalid{% endif %}" id="profit_margin" name="profit_margin" value="{{ form_data.profit_margin|default_if_none:'' }}" required>
+                    {% if errors.profit_margin %}<div class="invalid-feedback">{{ errors.profit_margin }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                    <label class="form-label" for="model_source">Motor de análise</label>
+                    <select class="form-select" id="model_source" name="model_source">
+                        <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>Modelo treinado localmente</option>
+                        <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>Modelo GPT (fallback automático)</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-chart-line me-2"></i>Analisar Pitch
                     </button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
-// Mostrar nome do arquivo selecionado
-document.querySelectorAll('.custom-file-input').forEach(input => {
-    // Manter o nome do arquivo se já foi selecionado anteriormente
-    const initialFileName = input.nextElementSibling.textContent;
-    if (initialFileName && initialFileName !== 'Escolha o arquivo...') {
-        input.nextElementSibling.textContent = initialFileName;
-    }
-    
-    // Atualizar quando o usuário selecionar um novo arquivo
-    input.addEventListener('change', function(e) {
-        const fileName = e.target.files[0]?.name || 'Escolha o arquivo...';
-        const label = e.target.nextElementSibling;
-        label.textContent = fileName;
+function setRecordedFileOnInput(input, blob, filename, mimeType) {
+    const file = new File([blob], filename, { type: mimeType });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+}
+
+async function setupRecorder(config) {
+    const { kind, startBtnId, stopBtnId, inputId, previewId } = config;
+    const startBtn = document.getElementById(startBtnId);
+    const stopBtn = document.getElementById(stopBtnId);
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    let mediaRecorder = null;
+    let stream = null;
+    let chunks = [];
+
+    startBtn.addEventListener("click", async () => {
+        const constraints = kind === "audio" ? { audio: true, video: false } : { audio: true, video: true };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (evt) => { if (evt.data.size > 0) chunks.push(evt.data); };
+        mediaRecorder.onstop = () => {
+            const mimeType = kind === "audio" ? "audio/webm" : "video/webm";
+            const filename = kind === "audio" ? "gravacao_audio.webm" : "gravacao_video.webm";
+            const blob = new Blob(chunks, { type: mimeType });
+            setRecordedFileOnInput(input, blob, filename, mimeType);
+            const localUrl = URL.createObjectURL(blob);
+            preview.srcObject = null;
+            preview.src = localUrl;
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        };
+
+        if (kind === "video") {
+            preview.srcObject = stream;
+            preview.muted = true;
+            await preview.play().catch(() => {});
+        }
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
     });
-});
+
+    stopBtn.addEventListener("click", () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+        }
+    });
+}
+
+setupRecorder({ kind: "audio", startBtnId: "startAudioBtn", stopBtnId: "stopAudioBtn", inputId: "audio", previewId: "audioPreview" });
+setupRecorder({ kind: "video", startBtnId: "startVideoBtn", stopBtnId: "stopVideoBtn", inputId: "video", previewId: "videoPreview" });
 </script>
 {% endblock %}

@@ -98,6 +98,36 @@
 
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Comparação por Sector</h5>
+                <div class="small text-muted">média de score por sector</div>
+            </div>
+            <div class="card-body">
+                <canvas id="sectorComparisonChart" height="95"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Seu Benchmark</h5>
+            </div>
+            <div class="card-body">
+                {% if user_sector_comparison %}
+                <p class="mb-2"><strong>Sector:</strong> {{ user_sector_comparison.industry_label }}</p>
+                <p class="mb-2"><strong>Seu último score:</strong> {{ user_sector_comparison.latest_score }}/10</p>
+                <p class="mb-0"><strong>Média do sector:</strong> {{ user_sector_comparison.sector_avg }}/10</p>
+                {% else %}
+                <p class="text-muted mb-0">Sem dados suficientes para benchmark sectorial.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Evolução de Score das Startups</h5>
@@ -202,6 +232,8 @@
     const revenues = {{ chart_revenues_json|safe }};
     const growth = {{ chart_growth_json|safe }};
     const distribution = {{ chart_distribution_json|safe }};
+    const sectorLabels = {{ chart_sector_labels_json|safe }};
+    const sectorAvg = {{ chart_sector_avg_json|safe }};
 
     const commonGrid = { color: "rgba(148,163,184,0.22)" };
 
@@ -304,6 +336,31 @@
             const analysisId = analysisIds[idx];
             if (analysisId) window.location.href = `/results/${analysisId}/`;
         };
+    }
+
+    const sectorCtx = document.getElementById("sectorComparisonChart");
+    if (sectorCtx) {
+        new Chart(sectorCtx, {
+            type: "bar",
+            data: {
+                labels: sectorLabels,
+                datasets: [{
+                    label: "Média de score por sector",
+                    data: sectorAvg,
+                    backgroundColor: "rgba(14,165,233,0.45)",
+                    borderColor: "#0284c7",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 10, grid: commonGrid },
+                    x: { grid: commonGrid }
+                }
+            }
+        });
     }
 </script>
 {% endblock %}
