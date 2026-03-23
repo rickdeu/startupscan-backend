@@ -29,6 +29,23 @@ class VideoPlan:
     engine_used: str
 
 
+class ExplainerVideoGenerationError(RuntimeError):
+    """Erro estruturado para expor falhas de geração realista/local."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        did_status: str | None = None,
+        did_error: str | None = None,
+        local_error: str | None = None,
+    ):
+        super().__init__(message)
+        self.did_status = did_status
+        self.did_error = did_error
+        self.local_error = local_error
+
+
 def _load_font(size: int):
     candidates = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -666,6 +683,11 @@ def _generate_tts_audio(narration_text: str, audio_path: str) -> tuple[bool, str
         return False, "none"
 
 
+def _safe_error_text(exc: Exception) -> str:
+    text = str(exc).strip()
+    return text if text else exc.__class__.__name__
+
+
 def generate_explainer_video(
     analysis,
     output_path: str,
@@ -701,74 +723,105 @@ def generate_explainer_video(
         }
 
     clips = []
+    final_clip = None
+    audio_clip = None
+    tts_engine = "none"
+    tmp_audio_path = output_path.replace(".mp4", ".mp3")
     presenter_face_patch = _extract_face_patch(presenter_image)
-    for idx, scene in enumerate(plan.scenes, start=1):
-        duration = float(scene["duration"])
-        if presenter_image is not None:
-            clip = VideoClip(
-                lambda t, _scene=scene, _idx=idx: _draw_scene(
-                    _scene,
+
+    try:
+        for idx, scene in enumerate(plan.scenes, start=1):
+            duration = float(scene["duration"])
+            if presenter_image is not None:
+                clip = VideoClip(
+                    lambda t, _scene=scene, _idx=idx: _draw_scene(
+                        _scene,
+                        plan.character_name,
+                        startup_name,
+                        score,
+                        _idx,
+                        len(plan.scenes),
+                        presenter_image=presenter_image,
+                        presenter_face_patch=presenter_face_patch,
+                        motion_t=float(t) + (_idx * 0.75),
+                    ),
+                    duration=duration,
+                )
+            else:
+                frame = _draw_scene(
+                    scene,
                     plan.character_name,
                     startup_name,
                     score,
-                    _idx,
+                    idx,
                     len(plan.scenes),
                     presenter_image=presenter_image,
-                    presenter_face_patch=presenter_face_patch,
-                    motion_t=float(t) + (_idx * 0.75),
+                )
+                clip = ImageClip(frame).with_duration(duration)
+            clips.append(clip)
+
+        final_clip = concatenate_videoclips(clips, method="compose")
+
+        has_audio, tts_engine = _generate_tts_audio(plan.narration, tmp_audio_path)
+        if has_audio and os.path.exists(tmp_audio_path):
+            audio_clip = AudioFileClip(tmp_audio_path)
+            if audio_clip.duration < final_clip.duration:
+                audio_clip = audio_clip.with_effects([afx.AudioLoop(duration=final_clip.duration)])
+            elif audio_clip.duration > final_clip.duration:
+                audio_clip = audio_clip.subclipped(0, final_clip.duration)
+            final_clip = final_clip.with_audio(audio_clip)
+
+        final_clip.write_videofile(
+            output_path,
+            fps=24,
+            codec="libx264",
+            audio_codec="aac",
+            preset="medium",
+            threads=2,
+            logger=None,
+        )
+    except Exception as local_exc:
+        local_error = _safe_error_text(local_exc)
+        did_status = (realistic_meta or {}).get("status")
+        did_error = (realistic_meta or {}).get("error")
+
+        if realistic_meta:
+            raise ExplainerVideoGenerationError(
+                (
+                    "Falha na geração do vídeo nos dois cenários. "
+                    f"Realista (D-ID): status={did_status or 'unknown'}, erro={did_error or 'não informado'}. "
+                    f"Local: {local_error}"
                 ),
-                duration=duration,
-            )
-        else:
-            frame = _draw_scene(
-                scene,
-                plan.character_name,
-                startup_name,
-                score,
-                idx,
-                len(plan.scenes),
-                presenter_image=presenter_image,
-            )
-            clip = ImageClip(frame).with_duration(duration)
-        clips.append(clip)
+                did_status=did_status,
+                did_error=did_error,
+                local_error=local_error,
+            ) from local_exc
 
-    final_clip = concatenate_videoclips(clips, method="compose")
-
-    tmp_audio_path = output_path.replace(".mp4", ".mp3")
-    has_audio, tts_engine = _generate_tts_audio(plan.narration, tmp_audio_path)
-    if has_audio and os.path.exists(tmp_audio_path):
-        audio_clip = AudioFileClip(tmp_audio_path)
-        if audio_clip.duration < final_clip.duration:
-            audio_clip = audio_clip.with_effects([afx.AudioLoop(duration=final_clip.duration)])
-        elif audio_clip.duration > final_clip.duration:
-            audio_clip = audio_clip.subclipped(0, final_clip.duration)
-        final_clip = final_clip.with_audio(audio_clip)
-
-    final_clip.write_videofile(
-        output_path,
-        fps=24,
-        codec="libx264",
-        audio_codec="aac",
-        preset="medium",
-        threads=2,
-        logger=None,
-    )
-
-    # Fechar recursos explícitos
-    for c in clips:
-        try:
-            c.close()
-        except Exception:
-            pass
-    try:
-        final_clip.close()
-    except Exception:
-        pass
-    if os.path.exists(tmp_audio_path):
-        try:
-            os.remove(tmp_audio_path)
-        except Exception:
-            pass
+        raise ExplainerVideoGenerationError(
+            f"Falha na geração local do vídeo: {local_error}",
+            local_error=local_error,
+        ) from local_exc
+    finally:
+        for c in clips:
+            try:
+                c.close()
+            except Exception:
+                pass
+        if final_clip is not None:
+            try:
+                final_clip.close()
+            except Exception:
+                pass
+        if audio_clip is not None:
+            try:
+                audio_clip.close()
+            except Exception:
+                pass
+        if os.path.exists(tmp_audio_path):
+            try:
+                os.remove(tmp_audio_path)
+            except Exception:
+                pass
 
     return {
         "output_path": output_path,
