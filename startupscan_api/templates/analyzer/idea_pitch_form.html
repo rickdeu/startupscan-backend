@@ -1,0 +1,96 @@
+{% extends "analyzer/base.html" %}
+
+{% block topbar_title %}Gerador de Pitch em PDF{% endblock %}
+{% block topbar_subtitle %}Descreva a ideia do negócio e gere um pitch profissional automaticamente{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-file-lines me-2"></i>Formulário de Ideia de Negócio</h4>
+        <span class="badge bg-primary">Saída: PDF</span>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+
+            <div class="col-md-8">
+                <label class="form-label">Nome da Startup *</label>
+                <input type="text" class="form-control {% if errors.startup_name %}is-invalid{% endif %}" name="startup_name" value="{{ form_data.startup_name }}">
+                {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Motor de geração</label>
+                <select class="form-select" name="model_source">
+                    <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>Local</option>
+                    <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>GPT (fallback local)</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">One-liner (frase de impacto)</label>
+                <input type="text" class="form-control" name="one_liner" value="{{ form_data.one_liner }}" placeholder="Ex.: Transformamos X em Y com Z">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Problema que resolve *</label>
+                <textarea class="form-control {% if errors.problem %}is-invalid{% endif %}" name="problem" rows="4">{{ form_data.problem }}</textarea>
+                {% if errors.problem %}<div class="invalid-feedback">{{ errors.problem }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Solução proposta *</label>
+                <textarea class="form-control {% if errors.solution %}is-invalid{% endif %}" name="solution" rows="4">{{ form_data.solution }}</textarea>
+                {% if errors.solution %}<div class="invalid-feedback">{{ errors.solution }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Cliente-alvo *</label>
+                <textarea class="form-control {% if errors.target_customer %}is-invalid{% endif %}" name="target_customer" rows="3">{{ form_data.target_customer }}</textarea>
+                {% if errors.target_customer %}<div class="invalid-feedback">{{ errors.target_customer }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tamanho de mercado (opcional)</label>
+                <textarea class="form-control" name="market_size" rows="3">{{ form_data.market_size }}</textarea>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Modelo de negócio *</label>
+                <textarea class="form-control {% if errors.business_model %}is-invalid{% endif %}" name="business_model" rows="3">{{ form_data.business_model }}</textarea>
+                {% if errors.business_model %}<div class="invalid-feedback">{{ errors.business_model }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Diferencial competitivo</label>
+                <textarea class="form-control" name="competitive_advantage" rows="3">{{ form_data.competitive_advantage }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tração atual</label>
+                <textarea class="form-control" name="traction" rows="3">{{ form_data.traction }}</textarea>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Equipe fundadora</label>
+                <textarea class="form-control" name="team" rows="3">{{ form_data.team }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Meta de captação</label>
+                <textarea class="form-control" name="funding_goal" rows="3">{{ form_data.funding_goal }}</textarea>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Uso do capital</label>
+                <textarea class="form-control" name="use_of_funds" rows="3">{{ form_data.use_of_funds }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Call to action</label>
+                <textarea class="form-control" name="call_to_action" rows="3">{{ form_data.call_to_action }}</textarea>
+            </div>
+
+            <div class="col-12 d-grid d-md-flex justify-content-md-end">
+                <button class="btn btn-primary btn-lg px-4" type="submit">
+                    <i class="fas fa-wand-magic-sparkles me-2"></i>Gerar Pitch em PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -28,6 +28,9 @@
                 <a class="sidebar-link {% if '/analyze/form/' in request.path %}active{% endif %}" href="{% url 'pitch_form' %}">
                     <i class="fas fa-plus-circle"></i><span>Novo Pitch</span>
                 </a>
+                <a class="sidebar-link {% if '/pitch/builder/' in request.path %}active{% endif %}" href="{% url 'idea_pitch_builder' %}">
+                    <i class="fas fa-lightbulb"></i><span>Gerar Pitch PDF</span>
+                </a>
                 <a class="sidebar-link {% if '/investors/' in request.path %}active{% endif %}" href="{% url 'investor_dashboard' %}">
                     <i class="fas fa-hand-holding-dollar"></i><span>Investidores</span>
                 </a>

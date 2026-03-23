@@ -33,6 +33,7 @@ from startupscan_api.services.model_registry import (
 )
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
+from startupscan_api.services.pitch_builder import generate_pitch_from_idea, export_pitch_pdf
 
 import joblib
 from celery.result import AsyncResult
@@ -521,6 +522,89 @@ class DashboardView(View):
             'filter_engine': engine,
             'user_sector_comparison': user_sector_comparison,
         })
+
+
+class IdeaPitchBuilderView(View):
+    """
+    Formulário simplificado para gerar pitch em PDF apenas com a ideia de negócio.
+    """
+
+    required_fields = {
+        "startup_name": "Nome da startup",
+        "problem": "Problema",
+        "solution": "Solução",
+        "target_customer": "Cliente-alvo",
+        "business_model": "Modelo de negócio",
+    }
+
+    def get(self, request):
+        context = {
+            "form_data": {"model_source": "local"},
+            "errors": {},
+        }
+        return render(request, "analyzer/idea_pitch_form.html", context)
+
+    def post(self, request):
+        form_data = {
+            "startup_name": request.POST.get("startup_name", "").strip(),
+            "one_liner": request.POST.get("one_liner", "").strip(),
+            "problem": request.POST.get("problem", "").strip(),
+            "solution": request.POST.get("solution", "").strip(),
+            "target_customer": request.POST.get("target_customer", "").strip(),
+            "market_size": request.POST.get("market_size", "").strip(),
+            "business_model": request.POST.get("business_model", "").strip(),
+            "competitive_advantage": request.POST.get("competitive_advantage", "").strip(),
+            "traction": request.POST.get("traction", "").strip(),
+            "team": request.POST.get("team", "").strip(),
+            "funding_goal": request.POST.get("funding_goal", "").strip(),
+            "use_of_funds": request.POST.get("use_of_funds", "").strip(),
+            "call_to_action": request.POST.get("call_to_action", "").strip(),
+            "model_source": request.POST.get("model_source", "local").strip().lower(),
+        }
+
+        if form_data["model_source"] not in {"local", "gpt"}:
+            form_data["model_source"] = "local"
+
+        errors = {}
+        for field, label in self.required_fields.items():
+            if not form_data.get(field):
+                errors[field] = f"{label} é obrigatório."
+
+        if errors:
+            messages.error(request, "Preencha os campos obrigatórios para gerar o pitch.")
+            return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": errors})
+
+        try:
+            pitch_payload = generate_pitch_from_idea(form_data, model_source=form_data["model_source"])
+
+            media_root = settings.MEDIA_ROOT
+            try:
+                os.makedirs(media_root, exist_ok=True)
+            except OSError:
+                media_root = os.path.join(settings.BASE_DIR, "media")
+                os.makedirs(media_root, exist_ok=True)
+
+            target_dir = os.path.join(media_root, "idea_pitches")
+            os.makedirs(target_dir, exist_ok=True)
+            safe_name = "".join(ch if ch.isalnum() else "_" for ch in form_data["startup_name"]).strip("_").lower()
+            safe_name = safe_name or "startup"
+            output_path = os.path.join(
+                target_dir,
+                f"pitch_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            )
+            export_pitch_pdf(pitch_payload, output_path)
+
+            return FileResponse(
+                open(output_path, "rb"),
+                as_attachment=True,
+                filename=f"pitch_{safe_name}.pdf",
+                content_type="application/pdf",
+            )
+        except Exception as exc:
+            logger.error("Falha ao gerar pitch PDF: %s", str(exc), exc_info=True)
+            messages.error(request, "Não foi possível gerar o pitch em PDF. Tente novamente.")
+            return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": {}})
+
 
 class PitchFormView(View):
     """Formulário para análise de pitch com tratamento completo de erros"""
