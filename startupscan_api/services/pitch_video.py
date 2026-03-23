@@ -32,6 +32,11 @@ class VideoPlan:
     engine_used: str
 
 
+MIN_KEYNOTE_SECONDS = 300
+MAX_KEYNOTE_SECONDS = 600
+TARGET_KEYNOTE_SECONDS = 390
+
+
 class ExplainerVideoGenerationError(RuntimeError):
     """Erro estruturado para expor falhas de geração realista/local."""
 
@@ -134,59 +139,157 @@ def _local_video_plan(payload: dict) -> VideoPlan:
     tone = stage_tones[int(uniqueness_key, 16) % len(stage_tones)]
     narrative_tagline = _narrative_tagline(startup_name, uniqueness_key)
 
+    recommendation_block = (
+        " ".join(recommendations)
+        if recommendations
+        else "Acelerar produto, fortalecer vendas, aumentar retenção e preparar governança para investimento institucional."
+    )
+    strengths_block = (
+        " ".join(strengths)
+        if strengths
+        else "Disciplina de execução, foco em cliente e capacidade de transformar visão em resultados."
+    )
+    category_block = " ; ".join(top_categories) if top_categories else "clareza estratégica, viabilidade, mercado e escala"
+
     scenes = [
         {
-            "title": "Apresentação da Startup",
-            "text": f"Olá, eu sou {character_name}. Hoje vou apresentar o potencial de {startup_name} para investidores. "
-            f"O score atual da startup é {score:.1f} de 10, {tone}.",
-            "duration": 7,
-        },
-        {
-            "title": "Resumo Estratégico",
-            "text": summary or "A startup apresenta uma proposta consistente, com sinais de tração e escalabilidade.",
-            "duration": 8,
-        },
-        {
-            "title": "Pontos Fortes",
-            "text": " • ".join(strengths) if strengths else "Execução orientada por métricas, foco em crescimento e base para escala.",
-            "duration": 8,
-        },
-        {
-            "title": "Indicadores de Mercado",
+            "title": "Abertura Executiva",
             "text": (
-                f"Receita: AOA {payload['revenue']:,.0f}. "
+                f"Senhoras e senhores investidores, eu sou {character_name}. "
+                f"Hoje apresento {startup_name} {tone}. "
+                f"Este é um keynote completo para demonstrar por que esta oportunidade merece atenção imediata."
+            ),
+            "duration": 22,
+        },
+        {
+            "title": "Visão e Tese da Startup",
+            "text": (
+                summary
+                or f"{startup_name} foi desenhada para resolver um problema crítico de mercado, com foco em escala sustentável, eficiência e retorno."
+            ),
+            "duration": 22,
+        },
+        {
+            "title": "Problema de Mercado",
+            "text": (
+                "O problema endereçado é recorrente, caro para empresas e pouco resolvido por soluções tradicionais. "
+                "Quando o problema é estrutural, quem executa melhor cria liderança e barreira competitiva."
+            ),
+            "duration": 21,
+        },
+        {
+            "title": "Solução e Diferenciação",
+            "text": (
+                f"A proposta de {startup_name} combina execução prática com arquitetura escalável. "
+                "Isto permite reduzir fricção de adoção e acelerar resultados para clientes desde as primeiras semanas."
+            ),
+            "duration": 22,
+        },
+        {
+            "title": "Métricas-Chave Financeiras",
+            "text": (
+                f"Receita atual: AOA {payload['revenue']:,.0f}. "
                 f"Crescimento: {payload['growth_rate']:.1f}%. "
                 f"Margem: {payload['profit_margin']:.1f}%. "
-                "No contexto angolano, estes sinais mostram base sólida para escalar."
+                "Esses números indicam capacidade de execução e evolução operacional."
             ),
-            "duration": 7,
+            "duration": 22,
         },
         {
-            "title": "Potencial para Investimento",
-            "text": f"{thesis} Prontidão: {readiness}. Ticket sugerido: {suggested_ticket}.",
-            "duration": 8,
-        },
-        {
-            "title": "Categorias com Maior Destaque",
-            "text": " • ".join(top_categories) if top_categories else "Clareza de proposta, viabilidade e potencial de mercado.",
-            "duration": 7,
-        },
-        {
-            "title": "Próximos Passos",
-            "text": " • ".join(recommendations)
-            if recommendations
-            else "Recomendamos acelerar estratégia comercial, fortalecer produto e preparar a captação com foco no mercado angolano.",
-            "duration": 8,
-        },
-        {
-            "title": "Mensagem Final ao Investidor",
+            "title": "Leitura de Potencial",
             "text": (
-                f"{startup_name} apresenta um enredo próprio de valor e crescimento. "
-                f"{narrative_tagline}"
+                f"O score preditivo de sucesso é {score:.1f} de 10. "
+                f"A prontidão atual é {readiness}. "
+                "Este posicionamento sugere janela concreta para investimento orientado a crescimento."
             ),
-            "duration": 6,
+            "duration": 22,
+        },
+        {
+            "title": "Pontos Fortes em Evidência",
+            "text": strengths_block,
+            "duration": 21,
+        },
+        {
+            "title": "Categorias de Maior Performance",
+            "text": (
+                f"As categorias com melhor desempenho incluem: {category_block}. "
+                "Este equilíbrio entre fundamento e execução sustenta a tese de expansão."
+            ),
+            "duration": 21,
+        },
+        {
+            "title": "Go-to-Market e Crescimento",
+            "text": (
+                "A estratégia comercial prioriza canais de maior eficiência, ciclo de venda previsível "
+                "e conversão orientada por dados. O objetivo é crescer com qualidade de receita."
+            ),
+            "duration": 22,
+        },
+        {
+            "title": "Escalabilidade e Operação",
+            "text": (
+                "A operação foi desenhada para escalar sem perder controle: processos claros, cadência de métricas "
+                "e gestão contínua de produtividade por unidade de negócio."
+            ),
+            "duration": 21,
+        },
+        {
+            "title": "Riscos e Mitigação",
+            "text": (
+                "Toda oportunidade tem riscos de execução, mercado e timing. "
+                "A mitigação proposta combina monitoramento mensal de indicadores, disciplina de custos e testes rápidos."
+            ),
+            "duration": 21,
+        },
+        {
+            "title": "Plano de Capital",
+            "text": (
+                f"Ticket sugerido: {suggested_ticket}. "
+                "O capital é direcionado para produto, aquisição de clientes e estrutura de escala, "
+                "com metas trimestrais de retorno operacional."
+            ),
+            "duration": 22,
+        },
+        {
+            "title": "Roadmap de 18 Meses",
+            "text": (
+                "Nos próximos dezoito meses, o roadmap prioriza validação de expansão, aumento de receita recorrente "
+                "e consolidação de vantagem competitiva nos segmentos com maior margem."
+            ),
+            "duration": 22,
+        },
+        {
+            "title": "Recomendações Estratégicas",
+            "text": recommendation_block,
+            "duration": 22,
+        },
+        {
+            "title": "Tese para Investidor",
+            "text": (
+                f"{thesis} Esta oportunidade é apresentada como tese executiva, com foco em governança, performance "
+                "e construção de valor de longo prazo para investidores estratégicos."
+            ),
+            "duration": 23,
+        },
+        {
+            "title": "Encerramento de Keynote",
+            "text": (
+                f"{startup_name} está posicionada para transformar execução em liderança de mercado. "
+                f"{narrative_tagline} Obrigado. Vamos avançar para a próxima etapa de investimento."
+            ),
+            "duration": 22,
         },
     ]
+    deepening_lines = [
+        "Nesta etapa, detalhamos evidências concretas para sustentar a tese de investimento com responsabilidade executiva.",
+        "A leitura considera contexto competitivo, maturidade operacional e capacidade do time em transformar estratégia em resultado.",
+        "O foco é construir valor com disciplina de execução, previsibilidade financeira e crescimento sustentável no médio prazo.",
+        "Cada decisão apresentada está ligada a indicadores mensuráveis de tração, eficiência e retorno esperado para investidores.",
+    ]
+    for idx, scene in enumerate(scenes):
+        line = deepening_lines[idx % len(deepening_lines)]
+        scene["text"] = f"{scene['text']} {line}"
+
     narration = " ".join(scene["text"] for scene in scenes)
     return VideoPlan(scenes=scenes, narration=narration, character_name=character_name, engine_used="local")
 
@@ -203,9 +306,9 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
         uniqueness_key = _build_video_uniqueness_key(payload)
         prompt = {
             "task": (
-                "Crie um roteiro criativo em portugues para video explicativo de potencial de startup. "
+                "Crie um roteiro executivo e cinematográfico em portugues para video explicativo de potencial de startup. "
                 "Retorne JSON com: character_name, narration, scenes(list de objetos com title,text,duration). "
-                "Duração total entre 45 e 70 segundos. "
+                "Duração total entre 5 e 10 minutos. "
                 "Este roteiro deve ser único para esta startup e não pode reaproveitar estrutura textual genérica."
             ),
             "uniqueness_key": uniqueness_key,
@@ -234,8 +337,8 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
         for s in scenes:
             title = str(s.get("title", "Cena")).strip() or "Cena"
             text = str(s.get("text", "")).strip() or "Conteúdo em preparação."
-            duration = int(float(s.get("duration", 7) or 7))
-            duration = max(4, min(12, duration))
+            duration = int(float(s.get("duration", 20) or 20))
+            duration = max(10, min(40, duration))
             fixed_scenes.append({"title": title, "text": text, "duration": duration})
         if fixed_scenes:
             fixed_scenes[-1]["text"] = (
@@ -254,12 +357,58 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
         return None
 
 
+def _plan_total_duration_seconds(plan: VideoPlan) -> int:
+    try:
+        return int(sum(float(scene.get("duration", 0) or 0) for scene in plan.scenes))
+    except Exception:
+        return 0
+
+
+def _enforce_keynote_duration(plan: VideoPlan, payload: dict) -> VideoPlan:
+    """
+    Garante vídeo entre 5 e 10 minutos.
+    Se GPT vier curto, utiliza plano local executivo completo.
+    """
+    total = _plan_total_duration_seconds(plan)
+    word_count = len((plan.narration or "").split())
+    if total < MIN_KEYNOTE_SECONDS:
+        return _local_video_plan(payload)
+    if word_count < 650:
+        return _local_video_plan(payload)
+
+    if total > MAX_KEYNOTE_SECONDS and plan.scenes:
+        trimmed = []
+        acc = 0
+        for scene in plan.scenes:
+            dur = int(float(scene.get("duration", 20) or 20))
+            if acc + dur <= MAX_KEYNOTE_SECONDS:
+                trimmed.append(scene)
+                acc += dur
+                continue
+            remaining = MAX_KEYNOTE_SECONDS - acc
+            if remaining >= 10:
+                clone = dict(scene)
+                clone["duration"] = remaining
+                trimmed.append(clone)
+                acc += remaining
+            break
+        if trimmed:
+            narration = " ".join(str(s.get("text", "") or "") for s in trimmed).strip()
+            return VideoPlan(
+                scenes=trimmed,
+                narration=narration or plan.narration,
+                character_name=plan.character_name,
+                engine_used=plan.engine_used,
+            )
+    return plan
+
+
 def build_video_plan_from_analysis(analysis) -> VideoPlan:
     payload = _analysis_payload(analysis)
     plan = _gpt_video_plan(payload)
-    if plan is not None:
-        return plan
-    return _local_video_plan(payload)
+    if plan is None:
+        plan = _local_video_plan(payload)
+    return _enforce_keynote_duration(plan, payload)
 
 
 def _download_binary_file(url: str, output_path: str) -> bool:
@@ -276,46 +425,78 @@ def _download_binary_file(url: str, output_path: str) -> bool:
         return False
 
 
-def _split_script_for_did(script_text: str, max_segments: int = 4) -> list[str]:
+def _split_script_for_did(
+    script_text: str,
+    *,
+    target_min_segments: int = 10,
+    max_segments: int = 24,
+    max_chars_per_segment: int = 420,
+) -> list[str]:
     clean = " ".join((script_text or "").strip().split())
     if not clean:
         return []
 
-    # Divide por frases primeiro; se texto curto mantém bloco único.
     sentence_chunks = [s.strip() for s in re.split(r"(?<=[\.\!\?])\s+", clean) if s.strip()]
-    if len(clean.split()) < 55 or max_segments <= 1:
-        return [clean]
-
-    words_count = len(clean.split())
-    if words_count >= 145:
-        dynamic_segments = 4
-    elif words_count >= 90:
-        dynamic_segments = 3
-    else:
-        dynamic_segments = 2
-    segment_count = min(max_segments, dynamic_segments)
+    if not sentence_chunks:
+        sentence_chunks = [clean]
 
     segments = []
-    if len(sentence_chunks) >= segment_count:
-        bucket_size = max(1, len(sentence_chunks) // segment_count)
-        for idx in range(segment_count):
-            start = idx * bucket_size
-            end = len(sentence_chunks) if idx == segment_count - 1 else (idx + 1) * bucket_size
-            part = " ".join(sentence_chunks[start:end]).strip()
-            if part:
-                segments.append(part)
-    if not segments:
-        words = clean.split()
-        chunk = max(40, len(words) // segment_count)
-        for i in range(0, len(words), chunk):
-            segments.append(" ".join(words[i : i + chunk]).strip())
+    current = ""
+    for sentence in sentence_chunks:
+        candidate = f"{current} {sentence}".strip() if current else sentence
+        if len(candidate) <= max_chars_per_segment:
+            current = candidate
+            continue
+        if current:
+            segments.append(current)
+            current = sentence
+        else:
+            # sentença longa: quebra por palavras
+            words = sentence.split()
+            buf = []
+            for w in words:
+                cand = (" ".join(buf + [w])).strip()
+                if len(cand) > max_chars_per_segment and buf:
+                    segments.append(" ".join(buf).strip())
+                    buf = [w]
+                else:
+                    buf.append(w)
+            if buf:
+                current = " ".join(buf).strip()
+    if current:
+        segments.append(current)
 
-    trimmed = []
-    for seg in segments[:segment_count]:
-        if len(seg) > 520:
-            seg = seg[:520].rsplit(" ", 1)[0] + "."
-        trimmed.append(seg)
-    return [s for s in trimmed if s]
+    # Se ainda ficou curto para vídeo longo, refina segmentos grandes em blocos menores.
+    target = max(1, min(max_segments, target_min_segments))
+    while len(segments) < target:
+        idx_long = None
+        max_len = 0
+        for i, seg in enumerate(segments):
+            if len(seg) > max_len:
+                max_len = len(seg)
+                idx_long = i
+        if idx_long is None or max_len < 180:
+            break
+        words = segments[idx_long].split()
+        mid = max(1, len(words) // 2)
+        left = " ".join(words[:mid]).strip()
+        right = " ".join(words[mid:]).strip()
+        new_parts = [p for p in (left, right) if p]
+        segments = segments[:idx_long] + new_parts + segments[idx_long + 1 :]
+        if len(segments) >= max_segments:
+            break
+
+    cleaned = []
+    for seg in segments[:max_segments]:
+        seg = seg.strip()
+        if not seg:
+            continue
+        if len(seg) > max_chars_per_segment:
+            seg = seg[:max_chars_per_segment].rsplit(" ", 1)[0].strip()
+        if seg and seg[-1] not in ".!?":
+            seg += "."
+        cleaned.append(seg)
+    return cleaned
 
 
 def _stylize_stage_cinematic_text(script_text: str) -> str:
@@ -340,8 +521,6 @@ def _stylize_stage_cinematic_text(script_text: str) -> str:
         else:
             stylized.append(f"{sentence}. ")
     merged = " ".join(stylized).strip()
-    if len(merged) > 1700:
-        merged = merged[:1700].rsplit(" ", 1)[0] + "."
     return merged
 
 
@@ -369,7 +548,23 @@ def _did_create_and_download_talk(
             "pad_audio": 0.0,
         },
     }
-    create_resp = requests.post(create_url, headers=headers, data=json.dumps(payload), timeout=120)
+    create_resp = None
+    for attempt in range(3):
+        try:
+            create_resp = requests.post(create_url, headers=headers, data=json.dumps(payload), timeout=120)
+        except Exception as exc:
+            if attempt < 2:
+                time.sleep(1.8 * (attempt + 1))
+                continue
+            return {"status": "failed", "error": f"create_exception:{exc}"}
+        if create_resp.status_code in {429, 500, 502, 503, 504} and attempt < 2:
+            time.sleep(1.8 * (attempt + 1))
+            continue
+        break
+
+    if create_resp is None:
+        return {"status": "failed", "error": "create_no_response"}
+
     if create_resp.status_code >= 400:
         return {
             "status": "failed",
@@ -426,6 +621,7 @@ def _try_generate_realistic_video_did(
     source_image_url: str,
     output_path: str,
     source_image_urls: list[str] | None = None,
+    progress_callback=None,
 ):
     """
     Usa D-ID para gerar vídeo de avatar realista com gestos/lip-sync.
@@ -433,7 +629,10 @@ def _try_generate_realistic_video_did(
     """
     api_key = os.getenv("DID_API_KEY", "").strip()
     did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
-    if source_image_url and source_image_url.strip() and source_image_url.strip() not in did_sources:
+    allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "0").strip().lower() in {"1", "true", "yes"}
+    if not did_sources and source_image_url and source_image_url.strip():
+        did_sources = [source_image_url.strip()]
+    elif allow_original_fallback and source_image_url and source_image_url.strip() and source_image_url.strip() not in did_sources:
         did_sources.append(source_image_url.strip())
 
     if not api_key or not did_sources:
@@ -452,7 +651,15 @@ def _try_generate_realistic_video_did(
 
     try:
         stage_script = _stylize_stage_cinematic_text(plan.narration)
-        segments = _split_script_for_did(stage_script, max_segments=min(4, max(1, len(did_sources))))
+        words = len(stage_script.split())
+        target_segments = 10 if words < 900 else 12
+        max_segments = 24 if words >= 1300 else 20
+        segments = _split_script_for_did(
+            stage_script,
+            target_min_segments=target_segments,
+            max_segments=max_segments,
+            max_chars_per_segment=420,
+        )
         if not segments:
             return {
                 "provider": "did",
@@ -468,6 +675,16 @@ def _try_generate_realistic_video_did(
         segment_talk_ids = []
         segment_result_urls = []
         for idx, segment_text in enumerate(segments):
+            if callable(progress_callback):
+                try:
+                    pct = 36 + int(((idx + 1) / max(1, len(segments))) * 46)
+                    progress_callback(
+                        pct,
+                        "renderizacao",
+                        f"Gerando segmento {idx + 1}/{len(segments)} no modo cinematográfico",
+                    )
+                except Exception:
+                    pass
             segment_path = output_path if len(segments) == 1 else output_path.replace(".mp4", f"_did_seg_{idx + 1}.mp4")
             segment_outputs.append(segment_path)
             preferred_source = did_sources[idx % len(did_sources)]
@@ -1118,6 +1335,7 @@ def generate_explainer_video(
     presenter_image_path: str | None = None,
     presenter_image_url: str | None = None,
     presenter_source_urls: list[str] | None = None,
+    progress_callback=None,
 ):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plan = build_video_plan_from_analysis(analysis)
@@ -1131,6 +1349,7 @@ def generate_explainer_video(
         source_image_url=presenter_image_url or "",
         output_path=output_path,
         source_image_urls=presenter_source_urls or [],
+        progress_callback=progress_callback,
     )
     if realistic_meta and realistic_meta.get("status") == "done":
         return {
@@ -1150,6 +1369,8 @@ def generate_explainer_video(
             "realistic_segment_count": realistic_meta.get("segment_count", 1),
             "realistic_source_count": realistic_meta.get("source_count", len(presenter_source_urls or [])),
             "realistic_style_mode": realistic_meta.get("style_mode", "cinematic_stage_keynote"),
+            "target_duration_sec": _plan_total_duration_seconds(plan),
+            "duration_range_sec": [MIN_KEYNOTE_SECONDS, MAX_KEYNOTE_SECONDS],
         }
 
     clips = []
@@ -1161,6 +1382,16 @@ def generate_explainer_video(
 
     try:
         for idx, scene in enumerate(plan.scenes, start=1):
+            if callable(progress_callback):
+                try:
+                    pct = 36 + int((idx / max(1, len(plan.scenes))) * 44)
+                    progress_callback(
+                        pct,
+                        "renderizacao",
+                        f"Renderizando cena {idx}/{len(plan.scenes)} do keynote",
+                    )
+                except Exception:
+                    pass
             duration = float(scene["duration"])
             if presenter_image is not None:
                 clip = VideoClip(
@@ -1203,7 +1434,7 @@ def generate_explainer_video(
 
         final_clip.write_videofile(
             output_path,
-            fps=24,
+            fps=18,
             codec="libx264",
             audio_codec="aac",
             preset="medium",
@@ -1264,6 +1495,8 @@ def generate_explainer_video(
         "narration_preview": plan.narration[:300],
         "presenter_image_used": bool(presenter_image),
         "animation_mode": "formal_executive_stage_motion" if presenter_image is not None else "static_avatar",
+        "target_duration_sec": _plan_total_duration_seconds(plan),
+        "duration_range_sec": [MIN_KEYNOTE_SECONDS, MAX_KEYNOTE_SECONDS],
         "did_attempted": bool(realistic_meta),
         "did_status": (realistic_meta or {}).get("status"),
         "did_error": (realistic_meta or {}).get("error"),
