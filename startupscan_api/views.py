@@ -468,6 +468,8 @@ class StartupPitchAnalyzer(APIView):
             audio_file = request.FILES.get('audio')
             video_file = request.FILES.get('video')
             youtube_url = (request.data.get("youtube_url", "") or "").strip()
+            startup_name = (request.data.get("startup_name", "") or "").strip()
+            industry = (request.data.get("industry", "") or "").strip()
             financial_data = request.data.get('financial_data', {})
             model_source = str(request.data.get("model_source", "local")).strip().lower()
             if model_source not in {"local", "gpt"}:
@@ -496,6 +498,9 @@ class StartupPitchAnalyzer(APIView):
                 # 4. Extrair features
                 features, metadata = prepare_features(pitch_data, financial_data)
                 metadata["analysis_engine_requested"] = model_source
+                metadata["startup_name"] = startup_name
+                metadata["industry"] = industry
+                metadata["analysis_context_id"] = str(uuid.uuid4())
 
                 prediction = None
                 report = None
@@ -1200,6 +1205,9 @@ class PitchFormView(View):
                     features, metadata = prepare_features(pitch_data, financial_data)
                     
                     metadata["analysis_engine_requested"] = model_source
+                    metadata["startup_name"] = startup_name
+                    metadata["industry"] = industry
+                    metadata["analysis_context_id"] = str(uuid.uuid4())
                     prediction = None
                     report = None
                     engine_used = model_source

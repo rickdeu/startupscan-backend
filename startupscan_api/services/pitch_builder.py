@@ -1,5 +1,6 @@
 import json
 import os
+import hashlib
 from datetime import datetime
 
 from reportlab.lib import colors
@@ -7,6 +8,23 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+
+def _build_pitch_uniqueness_key(idea_data: dict) -> str:
+    raw = json.dumps(
+        {
+            "startup_name": idea_data.get("startup_name", ""),
+            "problem": idea_data.get("problem", ""),
+            "solution": idea_data.get("solution", ""),
+            "target_customer": idea_data.get("target_customer", ""),
+            "business_model": idea_data.get("business_model", ""),
+            "model_source": idea_data.get("model_source", ""),
+            "created_hint": idea_data.get("created_at", ""),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
 
 
 def _local_pitch_fallback(idea_data: dict) -> dict:
@@ -25,11 +43,20 @@ def _local_pitch_fallback(idea_data: dict) -> dict:
     use_of_funds = idea_data.get("use_of_funds", "")
     market_size = idea_data.get("market_size", "")
     call_to_action = idea_data.get("call_to_action", "")
+    uniqueness_key = _build_pitch_uniqueness_key(idea_data)
+    tone_variants = [
+        "foco em crescimento disciplinado",
+        "foco em eficiência operacional com escala",
+        "foco em diferenciação de mercado e execução comercial",
+        "foco em tração previsível e governança para captação",
+    ]
+    variant = tone_variants[int(uniqueness_key, 16) % len(tone_variants)]
 
     elevator_pitch = (
         f"{one_liner} Resolvemos o problema de {target_customer} com uma solução prática e escalável. "
         f"Nosso modelo de negócio ({business_model}) permite crescimento sustentável, "
-        f"com diferencial em {competitive_advantage or 'execução e foco no cliente'}."
+        f"com diferencial em {competitive_advantage or 'execução e foco no cliente'}. "
+        f"Abordagem estratégica: {variant}."
     )
 
     script_3min = [
@@ -37,7 +64,7 @@ def _local_pitch_fallback(idea_data: dict) -> dict:
         f"Problema: {problem}",
         f"Solução: {solution}",
         f"Mercado e cliente-alvo: {target_customer}. {market_size or 'Mercado em expansão e com espaço para liderança.'}",
-        f"Modelo de negócio e tração: {business_model}. {traction or 'Validação inicial em andamento.'}",
+        f"Modelo de negócio e tração: {business_model}. {traction or 'Validação inicial em andamento.'} Ênfase: {variant}.",
         f"Equipe e execução: {team or 'Equipe multidisciplinar com foco em entrega.'}",
         f"Pedido de investimento: {funding_goal or 'Rodada seed para acelerar escala.'}",
         f"Uso de fundos e fecho: {use_of_funds or 'Expansão comercial, produto e operação.'}",
@@ -75,6 +102,7 @@ def _local_pitch_fallback(idea_data: dict) -> dict:
         "elevator_pitch": elevator_pitch,
         "script_3min": script_3min,
         "pitch_deck": pitch_deck,
+        "narrative_uniqueness_key": uniqueness_key,
         "engine_used": "local",
     }
 
@@ -89,6 +117,7 @@ def _normalize_payload(data: dict, engine_used: str) -> dict:
     data.setdefault("elevator_pitch", "")
     data.setdefault("script_3min", [])
     data.setdefault("pitch_deck", [])
+    data.setdefault("narrative_uniqueness_key", "")
     data.setdefault("engine_used", engine_used)
     return data
 
@@ -115,21 +144,30 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> di
                         "Transforme os dados da ideia em um pitch completo para apresentação em evento e reunião com investidores. "
                         "Responda em JSON com campos: "
                         "title, slogan, sections(list{title,content}), investment({funding_goal,use_of_funds}), "
-                        "elevator_pitch, script_3min(lista de tópicos), pitch_deck(lista com slide,title,bullets), closing."
+                        "elevator_pitch, script_3min(lista de tópicos), pitch_deck(lista com slide,title,bullets), closing. "
+                        "O roteiro precisa ser único para esta startup e não pode reutilizar texto padrão de outras startups."
                     ),
                     "idea_data": idea_data,
+                    "uniqueness_key": _build_pitch_uniqueness_key(idea_data),
                 }
                 response = client.chat.completions.create(
                     model=model_name,
-                    temperature=0.25,
+                    temperature=0.7,
                     response_format={"type": "json_object"},
                     messages=[
-                        {"role": "system", "content": "Você é especialista em storytelling e captação para startups."},
+                        {
+                            "role": "system",
+                            "content": (
+                                "Você é especialista em storytelling e captação para startups. "
+                                "Cada roteiro deve ser exclusivo para a startup analisada."
+                            ),
+                        },
                         {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
                     ],
                 )
                 data = json.loads(response.choices[0].message.content)
                 if isinstance(data, dict):
+                    data["narrative_uniqueness_key"] = payload["uniqueness_key"]
                     return _normalize_payload(data, "gpt")
             except Exception:
                 # Fallback silencioso para modo local quando GPT falhar.
