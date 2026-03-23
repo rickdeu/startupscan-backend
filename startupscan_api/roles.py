@@ -64,7 +64,7 @@ def role_home_url_name(role: str) -> str:
     if role == ROLE_ANALISTA:
         return "dashboard"
     if role == ROLE_ADMIN:
-        return "model_management"
+        return "dashboard"
     return "dashboard"
 
 
