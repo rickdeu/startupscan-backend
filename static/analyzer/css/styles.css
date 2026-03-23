@@ -16,6 +16,33 @@
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
 }
 
+.app-navbar .navbar-brand {
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+.app-navbar .nav-link {
+    color: #dbeafe !important;
+    font-weight: 500;
+    border-radius: 10px;
+    padding: 0.45rem 0.75rem !important;
+    margin: 0 0.15rem;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus {
+    color: #ffffff !important;
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.app-navbar .navbar-text {
+    color: #f8fafc !important;
+}
+
+.app-navbar .navbar-collapse {
+    border-radius: 12px;
+}
+
 .app-footer {
     background: linear-gradient(90deg, #0f172a, #111827);
 }
@@ -59,7 +86,8 @@
 .card-header {
     border-bottom: 1px solid #eef2f7;
     font-weight: 600;
-    background: #fff;
+    background: #f8fbff;
+    color: #0f172a;
 }
 
 .investor-thesis {
@@ -74,6 +102,20 @@
 
 .table td {
     vertical-align: middle;
+}
+
+canvas {
+    max-width: 100%;
+}
+
+.hero-panel .btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.75);
+    color: #fff;
+}
+
+.hero-panel .btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
 }
 
 .btn-primary {

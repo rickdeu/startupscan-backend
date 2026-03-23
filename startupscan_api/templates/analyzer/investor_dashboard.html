@@ -33,6 +33,25 @@
     </div>
 </div>
 
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">Ranking visual de potencial (score)</div>
+            <div class="card-body">
+                <canvas id="investorScoreChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Relação crescimento x score</div>
+            <div class="card-body">
+                <canvas id="investorGrowthChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="mb-0">Radar de oportunidades</h4>
@@ -69,4 +88,60 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const invLabels = {{ investor_labels_json|safe }};
+    const invScores = {{ investor_scores_json|safe }};
+    const invRevenue = {{ investor_revenue_json|safe }};
+    const invGrowth = {{ investor_growth_json|safe }};
+
+    const invCommonGrid = { color: "rgba(148,163,184,0.22)" };
+
+    const scoreCtx = document.getElementById("investorScoreChart");
+    if (scoreCtx) {
+        new Chart(scoreCtx, {
+            type: "bar",
+            data: {
+                labels: invLabels,
+                datasets: [{
+                    label: "Score de potencial",
+                    data: invScores,
+                    backgroundColor: "rgba(37,99,235,0.55)",
+                    borderColor: "#1d4ed8",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { min: 0, max: 10, grid: invCommonGrid },
+                    x: { grid: invCommonGrid }
+                }
+            }
+        });
+    }
+
+    const growthCtx = document.getElementById("investorGrowthChart");
+    if (growthCtx) {
+        new Chart(growthCtx, {
+            type: "scatter",
+            data: {
+                datasets: [{
+                    label: "Startups",
+                    data: invGrowth.map((g, i) => ({ x: g, y: invScores[i], r: 4 })),
+                    backgroundColor: "rgba(16,185,129,0.7)",
+                    borderColor: "#059669"
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: "Crescimento (%)" }, grid: invCommonGrid },
+                    y: { title: { display: true, text: "Score" }, min: 0, max: 10, grid: invCommonGrid }
+                }
+            }
+        });
+    }
+</script>
 {% endblock %}
