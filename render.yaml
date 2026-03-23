@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: startupscan-backend
+    env: python
+    plan: free
+    autoDeploy: true
+    buildCommand: >
+      pip install --upgrade pip &&
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate --noinput
+    startCommand: gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 180
+    healthCheckPath: /login/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DID_API_KEY
+        sync: false
