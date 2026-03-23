@@ -109,6 +109,38 @@
                         <span class="badge bg-primary">{{ analysis.startup_name|default:"Startup" }}</span>
                     </div>
                     <div class="card-body">
+                        {% url 'pitch_explainer_video_progress' analysis.id '__JOB_ID__' as video_progress_url_template %}
+                        {% if active_video_job and active_video_job.status %}
+                        <div
+                            id="videoGenerationStatusCard"
+                            class="alert {% if active_video_job.status == 'FAILED' %}alert-danger{% elif active_video_job.status == 'COMPLETED' %}alert-success{% else %}alert-info{% endif %} mb-3"
+                            data-job-id="{{ active_video_job_id }}"
+                            data-progress-url-template="{{ video_progress_url_template }}"
+                            data-analysis-id="{{ analysis.id }}"
+                            data-status="{{ active_video_job.status }}"
+                        >
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>Status da geração:</strong>
+                                <span id="videoJobStatusText">{{ active_video_job.status }}</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div
+                                    id="videoJobProgressBar"
+                                    class="progress-bar {% if active_video_job.status == 'FAILED' %}bg-danger{% elif active_video_job.status == 'COMPLETED' %}bg-success{% else %}bg-info{% endif %}"
+                                    role="progressbar"
+                                    style="width: {{ active_video_job.progress|default:0 }}%;"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    aria-valuenow="{{ active_video_job.progress|default:0 }}"
+                                ></div>
+                            </div>
+                            <div class="small">
+                                <span id="videoJobMessage">{{ active_video_job.message|default:"Aguardando atualização..." }}</span>
+                                <span id="videoJobProgressPct" class="float-end">{{ active_video_job.progress|default:0 }}%</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {% if analysis.explainer_video_file %}
                         <video controls class="w-100 mb-2" style="max-height: 220px;">
                             <source src="{{ analysis.explainer_video_file.url }}" type="video/mp4">
@@ -128,7 +160,11 @@
                                 A IA usa esta imagem internamente para gerar o vídeo; o rosto não é exibido na interface.
                                 Para modo ultra-realista (gestos e lip-sync avançado), configure DID_API_KEY no servidor.
                             </small>
-                            <button class="btn btn-sm btn-primary w-100" type="submit">
+                            <button
+                                class="btn btn-sm btn-primary w-100"
+                                type="submit"
+                                {% if active_video_job.status == 'RUNNING' or active_video_job.status == 'PENDING' %}disabled{% endif %}
+                            >
                                 <i class="fas fa-video me-1"></i>{% if analysis.explainer_video_file %}Regenerar{% else %}Gerar{% endif %} vídeo explicativo
                             </button>
                         </form>
@@ -227,4 +263,77 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function () {
+        const card = document.getElementById("videoGenerationStatusCard");
+        if (!card) return;
+
+        const jobId = card.getAttribute("data-job-id");
+        const initialStatus = (card.getAttribute("data-status") || "").toUpperCase();
+        const template = card.getAttribute("data-progress-url-template") || "";
+        if (!jobId || !template) return;
+
+        if (initialStatus === "COMPLETED" || initialStatus === "FAILED") return;
+
+        const progressUrl = template.replace("__JOB_ID__", jobId);
+        const bar = document.getElementById("videoJobProgressBar");
+        const statusText = document.getElementById("videoJobStatusText");
+        const messageEl = document.getElementById("videoJobMessage");
+        const pctEl = document.getElementById("videoJobProgressPct");
+
+        function updateState(state) {
+            const status = String(state.status || "RUNNING").toUpperCase();
+            const progress = Math.max(0, Math.min(100, parseInt(state.progress || 0, 10)));
+            const message = state.message || "Processando...";
+
+            if (statusText) statusText.textContent = status;
+            if (messageEl) messageEl.textContent = message;
+            if (pctEl) pctEl.textContent = progress + "%";
+            if (bar) {
+                bar.style.width = progress + "%";
+                bar.setAttribute("aria-valuenow", String(progress));
+                bar.classList.remove("bg-info", "bg-success", "bg-danger");
+                bar.classList.add(status === "FAILED" ? "bg-danger" : status === "COMPLETED" ? "bg-success" : "bg-info");
+            }
+            card.classList.remove("alert-info", "alert-success", "alert-danger");
+            card.classList.add(status === "FAILED" ? "alert-danger" : status === "COMPLETED" ? "alert-success" : "alert-info");
+
+            if (status === "COMPLETED") {
+                setTimeout(function () { window.location.reload(); }, 1200);
+                return true;
+            }
+            if (status === "FAILED") {
+                return true;
+            }
+            return false;
+        }
+
+        let stopped = false;
+        const poll = function () {
+            if (stopped) return;
+            fetch(progressUrl, { credentials: "same-origin" })
+                .then(function (resp) {
+                    if (!resp.ok) throw new Error("Falha ao consultar progresso");
+                    return resp.json();
+                })
+                .then(function (state) {
+                    const done = updateState(state || {});
+                    if (done) {
+                        stopped = true;
+                        return;
+                    }
+                    setTimeout(poll, 2000);
+                })
+                .catch(function () {
+                    if (messageEl) messageEl.textContent = "Aguardando conexão para atualizar o progresso...";
+                    setTimeout(poll, 3000);
+                });
+        };
+
+        setTimeout(poll, 1000);
+    })();
+</script>
 {% endblock %}

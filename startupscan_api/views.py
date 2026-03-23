@@ -14,6 +14,7 @@ from rest_framework import status
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
+from django.urls import reverse
 from django.core.files.storage import FileSystemStorage
 from django.core.files import File
 from django.contrib import messages
@@ -43,6 +44,7 @@ import joblib
 from celery.result import AsyncResult
 from django.core.management import call_command
 from django.core.cache import cache
+from django.db import close_old_connections
 from django.db.models import Avg, Count, Max
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
@@ -129,10 +131,16 @@ def _run_training_for_model(model_name, dataset_source="default"):
 
 MODEL_TRAINING_CACHE_PREFIX = "model_training_job"
 MODEL_TRAINING_TTL_SECONDS = 60 * 60 * 24
+VIDEO_GENERATION_CACHE_PREFIX = "explainer_video_job"
+VIDEO_GENERATION_TTL_SECONDS = 60 * 60 * 24
 
 
 def _model_training_cache_key(job_id: str) -> str:
     return f"{MODEL_TRAINING_CACHE_PREFIX}:{job_id}"
+
+
+def _video_generation_cache_key(job_id: str) -> str:
+    return f"{VIDEO_GENERATION_CACHE_PREFIX}:{job_id}"
 
 
 def _write_model_training_state(job_id: str, **updates):
@@ -147,6 +155,148 @@ def _write_model_training_state(job_id: str, **updates):
     state["updated_at"] = timezone.now().isoformat()
     cache.set(key, state, MODEL_TRAINING_TTL_SECONDS)
     return state
+
+
+def _write_video_generation_state(job_id: str, **updates):
+    key = _video_generation_cache_key(job_id)
+    state = cache.get(key) or {
+        "job_id": job_id,
+        "status": "PENDING",
+        "progress": 0,
+        "message": "Aguardando início da geração de vídeo",
+    }
+    state.update(updates)
+    state["updated_at"] = timezone.now().isoformat()
+    cache.set(key, state, VIDEO_GENERATION_TTL_SECONDS)
+    return state
+
+
+def _run_explainer_video_job(
+    job_id: str,
+    analysis_id: int,
+    presenter_path: str | None = None,
+    presenter_url: str | None = None,
+):
+    temp_output = None
+    try:
+        close_old_connections()
+        _write_video_generation_state(
+            job_id,
+            status="RUNNING",
+            progress=8,
+            message="Inicializando geração do vídeo explicativo",
+            analysis_id=analysis_id,
+        )
+
+        analysis = PitchAnalysis.objects.get(id=analysis_id)
+
+        media_root = settings.MEDIA_ROOT
+        try:
+            os.makedirs(media_root, exist_ok=True)
+        except OSError:
+            media_root = os.path.join(settings.BASE_DIR, "media")
+            os.makedirs(media_root, exist_ok=True)
+
+        temp_dir = os.path.join(media_root, "generated_videos")
+        os.makedirs(temp_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        temp_output = os.path.join(temp_dir, f"explainer_{analysis.id}_{timestamp}.mp4")
+
+        _write_video_generation_state(
+            job_id,
+            status="RUNNING",
+            progress=35,
+            message="Criando roteiro, cenas e narração",
+        )
+        video_meta = generate_explainer_video(
+            analysis,
+            temp_output,
+            presenter_image_path=presenter_path,
+            presenter_image_url=presenter_url,
+        )
+
+        _write_video_generation_state(
+            job_id,
+            status="RUNNING",
+            progress=78,
+            message="Salvando vídeo no resultado da análise",
+        )
+        final_name = f"explainer_{analysis.id}.mp4"
+        with open(temp_output, "rb") as fh:
+            analysis.explainer_video_file.save(final_name, File(fh), save=False)
+
+        metadata = analysis.metadata or {}
+        metadata["explainer_video"] = video_meta
+        metadata["explainer_video_job_id"] = job_id
+        metadata["explainer_video_job_status"] = "COMPLETED"
+        analysis.metadata = metadata
+        analysis.save(update_fields=["explainer_video_file", "metadata", "updated_at"])
+
+        _write_video_generation_state(
+            job_id,
+            status="COMPLETED",
+            progress=100,
+            message="Vídeo explicativo gerado com sucesso",
+            result={
+                "analysis_id": analysis_id,
+                "video_url": analysis.explainer_video_file.url if analysis.explainer_video_file else "",
+            },
+        )
+    except Exception as exc:
+        logger.error("Falha no job de vídeo explicativo: %s", str(exc), exc_info=True)
+        try:
+            analysis = PitchAnalysis.objects.get(id=analysis_id)
+            metadata = analysis.metadata or {}
+            metadata["explainer_video_job_id"] = job_id
+            metadata["explainer_video_job_status"] = "FAILED"
+            metadata["explainer_video_job_error"] = str(exc)
+            analysis.metadata = metadata
+            analysis.save(update_fields=["metadata", "updated_at"])
+        except Exception:
+            pass
+        _write_video_generation_state(
+            job_id,
+            status="FAILED",
+            progress=100,
+            message="Falha ao gerar vídeo explicativo",
+            error=str(exc),
+            analysis_id=analysis_id,
+        )
+    finally:
+        if temp_output:
+            try:
+                if os.path.exists(temp_output):
+                    os.remove(temp_output)
+            except OSError:
+                pass
+        close_old_connections()
+
+
+def _start_explainer_video_job(
+    analysis: PitchAnalysis,
+    presenter_path: str | None = None,
+    presenter_url: str | None = None,
+) -> str:
+    job_id = str(uuid.uuid4())
+    _write_video_generation_state(
+        job_id,
+        status="PENDING",
+        progress=0,
+        message="Job de vídeo criado, aguardando execução",
+        analysis_id=analysis.id,
+    )
+    thread = threading.Thread(
+        target=_run_explainer_video_job,
+        kwargs={
+            "job_id": job_id,
+            "analysis_id": analysis.id,
+            "presenter_path": presenter_path,
+            "presenter_url": presenter_url,
+        },
+        daemon=True,
+    )
+    thread.start()
+    return job_id
 
 
 def _normalize_model_name(raw_model_name: str, action: str) -> str:
@@ -1177,8 +1327,18 @@ class PitchResultsView(View):
     """Página de resultados da análise"""
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        active_video_job_id = (request.GET.get("video_job_id", "") or "").strip()
+        if not active_video_job_id:
+            active_video_job_id = str((analysis.metadata or {}).get("explainer_video_job_id", "") or "").strip()
+        active_video_job = None
+        if active_video_job_id:
+            state = cache.get(_video_generation_cache_key(active_video_job_id))
+            if state and int(state.get("analysis_id") or 0) == int(analysis.id):
+                active_video_job = state
         return render(request, 'analyzer/result.html', {
-            'analysis': analysis
+            'analysis': analysis,
+            'active_video_job_id': active_video_job_id,
+            'active_video_job': active_video_job or {},
         })
 
 
@@ -1219,22 +1379,17 @@ class PitchExplainerVideoGenerateView(View):
             return redirect("dashboard")
 
         try:
+            existing_job_id = str((analysis.metadata or {}).get("explainer_video_job_id", "") or "").strip()
+            if existing_job_id:
+                existing_state = cache.get(_video_generation_cache_key(existing_job_id))
+                if existing_state and existing_state.get("status") in {"PENDING", "RUNNING"}:
+                    messages.info(request, "Já existe uma geração de vídeo em andamento para esta análise.")
+                    return redirect(f"{reverse('pitch_results', kwargs={'analysis_id': analysis.id})}?video_job_id={existing_job_id}")
+
             presenter_image = request.FILES.get("presenter_image")
             if presenter_image:
                 analysis.presenter_face_image_file = presenter_image
                 analysis.save(update_fields=["presenter_face_image_file", "updated_at"])
-
-            media_root = settings.MEDIA_ROOT
-            try:
-                os.makedirs(media_root, exist_ok=True)
-            except OSError:
-                media_root = os.path.join(settings.BASE_DIR, "media")
-                os.makedirs(media_root, exist_ok=True)
-
-            temp_dir = os.path.join(media_root, "generated_videos")
-            os.makedirs(temp_dir, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            temp_output = os.path.join(temp_dir, f"explainer_{analysis.id}_{timestamp}.mp4")
 
             presenter_path = None
             presenter_url = None
@@ -1253,29 +1408,18 @@ class PitchExplainerVideoGenerateView(View):
                 except Exception:
                     presenter_url = None
 
-            video_meta = generate_explainer_video(
-                analysis,
-                temp_output,
-                presenter_image_path=presenter_path,
-                presenter_image_url=presenter_url,
-            )
-
-            final_name = f"explainer_{analysis.id}.mp4"
-            with open(temp_output, "rb") as fh:
-                analysis.explainer_video_file.save(final_name, File(fh), save=False)
-
             metadata = analysis.metadata or {}
-            metadata["explainer_video"] = video_meta
+            job_id = _start_explainer_video_job(
+                analysis=analysis,
+                presenter_path=presenter_path,
+                presenter_url=presenter_url,
+            )
+            metadata["explainer_video_job_id"] = job_id
+            metadata["explainer_video_job_status"] = "PENDING"
             analysis.metadata = metadata
-            analysis.save(update_fields=["explainer_video_file", "metadata", "updated_at"])
-
-            try:
-                if os.path.exists(temp_output):
-                    os.remove(temp_output)
-            except OSError:
-                pass
-
-            messages.success(request, "Vídeo explicativo gerado com sucesso.")
+            analysis.save(update_fields=["metadata", "updated_at"])
+            messages.success(request, "Geração de vídeo iniciada. Acompanhe o progresso nesta página.")
+            return redirect(f"{reverse('pitch_results', kwargs={'analysis_id': analysis.id})}?video_job_id={job_id}")
         except Exception as exc:
             logger.error("Falha ao gerar vídeo explicativo: %s", str(exc), exc_info=True)
             messages.error(
@@ -1284,6 +1428,24 @@ class PitchExplainerVideoGenerateView(View):
             )
 
         return redirect("pitch_results", analysis_id=analysis.id)
+
+
+class PitchExplainerVideoProgressView(View):
+    """Endpoint de progresso em tempo real para geração de vídeo explicativo."""
+
+    def get(self, request, analysis_id, job_id):
+        analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
+        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+            return JsonResponse({"error": "Acesso negado"}, status=403)
+
+        state = cache.get(_video_generation_cache_key(job_id))
+        if not state:
+            return JsonResponse({"error": "Job não encontrado"}, status=404)
+
+        if int(state.get("analysis_id") or 0) != int(analysis.id):
+            return JsonResponse({"error": "Job inválido para esta análise"}, status=403)
+
+        return JsonResponse(state, status=200)
 
 
 class ModelManagementView(LoginRequiredMixin, View):
