@@ -26,6 +26,34 @@ def _local_pitch_fallback(idea_data: dict) -> dict:
     market_size = idea_data.get("market_size", "")
     call_to_action = idea_data.get("call_to_action", "")
 
+    elevator_pitch = (
+        f"{one_liner} Resolvemos o problema de {target_customer} com uma solução prática e escalável. "
+        f"Nosso modelo de negócio ({business_model}) permite crescimento sustentável, "
+        f"com diferencial em {competitive_advantage or 'execução e foco no cliente'}."
+    )
+
+    script_3min = [
+        "Abertura: contextualize o problema e impacto atual no mercado.",
+        f"Problema: {problem}",
+        f"Solução: {solution}",
+        f"Mercado e cliente-alvo: {target_customer}. {market_size or 'Mercado em expansão e com espaço para liderança.'}",
+        f"Modelo de negócio e tração: {business_model}. {traction or 'Validação inicial em andamento.'}",
+        f"Equipe e execução: {team or 'Equipe multidisciplinar com foco em entrega.'}",
+        f"Pedido de investimento: {funding_goal or 'Rodada seed para acelerar escala.'}",
+        f"Uso de fundos e fecho: {use_of_funds or 'Expansão comercial, produto e operação.'}",
+    ]
+
+    pitch_deck = [
+        {"slide": 1, "title": "Abertura", "bullets": [one_liner, "Visão de longo prazo da startup"]},
+        {"slide": 2, "title": "Problema", "bullets": [problem, "Dor real e recorrente do mercado"]},
+        {"slide": 3, "title": "Solução", "bullets": [solution, "Entrega clara de valor ao cliente"]},
+        {"slide": 4, "title": "Mercado", "bullets": [target_customer, market_size or "Mercado em crescimento"]},
+        {"slide": 5, "title": "Modelo de Negócio", "bullets": [business_model, competitive_advantage or "Diferencial competitivo sustentável"]},
+        {"slide": 6, "title": "Tração", "bullets": [traction or "KPIs iniciais em evolução", "Estratégia de crescimento"]},
+        {"slide": 7, "title": "Equipe", "bullets": [team or "Time fundador comprometido", "Capacidade de execução"]},
+        {"slide": 8, "title": "Captação", "bullets": [funding_goal or "Meta de investimento", use_of_funds or "Plano de uso do capital"]},
+    ]
+
     return {
         "title": f"Pitch de Negócio - {startup_name}",
         "slogan": one_liner,
@@ -44,8 +72,25 @@ def _local_pitch_fallback(idea_data: dict) -> dict:
             "use_of_funds": use_of_funds or "Produto, aquisição de clientes e fortalecimento operacional.",
         },
         "closing": call_to_action or "Estamos prontos para uma reunião de aprofundamento com investidores estratégicos.",
+        "elevator_pitch": elevator_pitch,
+        "script_3min": script_3min,
+        "pitch_deck": pitch_deck,
         "engine_used": "local",
     }
+
+
+def _normalize_payload(data: dict, engine_used: str) -> dict:
+    data = data if isinstance(data, dict) else {}
+    data.setdefault("title", "Pitch de Negócio")
+    data.setdefault("slogan", "")
+    data.setdefault("sections", [])
+    data.setdefault("investment", {})
+    data.setdefault("closing", "")
+    data.setdefault("elevator_pitch", "")
+    data.setdefault("script_3min", [])
+    data.setdefault("pitch_deck", [])
+    data.setdefault("engine_used", engine_used)
+    return data
 
 
 def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> dict:
@@ -67,9 +112,10 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> di
                 client = OpenAI(api_key=api_key)
                 payload = {
                     "task": (
-                        "Transforme os dados da ideia em um pitch estruturado para investidores. "
-                        "Responda em JSON com campos: title, slogan, sections(list{title,content}), "
-                        "investment({funding_goal,use_of_funds}), closing."
+                        "Transforme os dados da ideia em um pitch completo para apresentação em evento e reunião com investidores. "
+                        "Responda em JSON com campos: "
+                        "title, slogan, sections(list{title,content}), investment({funding_goal,use_of_funds}), "
+                        "elevator_pitch, script_3min(lista de tópicos), pitch_deck(lista com slide,title,bullets), closing."
                     ),
                     "idea_data": idea_data,
                 }
@@ -84,16 +130,12 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> di
                 )
                 data = json.loads(response.choices[0].message.content)
                 if isinstance(data, dict):
-                    data.setdefault("engine_used", "gpt")
-                    data.setdefault("sections", [])
-                    data.setdefault("investment", {})
-                    data.setdefault("closing", "")
-                    return data
+                    return _normalize_payload(data, "gpt")
             except Exception:
                 # Fallback silencioso para modo local quando GPT falhar.
                 pass
 
-    return _local_pitch_fallback(idea_data)
+    return _normalize_payload(_local_pitch_fallback(idea_data), "local")
 
 
 def export_pitch_pdf(pitch_payload: dict, output_path: str):
@@ -126,6 +168,12 @@ def export_pitch_pdf(pitch_payload: dict, output_path: str):
     story.append(Paragraph(f"<b>Slogan:</b> {pitch_payload.get('slogan', '')}", styles["BodyText"]))
     story.append(Spacer(1, 0.4 * cm))
 
+    elevator_pitch = pitch_payload.get("elevator_pitch", "")
+    if elevator_pitch:
+        story.append(Paragraph("<b>Elevator Pitch (60-90 segundos)</b>", styles["Heading3"]))
+        story.append(Paragraph(elevator_pitch, styles["BodyText"]))
+        story.append(Spacer(1, 0.25 * cm))
+
     for section in pitch_payload.get("sections", []):
         title = section.get("title", "Seção")
         content = section.get("content", "")
@@ -153,6 +201,41 @@ def export_pitch_pdf(pitch_payload: dict, output_path: str):
     )
     story.append(inv_table)
     story.append(Spacer(1, 0.35 * cm))
+
+    script_3min = pitch_payload.get("script_3min", []) or []
+    if script_3min:
+        story.append(Paragraph("<b>Roteiro para apresentação de 3 minutos</b>", styles["Heading3"]))
+        for idx, item in enumerate(script_3min, start=1):
+            story.append(Paragraph(f"{idx}. {item}", styles["BodyText"]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    deck = pitch_payload.get("pitch_deck", []) or []
+    if deck:
+        story.append(Paragraph("<b>Estrutura sugerida de Pitch Deck</b>", styles["Heading3"]))
+        deck_rows = [["Slide", "Título", "Pontos-chave"]]
+        for slide in deck:
+            bullets = slide.get("bullets", []) or []
+            bullets_text = " • ".join(str(b) for b in bullets if b)
+            deck_rows.append(
+                [
+                    str(slide.get("slide", "")),
+                    str(slide.get("title", "")),
+                    bullets_text or "Sem pontos informados",
+                ]
+            )
+        deck_table = Table(deck_rows, colWidths=[1.5 * cm, 4.5 * cm, 10 * cm])
+        deck_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dbeafe")),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfdbfe")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("PADDING", (0, 0), (-1, -1), 5),
+                ]
+            )
+        )
+        story.append(deck_table)
+        story.append(Spacer(1, 0.3 * cm))
 
     story.append(Paragraph("<b>Fecho</b>", styles["Heading3"]))
     story.append(Paragraph(pitch_payload.get("closing", ""), styles["BodyText"]))
