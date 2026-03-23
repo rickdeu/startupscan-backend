@@ -84,6 +84,34 @@ def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:
     return normalized
 
 
+def _infer_error_field(error_text: str) -> str:
+    text = (error_text or "").strip().lower()
+    if not text:
+        return "general"
+
+    if any(k in text for k in ("áudio", "audio", "whisper", "mfcc")):
+        return "audio_file"
+    if any(k in text for k in ("vídeo", "video", "ffmpeg", "mediapipe", "deepface")):
+        return "video_file"
+    if "youtube" in text:
+        return "youtube_url"
+    if any(k in text for k in ("documento", "document", "docx", "pdf", "txt", "csv", "ficheiro", "arquivo")):
+        return "text_file"
+    if any(k in text for k in ("receita", "revenue")):
+        return "revenue"
+    if any(k in text for k in ("crescimento", "growth")):
+        return "growth_rate"
+    if any(k in text for k in ("margem", "profit_margin")):
+        return "profit_margin"
+    if any(k in text for k in ("modelo", "openai", "gpt")):
+        return "model_source"
+    if any(k in text for k in ("e-mail", "email")):
+        return "contact_email"
+    if "startup" in text:
+        return "startup_name"
+    return "general"
+
+
 def _safe_slug_model_name(raw_name):
     name = (raw_name or "").strip().lower()
     sanitized = []
@@ -1194,7 +1222,9 @@ class PitchFormView(View):
                     raise ValueError("Margem de lucro deve estar entre 0% e 100%")
                     
             except ValueError as e:
-                messages.error(request, f"Dados financeiros inválidos: {str(e)}")
+                detail = f"Dados financeiros inválidos: {str(e)}"
+                field = _infer_error_field(detail)
+                messages.error(request, detail, extra_tags=f"{field}:{detail}")
                 return self._render_form_with_data(request)
             
             # 4. Estratégia de análise escolhida pelo usuário
@@ -1288,13 +1318,17 @@ class PitchFormView(View):
             except Exception as e:
                 logger.error(f"Erro durante processamento: {str(e)}", exc_info=True)
                 detail = _safe_exception_message(e)
-                messages.error(request, f"Erro durante o processamento: {detail}")
+                field = _infer_error_field(detail)
+                user_msg = f"Erro durante o processamento: {detail}"
+                messages.error(request, user_msg, extra_tags=f"{field}:{user_msg}")
                 return self._render_form_with_data(request)
                 
         except Exception as e:
             logger.critical(f"Erro inesperado: {str(e)}", exc_info=True)
             detail = _safe_exception_message(e)
-            messages.error(request, f"Erro inesperado na validação: {detail}")
+            field = _infer_error_field(detail)
+            user_msg = f"Erro inesperado na validação: {detail}"
+            messages.error(request, user_msg, extra_tags=f"{field}:{user_msg}")
             return self._render_form_with_data(request)
 
     # Métodos auxiliares
@@ -1388,15 +1422,24 @@ class PitchFormView(View):
         
         # Extrair erros das mensagens
         errors = {}
+        general_errors = []
         storage = messages.get_messages(request)
         for message in storage:
-            if hasattr(message, 'extra_tags') and message.extra_tags:
-                field, error_msg = message.extra_tags.split(':', 1)
-                errors[field] = error_msg
+            msg_text = str(message)
+            if hasattr(message, "extra_tags") and message.extra_tags and ":" in message.extra_tags:
+                field, error_msg = message.extra_tags.split(":", 1)
+                field = (field or "general").strip()
+                if field == "general":
+                    general_errors.append(error_msg.strip() or msg_text)
+                else:
+                    errors[field] = (error_msg.strip() or msg_text)
+            else:
+                general_errors.append(msg_text)
         
         context = {
             'form_data': form_data,
             'errors': errors,
+            'general_errors': general_errors,
             'default_date': datetime.now().strftime('%Y-%m-%d'),
             'max_file_size': 50,  # MB
             'industries': PitchAnalysis.INDUSTRY_CHOICES,
