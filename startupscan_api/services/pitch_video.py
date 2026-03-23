@@ -3,10 +3,12 @@ import json
 import os
 import textwrap
 import asyncio
+import time
 from dataclasses import dataclass
 from datetime import datetime
 
 import numpy as np
+import requests
 from django.utils import timezone
 from gtts import gTTS
 from moviepy import AudioFileClip, ImageClip, afx, concatenate_videoclips
@@ -181,6 +183,105 @@ def build_video_plan_from_analysis(analysis) -> VideoPlan:
     return _local_video_plan(payload)
 
 
+def _download_binary_file(url: str, output_path: str) -> bool:
+    try:
+        with requests.get(url, stream=True, timeout=120) as resp:
+            if resp.status_code >= 400:
+                return False
+            with open(output_path, "wb") as fh:
+                for chunk in resp.iter_content(chunk_size=1024 * 128):
+                    if chunk:
+                        fh.write(chunk)
+        return True
+    except Exception:
+        return False
+
+
+def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, output_path: str):
+    """
+    Usa D-ID para gerar vídeo de avatar realista com gestos/lip-sync.
+    Retorna metadados ou None em caso de falha/sem configuração.
+    """
+    api_key = os.getenv("DID_API_KEY", "").strip()
+    if not api_key or not source_image_url:
+        return None
+
+    auth_value = api_key if api_key.lower().startswith("basic ") else f"Basic {api_key}"
+    base_url = os.getenv("DID_API_BASE_URL", "https://api.d-id.com").rstrip("/")
+    create_url = f"{base_url}/talks"
+    voice_id = os.getenv("DID_VOICE_ID", "pt-PT-DuarteNeural")
+
+    script_text = plan.narration.strip()
+    if len(script_text) > 1600:
+        script_text = script_text[:1600].rsplit(" ", 1)[0] + "."
+
+    payload = {
+        "source_url": source_image_url,
+        "script": {
+            "type": "text",
+            "input": script_text,
+            "provider": {
+                "type": "microsoft",
+                "voice_id": voice_id,
+            },
+        },
+        "config": {
+            "fluent": True,
+            "pad_audio": 0.0,
+        },
+    }
+    headers = {
+        "Authorization": auth_value,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    try:
+        create_resp = requests.post(create_url, headers=headers, data=json.dumps(payload), timeout=120)
+        if create_resp.status_code >= 400:
+            return None
+        create_data = create_resp.json() if create_resp.content else {}
+        talk_id = create_data.get("id")
+        if not talk_id:
+            return None
+
+        status_url = f"{create_url}/{talk_id}"
+        result_url = None
+        status_value = "created"
+        error_message = ""
+        for _ in range(90):
+            poll_resp = requests.get(status_url, headers=headers, timeout=60)
+            if poll_resp.status_code >= 400:
+                break
+            poll_data = poll_resp.json() if poll_resp.content else {}
+            status_value = str(poll_data.get("status", "")).lower()
+            if status_value == "done":
+                result_url = poll_data.get("result_url")
+                break
+            if status_value in {"error", "failed", "rejected"}:
+                error_message = str(poll_data.get("error", "failed"))
+                break
+            time.sleep(2.2)
+
+        if not result_url:
+            return None
+
+        ok = _download_binary_file(result_url, output_path)
+        if not ok:
+            return None
+
+        return {
+            "provider": "did",
+            "talk_id": talk_id,
+            "result_url": result_url,
+            "status": "done",
+            "voice_id": voice_id,
+            "error": error_message,
+        }
+    except Exception:
+        return None
+
+
 def _prepare_presenter_image(image_path: str | None):
     if not image_path or not os.path.exists(image_path):
         return None
@@ -293,13 +394,39 @@ def _generate_tts_audio(narration_text: str, audio_path: str) -> tuple[bool, str
         return False, "none"
 
 
-def generate_explainer_video(analysis, output_path: str, presenter_image_path: str | None = None):
+def generate_explainer_video(
+    analysis,
+    output_path: str,
+    presenter_image_path: str | None = None,
+    presenter_image_url: str | None = None,
+):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plan = build_video_plan_from_analysis(analysis)
     payload = _analysis_payload(analysis)
     startup_name = payload["startup_name"]
     score = payload["score"]
     presenter_image = _prepare_presenter_image(presenter_image_path)
+
+    realistic_meta = _try_generate_realistic_video_did(
+        plan=plan,
+        source_image_url=presenter_image_url or "",
+        output_path=output_path,
+    )
+    if realistic_meta:
+        return {
+            "output_path": output_path,
+            "engine_used": f"{plan.engine_used}+did",
+            "character_name": plan.character_name,
+            "voice_engine": f"did:{realistic_meta.get('voice_id')}",
+            "accent_target": "angola",
+            "scene_count": len(plan.scenes),
+            "generated_at": timezone.now().isoformat(),
+            "narration_preview": plan.narration[:300],
+            "presenter_image_used": bool(presenter_image_url),
+            "realistic_provider": realistic_meta.get("provider"),
+            "realistic_result_url": realistic_meta.get("result_url"),
+            "realistic_talk_id": realistic_meta.get("talk_id"),
+        }
 
     clips = []
     for idx, scene in enumerate(plan.scenes, start=1):
