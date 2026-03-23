@@ -140,6 +140,24 @@
                             </div>
                         </div>
                         {% endif %}
+                        {% if analysis.metadata.explainer_video_job_status == 'FAILED' and analysis.metadata.explainer_video_job_error %}
+                        <div class="alert alert-danger small mb-3">
+                            <div class="fw-semibold mb-1">Falha na geração do vídeo</div>
+                            <div>{{ analysis.metadata.explainer_video_job_error }}</div>
+                            {% if analysis.metadata.explainer_video.did_error %}
+                            <div class="mt-2">
+                                <strong>Erro no cenário realista (D-ID):</strong>
+                                <span>{{ analysis.metadata.explainer_video.did_error }}</span>
+                            </div>
+                            {% endif %}
+                            {% if analysis.metadata.explainer_video.local_error %}
+                            <div class="mt-1">
+                                <strong>Erro no cenário local:</strong>
+                                <span>{{ analysis.metadata.explainer_video.local_error }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
 
                         {% if analysis.explainer_video_file %}
                         <video controls class="w-100 mb-2" style="max-height: 220px;">

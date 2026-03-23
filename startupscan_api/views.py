@@ -229,6 +229,7 @@ def _run_explainer_video_job(
         metadata["explainer_video"] = video_meta
         metadata["explainer_video_job_id"] = job_id
         metadata["explainer_video_job_status"] = "COMPLETED"
+        metadata.pop("explainer_video_job_error", None)
         analysis.metadata = metadata
         analysis.save(update_fields=["explainer_video_file", "metadata", "updated_at"])
 
@@ -244,12 +245,33 @@ def _run_explainer_video_job(
         )
     except Exception as exc:
         logger.error("Falha no job de vídeo explicativo: %s", str(exc), exc_info=True)
+        error_detail = str(exc).strip() or exc.__class__.__name__
+        did_status = getattr(exc, "did_status", None)
+        did_error = getattr(exc, "did_error", None)
+        local_error = getattr(exc, "local_error", None)
         try:
             analysis = PitchAnalysis.objects.get(id=analysis_id)
             metadata = analysis.metadata or {}
             metadata["explainer_video_job_id"] = job_id
             metadata["explainer_video_job_status"] = "FAILED"
-            metadata["explainer_video_job_error"] = str(exc)
+            metadata["explainer_video_job_error"] = error_detail
+            explainer_video_meta = metadata.get("explainer_video")
+            if not isinstance(explainer_video_meta, dict):
+                explainer_video_meta = {}
+            explainer_video_meta.update(
+                {
+                    "status": "failed",
+                    "error": error_detail,
+                    "generated_at": timezone.now().isoformat(),
+                }
+            )
+            if did_status:
+                explainer_video_meta["did_status"] = did_status
+            if did_error:
+                explainer_video_meta["did_error"] = did_error
+            if local_error:
+                explainer_video_meta["local_error"] = local_error
+            metadata["explainer_video"] = explainer_video_meta
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
         except Exception:
@@ -258,8 +280,11 @@ def _run_explainer_video_job(
             job_id,
             status="FAILED",
             progress=100,
-            message="Falha ao gerar vídeo explicativo",
-            error=str(exc),
+            message=f"Falha ao gerar vídeo: {error_detail[:220]}",
+            error=error_detail,
+            did_status=did_status,
+            did_error=did_error,
+            local_error=local_error,
             analysis_id=analysis_id,
         )
     finally:
