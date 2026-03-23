@@ -47,6 +47,7 @@ from startupscan_api.services.pitch_builder import (
 )
 from startupscan_api.services.pitch_video import (
     build_did_presenter_source_urls,
+    build_did_real_image_only_source_url,
     generate_explainer_video,
 )
 
@@ -1744,8 +1745,12 @@ class PitchExplainerVideoGenerateView(View):
 
             if presenter_path and presenter_url:
                 if video_mode == "did_only":
-                    # Modo D-ID estrito: usa somente a imagem real enviada (sem composição de fundo/poses).
-                    presenter_source_urls = [presenter_url]
+                    # Modo D-ID estrito: usa somente imagem real (sem cenário/palco gerado).
+                    real_only_url = build_did_real_image_only_source_url(
+                        presenter_image_path=presenter_path,
+                        presenter_image_url=presenter_url,
+                    )
+                    presenter_source_urls = [real_only_url or presenter_url]
                 else:
                     presenter_source_urls = build_did_presenter_source_urls(
                         presenter_image_path=presenter_path,

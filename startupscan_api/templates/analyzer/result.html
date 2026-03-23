@@ -180,14 +180,14 @@
                             <label class="form-label mt-2">Modo de geração do vídeo</label>
                             <select class="form-select form-select-sm mb-2" name="video_mode">
                                 <option value="auto" {% if selected_video_mode == 'auto' %}selected{% endif %}>D-ID + fallback local (recomendado)</option>
-                                <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>Apenas D-ID com imagem real e fala</option>
+                                <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>Apenas D-ID (imagem real a falar, sem fundo/cenário)</option>
                                 <option value="local_only" {% if selected_video_mode == 'local_only' %}selected{% endif %}>Apenas geração local</option>
                             </select>
                             <label class="form-label mt-2">Imagem real do apresentador (rosto)</label>
                             <input type="file" class="form-control form-control-sm mb-2" name="presenter_image" accept="image/*">
                             <small class="text-muted d-block mb-2">
                                 A IA usa esta imagem internamente para gerar o vídeo; o rosto não é exibido na interface.
-                                Para modo ultra-realista (gestos e lip-sync avançado), configure DID_API_KEY no servidor.
+                                No modo did_only, o sistema usa somente a imagem real a falar (sem fundo/cenário artificial).
                             </small>
                             <small class="text-muted d-block mb-2">
                                 Duração padrão do vídeo: mínimo 1 minuto e máximo 3 minutos, sempre com conclusão no final.
