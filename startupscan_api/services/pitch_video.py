@@ -1172,7 +1172,7 @@ def build_did_real_image_only_source_url(
     Gera uma fonte visual "real-only" para o D-ID:
     - sem cenário artificial;
     - sem palco ou composição extra;
-    - apenas recorte real do apresentador para priorizar lip-sync.
+    - close-up da pessoa para minimizar qualquer fundo visível.
     """
     if not presenter_image_path or not presenter_image_url:
         return None
@@ -1187,32 +1187,23 @@ def build_did_real_image_only_source_url(
         file_path = os.path.join(source_dir, file_name)
         url_base = presenter_image_url.rsplit("/", 1)[0]
 
-        # Sem fundo/cenário: preserva transparência original quando existir.
-        if "A" in raw_image.getbands():
-            source_img = ImageOps.fit(raw_image.convert("RGBA"), (1024, 1024), method=Image.Resampling.LANCZOS)
+        # No modo did_only, o foco é close-up real sem cenário.
+        # Evita transparência para não cair em preenchimentos automáticos do provedor.
+        presenter_image = raw_image.convert("RGB")
+        face_patch = _extract_face_patch(presenter_image)
+        if face_patch is not None:
+            # Zoom adicional para reduzir ainda mais fundo periférico.
+            zoomed = ImageOps.fit(face_patch, (1400, 1400), method=Image.Resampling.LANCZOS)
+            source_img = ImageOps.fit(zoomed, (1024, 1024), method=Image.Resampling.LANCZOS)
         else:
-            presenter_image = raw_image.convert("RGB")
-            face_patch = _extract_face_patch(presenter_image)
-            if face_patch is not None:
-                # Fallback sem alpha: recorte circular com fundo transparente.
-                face_rgba = face_patch.convert("RGBA")
-                alpha = Image.new("L", face_rgba.size, 0)
-                alpha_draw = ImageDraw.Draw(alpha)
-                alpha_draw.ellipse((0, 0, face_rgba.size[0], face_rgba.size[1]), fill=255)
-                face_rgba.putalpha(alpha)
-                face_rgba = face_rgba.filter(ImageFilter.SMOOTH_MORE)
-                source_img = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-                portrait = ImageOps.fit(face_rgba, (860, 860), method=Image.Resampling.LANCZOS)
-                offset = ((1024 - portrait.width) // 2, (1024 - portrait.height) // 2)
-                source_img.paste(portrait, offset, portrait)
-            else:
-                source_img = ImageOps.fit(presenter_image.convert("RGBA"), (1024, 1024), method=Image.Resampling.LANCZOS)
+            source_img = ImageOps.fit(presenter_image, (1024, 1024), method=Image.Resampling.LANCZOS)
+        source_img = source_img.filter(ImageFilter.SMOOTH_MORE)
 
         os.makedirs(source_dir, exist_ok=True)
         source_img.save(file_path, format="PNG", optimize=True)
         return f"{url_base}/{file_name}"
     except Exception:
-        return presenter_image_url
+        return None
 
 
 def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):

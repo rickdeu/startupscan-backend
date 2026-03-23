@@ -1750,7 +1750,13 @@ class PitchExplainerVideoGenerateView(View):
                         presenter_image_path=presenter_path,
                         presenter_image_url=presenter_url,
                     )
-                    presenter_url = real_only_url or presenter_url
+                    if not real_only_url:
+                        messages.error(
+                            request,
+                            "Não foi possível preparar a imagem real sem fundo para o modo did_only. Tente outra imagem.",
+                        )
+                        return redirect("pitch_results", analysis_id=analysis.id)
+                    presenter_url = real_only_url
                     presenter_source_urls = [presenter_url]
                 else:
                     presenter_source_urls = build_did_presenter_source_urls(
