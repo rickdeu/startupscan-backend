@@ -13,7 +13,7 @@ import requests
 from django.utils import timezone
 from gtts import gTTS
 from moviepy import AudioFileClip, ImageClip, VideoClip, afx, concatenate_videoclips
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps, ImageEnhance
 
 try:
     import edge_tts
@@ -361,72 +361,140 @@ def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: fl
                 )
 
 
+def _draw_formal_stage_elements(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):
+    """Elementos corporativos de palco para reforçar estilo formal."""
+    # Trilhas de luz
+    beam_color = (52, 102, 168)
+    draw.polygon([(0, 0), (220, 0), (80, 300)], outline=beam_color)
+    draw.polygon([(width, 0), (width - 220, 0), (width - 80, 300)], outline=beam_color)
+    draw.polygon([(260, 0), (420, 0), (320, 300)], outline=beam_color)
+
+    # Tela de conferência no fundo
+    panel_top = 96
+    panel_left = 450
+    panel_right = width - 60
+    panel_bottom = 228
+    draw.rounded_rectangle(
+        (panel_left, panel_top, panel_right, panel_bottom),
+        radius=16,
+        fill=(17, 31, 56),
+        outline=(83, 142, 210),
+        width=2,
+    )
+    title_font = _load_font(20)
+    subtitle_font = _load_font(16)
+    draw.text((panel_left + 22, panel_top + 24), "Investor Conference · Executive Briefing", fill=(214, 230, 255), font=title_font)
+    draw.text((panel_left + 22, panel_top + 58), "Ambiente formal para apresentação institucional", fill=(170, 195, 225), font=subtitle_font)
+    pulse_bar = int(200 + 28 * pulse)
+    draw.rounded_rectangle((panel_right - 210, panel_top + 30, panel_right - 24, panel_top + 46), radius=6, fill=(36, 70, 118))
+    draw.rounded_rectangle((panel_right - 210, panel_top + 30, panel_right - 210 + pulse_bar // 2, panel_top + 46), radius=6, fill=(90, 192, 255))
+
+
+def _draw_formal_podium(draw: ImageDraw.ImageDraw, cx: int, top: int, pulse: float, startup_name: str):
+    podium_left = cx - 84
+    podium_top = top + 235
+    podium_right = cx + 142
+    podium_bottom = top + 540
+
+    # Base do púlpito
+    draw.rounded_rectangle(
+        (podium_left, podium_top, podium_right, podium_bottom),
+        radius=20,
+        fill=(18, 28, 50),
+        outline=(84, 142, 214),
+        width=3,
+    )
+    draw.polygon(
+        [(podium_left + 16, podium_top + 10), (podium_right - 16, podium_top + 10), (podium_right - 28, podium_top + 45), (podium_left + 28, podium_top + 45)],
+        fill=(29, 46, 82),
+    )
+    # Plaqueta institucional
+    plate = (podium_left + 34, podium_top + 72, podium_right - 34, podium_top + 126)
+    draw.rounded_rectangle(plate, radius=10, fill=(30, 58, 102))
+    plate_font = _load_font(16)
+    startup_short = (startup_name or "Startup")[:18]
+    draw.text((plate[0] + 10, plate[1] + 16), f"{startup_short} · CEO", fill=(230, 240, 255), font=plate_font)
+    # Microfones
+    mic_bounce = int(5 * pulse)
+    draw.line([(podium_left + 92, podium_top + 12), (podium_left + 74, podium_top - 55 - mic_bounce)], fill=(120, 140, 170), width=4)
+    draw.line([(podium_left + 128, podium_top + 14), (podium_left + 144, podium_top - 52 + mic_bounce)], fill=(120, 140, 170), width=4)
+    draw.ellipse((podium_left + 68, podium_top - 66 - mic_bounce, podium_left + 82, podium_top - 52 - mic_bounce), fill=(156, 170, 190))
+    draw.ellipse((podium_left + 138, podium_top - 62 + mic_bounce, podium_left + 152, podium_top - 48 + mic_bounce), fill=(156, 170, 190))
+
+
 def _draw_full_body_presenter(
     img: Image.Image,
     character_name: str,
+    startup_name: str,
     face_patch: Image.Image | None,
     motion_t: float,
     scene_index: int,
 ):
-    """Desenha apresentador de corpo inteiro com gestos animados."""
+    """Desenha apresentador de corpo inteiro, em postura formal e com gestos executivos."""
     draw = ImageDraw.Draw(img)
     pulse = 0.5 + 0.5 * math.sin(motion_t * 2.6 + scene_index * 0.9)
 
-    cx = 205 + int(math.sin(motion_t * 1.2 + scene_index * 0.6) * 14)
-    top = 120 + int(math.sin(motion_t * 2.0 + scene_index * 0.3) * 5)
+    cx = 200 + int(math.sin(motion_t * 1.0 + scene_index * 0.6) * 8)
+    top = 112 + int(math.sin(motion_t * 1.8 + scene_index * 0.3) * 4)
+    gesture_factor = 0.45 + (0.12 if scene_index % 2 == 0 else -0.08)
 
     # Sombra de palco
     draw.ellipse((cx - 120, 560, cx + 120, 620), fill=(8, 11, 18))
+    _draw_formal_podium(draw, cx=cx, top=top, pulse=pulse, startup_name=startup_name)
 
-    suit_dark = (20, 35, 66)
-    suit_mid = (31, 52, 93)
+    suit_dark = (16, 28, 52)
+    suit_mid = (24, 42, 75)
     shirt = (226, 232, 240)
-    tie = (192, 43, 60)
+    tie = (170, 38, 58)
     skin = (205, 156, 128)
 
     # Pernas e sapatos
-    draw.rounded_rectangle((cx - 55, top + 360, cx - 8, top + 530), radius=16, fill=(16, 27, 51))
-    draw.rounded_rectangle((cx + 8, top + 360, cx + 55, top + 530), radius=16, fill=(16, 27, 51))
-    draw.rounded_rectangle((cx - 72, top + 522, cx - 2, top + 548), radius=8, fill=(9, 13, 25))
-    draw.rounded_rectangle((cx + 2, top + 522, cx + 72, top + 548), radius=8, fill=(9, 13, 25))
+    draw.rounded_rectangle((cx - 52, top + 360, cx - 8, top + 536), radius=16, fill=(14, 25, 46))
+    draw.rounded_rectangle((cx + 8, top + 360, cx + 52, top + 536), radius=16, fill=(14, 25, 46))
+    draw.rounded_rectangle((cx - 70, top + 526, cx - 2, top + 552), radius=8, fill=(8, 12, 22))
+    draw.rounded_rectangle((cx + 2, top + 526, cx + 70, top + 552), radius=8, fill=(8, 12, 22))
 
     # Tronco
-    draw.rounded_rectangle((cx - 92, top + 150, cx + 92, top + 392), radius=36, fill=suit_dark, outline=(106, 184, 255), width=3)
+    draw.rounded_rectangle((cx - 88, top + 150, cx + 88, top + 392), radius=36, fill=suit_dark, outline=(106, 184, 255), width=3)
     draw.polygon([(cx - 34, top + 166), (cx - 7, top + 270), (cx - 54, top + 270)], fill=suit_mid)
     draw.polygon([(cx + 34, top + 166), (cx + 7, top + 270), (cx + 54, top + 270)], fill=suit_mid)
     draw.polygon([(cx - 11, top + 166), (cx + 11, top + 166), (cx + 20, top + 255), (cx - 20, top + 255)], fill=shirt)
     draw.rectangle((cx - 6, top + 182, cx + 6, top + 300), fill=tie)
     draw.polygon([(cx - 6, top + 300), (cx + 6, top + 300), (cx, top + 332)], fill=tie)
+    # Pocket square para formalidade
+    draw.polygon([(cx + 35, top + 220), (cx + 55, top + 220), (cx + 48, top + 236)], fill=(240, 240, 240))
 
-    # Braços com gestos animados
-    left_shoulder = (cx - 66, top + 196)
-    right_shoulder = (cx + 66, top + 196)
+    # Braços com gestual formal (amplitude reduzida e postura executiva)
+    left_shoulder = (cx - 62, top + 198)
+    right_shoulder = (cx + 62, top + 198)
 
     left_elbow = (
-        left_shoulder[0] - int(58 + 24 * pulse),
-        left_shoulder[1] + int(14 + 18 * math.sin(motion_t * 2.1 + 1.0)),
+        left_shoulder[0] - int(44 + 18 * pulse * gesture_factor),
+        left_shoulder[1] + int(26 + 12 * math.sin(motion_t * 1.7 + 1.0)),
     )
     left_hand = (
-        left_elbow[0] - int(50 + 20 * math.sin(motion_t * 2.7 + 0.7)),
-        left_elbow[1] - int(34 + 18 * pulse),
+        left_elbow[0] - int(32 + 12 * math.sin(motion_t * 2.0 + 0.7)),
+        left_elbow[1] - int(16 + 10 * pulse * gesture_factor),
     )
 
     right_elbow = (
-        right_shoulder[0] + int(52 + 18 * math.sin(motion_t * 1.9 + 0.8)),
-        right_shoulder[1] - int(10 + 22 * pulse),
+        right_shoulder[0] + int(40 + 14 * math.sin(motion_t * 1.7 + 0.8)),
+        right_shoulder[1] + int(4 - 14 * pulse * gesture_factor),
     )
     right_hand = (
-        right_elbow[0] + int(58 + 18 * pulse),
-        right_elbow[1] - int(30 + 16 * math.sin(motion_t * 2.5 + 1.8)),
+        right_elbow[0] + int(42 + 10 * pulse * gesture_factor),
+        right_elbow[1] - int(20 + 10 * math.sin(motion_t * 2.1 + 1.8)),
     )
 
-    draw.line([left_shoulder, left_elbow], fill=suit_mid, width=26, joint="curve")
-    draw.line([left_elbow, left_hand], fill=suit_mid, width=20, joint="curve")
-    draw.ellipse((left_hand[0] - 15, left_hand[1] - 15, left_hand[0] + 15, left_hand[1] + 15), fill=skin)
+    draw.line([left_shoulder, left_elbow], fill=suit_mid, width=24, joint="curve")
+    draw.line([left_elbow, left_hand], fill=suit_mid, width=18, joint="curve")
+    draw.ellipse((left_hand[0] - 13, left_hand[1] - 13, left_hand[0] + 13, left_hand[1] + 13), fill=skin)
 
-    draw.line([right_shoulder, right_elbow], fill=suit_mid, width=26, joint="curve")
-    draw.line([right_elbow, right_hand], fill=suit_mid, width=20, joint="curve")
-    draw.ellipse((right_hand[0] - 15, right_hand[1] - 15, right_hand[0] + 15, right_hand[1] + 15), fill=skin)
+    draw.line([right_shoulder, right_elbow], fill=suit_mid, width=24, joint="curve")
+    draw.line([right_elbow, right_hand], fill=suit_mid, width=18, joint="curve")
+    draw.ellipse((right_hand[0] - 13, right_hand[1] - 13, right_hand[0] + 13, right_hand[1] + 13), fill=skin)
+    # Clicker na mão direita para estilo de conferência
+    draw.rounded_rectangle((right_hand[0] + 8, right_hand[1] - 4, right_hand[0] + 22, right_hand[1] + 9), radius=3, fill=(35, 40, 50))
 
     # Cabeça (usa face enviada quando disponível)
     head_size = 128
@@ -450,6 +518,25 @@ def _draw_full_body_presenter(
     glow_g = int(96 + pulse * 30)
     glow_b = int(150 + pulse * 40)
     draw.ellipse((cx - 155, 84, cx + 155, 406), outline=(glow_r, glow_g, glow_b), width=3)
+
+
+def _apply_cinematic_camera_and_grade(img: Image.Image, motion_t: float, scene_index: int):
+    """Aplica zoom/pan suave e leve color grading para aspecto mais formal."""
+    w, h = img.size
+    zoom = 1.04 + 0.03 * (0.5 + 0.5 * math.sin(motion_t * 0.42 + scene_index * 0.6))
+    zw = int(w * zoom)
+    zh = int(h * zoom)
+    enlarged = img.resize((zw, zh), Image.Resampling.LANCZOS)
+    max_x = max(0, zw - w)
+    max_y = max(0, zh - h)
+    crop_x = int((0.5 + 0.5 * math.sin(motion_t * 0.37 + scene_index * 0.8)) * max_x)
+    crop_y = int((0.5 + 0.5 * math.cos(motion_t * 0.33 + scene_index * 0.4)) * max_y * 0.72)
+    frame = enlarged.crop((crop_x, crop_y, crop_x + w, crop_y + h))
+
+    contrast = ImageEnhance.Contrast(frame).enhance(1.08)
+    color = ImageEnhance.Color(contrast).enhance(0.94)
+    sharp = ImageEnhance.Sharpness(color).enhance(1.15)
+    return sharp
 
 
 def _draw_scene(
@@ -489,6 +576,7 @@ def _draw_scene(
     draw.ellipse((190, 96, 540, 512), outline=(69, 112, 170), width=2)
     draw.ellipse((80, 420, 380, 670), fill=(9, 14, 24))
     draw.ellipse((0, 470, 430, 760), fill=(7, 10, 18))
+    _draw_formal_stage_elements(draw, width, height, pulse)
     _draw_audience(draw, width, height, pulse)
 
     # Avatar/personagem
@@ -496,6 +584,7 @@ def _draw_scene(
         _draw_full_body_presenter(
             img=img,
             character_name=character_name,
+            startup_name=startup_name,
             face_patch=presenter_face_patch,
             motion_t=motion_t,
             scene_index=index,
@@ -519,7 +608,8 @@ def _draw_scene(
         )
         initials = (character_name[:2] or "AI").upper()
         draw.text((avatar_center[0] - 38, avatar_center[1] - 28), initials, fill=(255, 255, 255), font=_load_font(60))
-    draw.text((45, 600), f"Apresentador no palco: {character_name}", fill=(255, 255, 255), font=small_font)
+    draw.text((45, 598), f"Apresentador Executivo: {character_name}", fill=(255, 255, 255), font=small_font)
+    draw.text((45, 628), "Formato: Pitch institucional para investidores", fill=(178, 198, 226), font=_load_font(18))
 
     # Speech card
     draw.rounded_rectangle((355, 130, 1230, 620), radius=24, fill=(15, 25, 45), outline=(59, 130, 246), width=3)
@@ -532,6 +622,8 @@ def _draw_scene(
 
     draw.text((390, 585), f"Cena {index}/{total}", fill=(148, 163, 184), font=small_font)
 
+    if presenter_image is not None:
+        img = _apply_cinematic_camera_and_grade(img, motion_t=motion_t, scene_index=index)
     return np.array(img)
 
 
@@ -688,7 +780,7 @@ def generate_explainer_video(
         "generated_at": timezone.now().isoformat(),
         "narration_preview": plan.narration[:300],
         "presenter_image_used": bool(presenter_image),
-        "animation_mode": "full_body_stage_motion" if presenter_image is not None else "static_avatar",
+        "animation_mode": "formal_executive_stage_motion" if presenter_image is not None else "static_avatar",
         "did_attempted": bool(realistic_meta),
         "did_status": (realistic_meta or {}).get("status"),
         "did_error": (realistic_meta or {}).get("error"),
