@@ -124,7 +124,9 @@
             if (!overlay || !bar || !pct) return;
 
             let timer = null;
+            let watchdog = null;
             let current = 0;
+            let lockedButtons = [];
 
             function setProgress(value) {
                 current = Math.max(0, Math.min(100, value));
@@ -139,6 +141,31 @@
                 }
             }
 
+            function stopWatchdog() {
+                if (watchdog) {
+                    clearTimeout(watchdog);
+                    watchdog = null;
+                }
+            }
+
+            function unlockButtons() {
+                lockedButtons.forEach(function (btn) {
+                    try {
+                        btn.disabled = false;
+                    } catch (_) {}
+                });
+                lockedButtons = [];
+            }
+
+            function resetProgressUI() {
+                stopTimer();
+                stopWatchdog();
+                overlay.classList.remove("active");
+                overlay.setAttribute("aria-hidden", "true");
+                setProgress(0);
+                unlockButtons();
+            }
+
             function startProgress() {
                 if (overlay.classList.contains("active")) return;
                 overlay.classList.add("active");
@@ -150,30 +177,49 @@
                     else if (current < 75) setProgress(current + 3);
                     else if (current < 92) setProgress(current + 1);
                 }, 180);
+                stopWatchdog();
+                watchdog = setTimeout(function () {
+                    // Evita overlay preso quando não há navegação (ex: download)
+                    resetProgressUI();
+                }, 25000);
             }
 
             function endProgress() {
                 stopTimer();
+                stopWatchdog();
                 setProgress(100);
                 setTimeout(function () {
-                    overlay.classList.remove("active");
-                    overlay.setAttribute("aria-hidden", "true");
-                    setProgress(0);
+                    resetProgressUI();
                 }, 180);
             }
 
+            // Garante estado limpo ao carregar/voltar página.
+            resetProgressUI();
+            window.addEventListener("load", resetProgressUI);
+            document.addEventListener("DOMContentLoaded", resetProgressUI);
+
             document.querySelectorAll("form").forEach(function (form) {
                 if (form.dataset.noProgress === "true") return;
+                const method = (form.getAttribute("method") || "get").toLowerCase();
+                const forceProgress = form.dataset.progressMode === "always";
+                if (method !== "post" && !forceProgress) return;
                 form.addEventListener("submit", function () {
                     startProgress();
+                    lockedButtons = [];
                     form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
                         if (!btn.disabled) btn.disabled = true;
+                        lockedButtons.push(btn);
                     });
                 });
             });
 
             window.addEventListener("pageshow", function () {
                 if (overlay.classList.contains("active")) endProgress();
+            });
+            document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "visible" && overlay.classList.contains("active")) {
+                    endProgress();
+                }
             });
         })();
     </script>
