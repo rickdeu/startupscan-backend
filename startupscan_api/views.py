@@ -163,6 +163,7 @@ def _write_video_generation_state(job_id: str, **updates):
         "job_id": job_id,
         "status": "PENDING",
         "progress": 0,
+        "phase": "fila",
         "message": "Aguardando início da geração de vídeo",
     }
     state.update(updates)
@@ -184,6 +185,7 @@ def _run_explainer_video_job(
             job_id,
             status="RUNNING",
             progress=8,
+            phase="inicializacao",
             message="Inicializando geração do vídeo explicativo",
             analysis_id=analysis_id,
         )
@@ -205,7 +207,16 @@ def _run_explainer_video_job(
         _write_video_generation_state(
             job_id,
             status="RUNNING",
+            progress=24,
+            phase="preparacao",
+            message="Preparando recursos visuais e áudio",
+        )
+
+        _write_video_generation_state(
+            job_id,
+            status="RUNNING",
             progress=35,
+            phase="renderizacao",
             message="Criando roteiro, cenas e narração",
         )
         video_meta = generate_explainer_video(
@@ -219,6 +230,7 @@ def _run_explainer_video_job(
             job_id,
             status="RUNNING",
             progress=78,
+            phase="persistencia",
             message="Salvando vídeo no resultado da análise",
         )
         final_name = f"explainer_{analysis.id}.mp4"
@@ -237,6 +249,7 @@ def _run_explainer_video_job(
             job_id,
             status="COMPLETED",
             progress=100,
+            phase="concluido",
             message="Vídeo explicativo gerado com sucesso",
             result={
                 "analysis_id": analysis_id,
@@ -280,6 +293,7 @@ def _run_explainer_video_job(
             job_id,
             status="FAILED",
             progress=100,
+            phase="falha",
             message=f"Falha ao gerar vídeo: {error_detail[:220]}",
             error=error_detail,
             did_status=did_status,
@@ -307,6 +321,7 @@ def _start_explainer_video_job(
         job_id,
         status="PENDING",
         progress=0,
+        phase="fila",
         message="Job de vídeo criado, aguardando execução",
         analysis_id=analysis.id,
     )
