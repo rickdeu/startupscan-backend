@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-br" data-theme="dark">
+<html lang="{{ current_ui_language|default:'pt' }}" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,57 +20,57 @@
                     <span class="brand-text">StartupScan</span>
                 </a>
             </div>
-            <div class="sidebar-caption">NAVEGAÇÃO</div>
+            <div class="sidebar-caption">{{ ui_text.navigation }}</div>
             <nav class="sidebar-nav">
                 {% if user_role_access.can_dashboard %}
                 <a class="sidebar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'dashboard' %}">
-                    <i class="fas fa-chart-pie"></i><span>Painel</span>
+                    <i class="fas fa-chart-pie"></i><span>{{ ui_text.nav_dashboard }}</span>
                 </a>
                 {% endif %}
                 {% if user_role_access.can_pitch %}
                 <a class="sidebar-link {% if '/analyze/form/' in request.path %}active{% endif %}" href="{% url 'pitch_form' %}">
-                    <i class="fas fa-plus-circle"></i><span>Novo Pitch</span>
+                    <i class="fas fa-plus-circle"></i><span>{{ ui_text.nav_new_pitch }}</span>
                 </a>
                 {% endif %}
                 {% if user_role_access.can_idea_builder %}
                 <a class="sidebar-link {% if '/pitch/builder/' in request.path %}active{% endif %}" href="{% url 'idea_pitch_builder' %}">
-                    <i class="fas fa-lightbulb"></i><span>Gerar Pitch PDF</span>
+                    <i class="fas fa-lightbulb"></i><span>{{ ui_text.nav_generate_pitch_pdf }}</span>
                 </a>
                 {% endif %}
                 {% if user_role_access.can_investor %}
                 <a class="sidebar-link {% if '/investors/' in request.path %}active{% endif %}" href="{% url 'investor_dashboard' %}">
-                    <i class="fas fa-hand-holding-dollar"></i><span>Investidores</span>
+                    <i class="fas fa-hand-holding-dollar"></i><span>{{ ui_text.nav_investors }}</span>
                 </a>
                 {% endif %}
                 {% if user.is_authenticated and user_role_access.can_connections %}
                 <a class="sidebar-link {% if '/connections/' in request.path %}active{% endif %}" href="{% url 'connections_hub' %}">
-                    <i class="fas fa-link"></i><span>Conexões</span>
+                    <i class="fas fa-link"></i><span>{{ ui_text.nav_connections }}</span>
                 </a>
                 {% endif %}
                 {% if user_role_access.can_public_ideas %}
                 <a class="sidebar-link {% if '/ideas/' in request.path %}active{% endif %}" href="{% url 'public_ideas' %}">
-                    <i class="fas fa-lightbulb"></i><span>Ideias da Plataforma</span>
+                    <i class="fas fa-lightbulb"></i><span>{{ ui_text.nav_platform_ideas }}</span>
                 </a>
                 {% endif %}
                 {% if user.is_authenticated and user_role_access.can_models %}
                 <a class="sidebar-link {% if '/models/' in request.path %}active{% endif %}" href="{% url 'model_management' %}">
-                    <i class="fas fa-sliders"></i><span>Modelos</span>
+                    <i class="fas fa-sliders"></i><span>{{ ui_text.nav_models }}</span>
                 </a>
                 {% endif %}
             </nav>
 
             <div class="sidebar-footer">
                 {% if user.is_authenticated %}
-                <div class="small text-muted mb-2">Sessão ativa</div>
+                <div class="small text-muted mb-2">{{ ui_text.session_active }}</div>
                 <div class="fw-semibold mb-2">{{ user.first_name|default:user.username }}</div>
-                <div class="small text-muted mb-2">Perfil: {{ user_role_label }}</div>
+                <div class="small text-muted mb-2">{{ ui_text.profile }}: {{ user_role_label }}</div>
                 <form action="{% url 'logout' %}" method="post">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-light w-100">Sair</button>
+                    <button type="submit" class="btn btn-sm btn-outline-light w-100">{{ ui_text.logout }}</button>
                 </form>
                 {% else %}
-                <a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100 mb-2">Entrar</a>
-                <a href="{% url 'register' %}" class="btn btn-sm btn-outline-light w-100">Criar conta</a>
+                <a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100 mb-2">{{ ui_text.login }}</a>
+                <a href="{% url 'register' %}" class="btn btn-sm btn-outline-light w-100">{{ ui_text.create_account }}</a>
                 {% endif %}
             </div>
         </aside>
@@ -82,12 +82,22 @@
                         <i class="fas fa-bars"></i>
                     </button>
                     <div>
-                        <div class="topbar-title">{% block topbar_title %}Dashboard Inteligente{% endblock %}</div>
-                        <div class="topbar-subtitle">{% block topbar_subtitle %}Visão consolidada de performance e oportunidades{% endblock %}</div>
+                        <div class="topbar-title">{% block topbar_title %}{{ ui_text.default_topbar_title }}{% endblock %}</div>
+                        <div class="topbar-subtitle">{% block topbar_subtitle %}{{ ui_text.default_topbar_subtitle }}{% endblock %}</div>
                     </div>
                 </div>
                 <div class="topbar-meta">
-                    <span><i class="fas fa-circle-dot me-1 text-success"></i> Online</span>
+                    <form method="post" action="{% url 'set_ui_language' %}" class="d-inline-flex align-items-center gap-2 me-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <label for="uiLanguageSelect" class="small text-muted mb-0">{{ ui_text.language }}</label>
+                        <select id="uiLanguageSelect" name="language" class="form-select form-select-sm" onchange="this.form.submit()">
+                            {% for code, label in ui_languages %}
+                            <option value="{{ code }}" {% if code == current_ui_language %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    <span><i class="fas fa-circle-dot me-1 text-success"></i> {{ ui_text.online }}</span>
                 </div>
             </header>
 
@@ -105,7 +115,7 @@
             </main>
 
             <footer class="app-footer py-3">
-                <p class="mb-0 text-center">Startup Intelligence Hub &copy; {% now "Y" %}</p>
+                <p class="mb-0 text-center">{{ ui_text.footer }} &copy; {% now "Y" %}</p>
             </footer>
         </div>
     </div>
@@ -113,13 +123,13 @@
     <div id="submitProgressOverlay" class="submit-progress-overlay" aria-live="polite" aria-hidden="true">
         <div class="submit-progress-card">
             <div class="submit-progress-title">
-                <i class="fas fa-cloud-upload-alt me-2"></i>Processando envio do formulário...
+                <i class="fas fa-cloud-upload-alt me-2"></i>{{ ui_text.processing_form }}
             </div>
             <div class="submit-progress-track">
                 <div id="submitProgressBar" class="submit-progress-bar" style="width: 0%;"></div>
             </div>
             <div class="submit-progress-meta">
-                <span>Aguarde, isto pode levar alguns segundos.</span>
+                <span>{{ ui_text.processing_wait }}</span>
                 <strong id="submitProgressPct">0%</strong>
             </div>
         </div>
