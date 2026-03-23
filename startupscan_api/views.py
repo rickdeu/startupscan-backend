@@ -38,7 +38,10 @@ from startupscan_api.services.model_registry import (
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.services.pitch_builder import generate_pitch_from_idea, export_pitch_pdf
-from startupscan_api.services.pitch_video import generate_explainer_video
+from startupscan_api.services.pitch_video import (
+    build_did_presenter_source_urls,
+    generate_explainer_video,
+)
 
 import joblib
 from celery.result import AsyncResult
@@ -177,6 +180,7 @@ def _run_explainer_video_job(
     analysis_id: int,
     presenter_path: str | None = None,
     presenter_url: str | None = None,
+    presenter_source_urls: list[str] | None = None,
 ):
     temp_output = None
     try:
@@ -224,6 +228,7 @@ def _run_explainer_video_job(
             temp_output,
             presenter_image_path=presenter_path,
             presenter_image_url=presenter_url,
+            presenter_source_urls=presenter_source_urls or [],
         )
 
         _write_video_generation_state(
@@ -315,6 +320,7 @@ def _start_explainer_video_job(
     analysis: PitchAnalysis,
     presenter_path: str | None = None,
     presenter_url: str | None = None,
+    presenter_source_urls: list[str] | None = None,
 ) -> str:
     job_id = str(uuid.uuid4())
     _write_video_generation_state(
@@ -332,6 +338,7 @@ def _start_explainer_video_job(
             "analysis_id": analysis.id,
             "presenter_path": presenter_path,
             "presenter_url": presenter_url,
+            "presenter_source_urls": presenter_source_urls or [],
         },
         daemon=True,
     )
@@ -1433,6 +1440,7 @@ class PitchExplainerVideoGenerateView(View):
 
             presenter_path = None
             presenter_url = None
+            presenter_source_urls = []
             if analysis.presenter_face_image_file:
                 try:
                     presenter_path = analysis.presenter_face_image_file.path
@@ -1448,14 +1456,23 @@ class PitchExplainerVideoGenerateView(View):
                 except Exception:
                     presenter_url = None
 
+            if presenter_path and presenter_url:
+                presenter_source_urls = build_did_presenter_source_urls(
+                    presenter_image_path=presenter_path,
+                    presenter_image_url=presenter_url,
+                    startup_name=analysis.startup_name or "Startup",
+                )
+
             metadata = analysis.metadata or {}
             job_id = _start_explainer_video_job(
                 analysis=analysis,
                 presenter_path=presenter_path,
                 presenter_url=presenter_url,
+                presenter_source_urls=presenter_source_urls,
             )
             metadata["explainer_video_job_id"] = job_id
             metadata["explainer_video_job_status"] = "PENDING"
+            metadata["explainer_video_source_images"] = len(presenter_source_urls or [])
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
             messages.success(request, "Geração de vídeo iniciada. Acompanhe o progresso nesta página.")

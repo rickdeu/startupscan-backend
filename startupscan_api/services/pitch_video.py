@@ -1,10 +1,12 @@
 import io
 import json
 import os
+import re
 import textwrap
 import asyncio
 import time
 import math
+from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -12,7 +14,7 @@ import numpy as np
 import requests
 from django.utils import timezone
 from gtts import gTTS
-from moviepy import AudioFileClip, ImageClip, VideoClip, afx, concatenate_videoclips
+from moviepy import AudioFileClip, ImageClip, VideoClip, VideoFileClip, afx, concatenate_videoclips
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps, ImageEnhance
 
 try:
@@ -215,24 +217,51 @@ def _download_binary_file(url: str, output_path: str) -> bool:
         return False
 
 
-def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, output_path: str):
-    """
-    Usa D-ID para gerar vídeo de avatar realista com gestos/lip-sync.
-    Retorna metadados ou None em caso de falha/sem configuração.
-    """
-    api_key = os.getenv("DID_API_KEY", "").strip()
-    if not api_key or not source_image_url:
-        return None
+def _split_script_for_did(script_text: str, max_segments: int = 3) -> list[str]:
+    clean = " ".join((script_text or "").strip().split())
+    if not clean:
+        return []
 
-    auth_value = api_key if api_key.lower().startswith("basic ") else f"Basic {api_key}"
-    base_url = os.getenv("DID_API_BASE_URL", "https://api.d-id.com").rstrip("/")
-    create_url = f"{base_url}/talks"
-    voice_id = os.getenv("DID_VOICE_ID", "pt-PT-DuarteNeural")
+    # Divide por frases primeiro; se texto curto mantém bloco único.
+    sentence_chunks = [s.strip() for s in re.split(r"(?<=[\.\!\?])\s+", clean) if s.strip()]
+    if len(clean.split()) < 65 or max_segments <= 1:
+        return [clean]
 
-    script_text = plan.narration.strip()
-    if len(script_text) > 1600:
-        script_text = script_text[:1600].rsplit(" ", 1)[0] + "."
+    segment_count = min(max_segments, max(2, len(clean.split()) // 55))
+    segment_count = min(segment_count, 3)
 
+    segments = []
+    if len(sentence_chunks) >= segment_count:
+        bucket_size = max(1, len(sentence_chunks) // segment_count)
+        for idx in range(segment_count):
+            start = idx * bucket_size
+            end = len(sentence_chunks) if idx == segment_count - 1 else (idx + 1) * bucket_size
+            part = " ".join(sentence_chunks[start:end]).strip()
+            if part:
+                segments.append(part)
+    if not segments:
+        words = clean.split()
+        chunk = max(40, len(words) // segment_count)
+        for i in range(0, len(words), chunk):
+            segments.append(" ".join(words[i : i + chunk]).strip())
+
+    trimmed = []
+    for seg in segments[:segment_count]:
+        if len(seg) > 580:
+            seg = seg[:580].rsplit(" ", 1)[0] + "."
+        trimmed.append(seg)
+    return [s for s in trimmed if s]
+
+
+def _did_create_and_download_talk(
+    *,
+    create_url: str,
+    headers: dict,
+    source_image_url: str,
+    script_text: str,
+    voice_id: str,
+    output_path: str,
+) -> dict:
     payload = {
         "source_url": source_image_url,
         "script": {
@@ -248,6 +277,81 @@ def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, ou
             "pad_audio": 0.0,
         },
     }
+    create_resp = requests.post(create_url, headers=headers, data=json.dumps(payload), timeout=120)
+    if create_resp.status_code >= 400:
+        return {
+            "status": "failed",
+            "error": f"create_failed:{create_resp.status_code}:{(create_resp.text or '')[:350]}",
+        }
+
+    create_data = create_resp.json() if create_resp.content else {}
+    talk_id = create_data.get("id")
+    if not talk_id:
+        return {"status": "failed", "error": "missing_talk_id"}
+
+    status_url = f"{create_url}/{talk_id}"
+    result_url = None
+    status_value = "created"
+    error_message = ""
+    for _ in range(95):
+        poll_resp = requests.get(status_url, headers=headers, timeout=60)
+        if poll_resp.status_code >= 400:
+            error_message = f"poll_failed:{poll_resp.status_code}:{(poll_resp.text or '')[:250]}"
+            break
+        poll_data = poll_resp.json() if poll_resp.content else {}
+        status_value = str(poll_data.get("status", "")).lower()
+        if status_value == "done":
+            result_url = poll_data.get("result_url")
+            break
+        if status_value in {"error", "failed", "rejected"}:
+            error_message = str(poll_data.get("error", "failed"))
+            break
+        time.sleep(2.1)
+
+    if not result_url:
+        return {
+            "status": status_value or "failed",
+            "talk_id": talk_id,
+            "error": error_message or "no_result_url",
+        }
+
+    ok = _download_binary_file(result_url, output_path)
+    if not ok:
+        return {
+            "status": "failed",
+            "talk_id": talk_id,
+            "error": "result_download_failed",
+        }
+    return {
+        "status": "done",
+        "talk_id": talk_id,
+        "result_url": result_url,
+    }
+
+
+def _try_generate_realistic_video_did(
+    plan: VideoPlan,
+    source_image_url: str,
+    output_path: str,
+    source_image_urls: list[str] | None = None,
+):
+    """
+    Usa D-ID para gerar vídeo de avatar realista com gestos/lip-sync.
+    Retorna metadados ou None em caso de falha/sem configuração.
+    """
+    api_key = os.getenv("DID_API_KEY", "").strip()
+    did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
+    if source_image_url and source_image_url.strip() and source_image_url.strip() not in did_sources:
+        did_sources.append(source_image_url.strip())
+
+    if not api_key or not did_sources:
+        return None
+
+    auth_value = api_key if api_key.lower().startswith("basic ") else f"Basic {api_key}"
+    base_url = os.getenv("DID_API_BASE_URL", "https://api.d-id.com").rstrip("/")
+    create_url = f"{base_url}/talks"
+    voice_id = os.getenv("DID_VOICE_ID", "pt-PT-DuarteNeural")
+
     headers = {
         "Authorization": auth_value,
         "Content-Type": "application/json",
@@ -255,70 +359,111 @@ def _try_generate_realistic_video_did(plan: VideoPlan, source_image_url: str, ou
     }
 
     try:
-        create_resp = requests.post(create_url, headers=headers, data=json.dumps(payload), timeout=120)
-        if create_resp.status_code >= 400:
-            body_preview = (create_resp.text or "")[:400]
+        segments = _split_script_for_did(plan.narration, max_segments=min(3, len(did_sources)))
+        if not segments:
             return {
                 "provider": "did",
                 "status": "failed",
                 "voice_id": voice_id,
-                "error": f"create_failed:{create_resp.status_code}:{body_preview}",
-            }
-        create_data = create_resp.json() if create_resp.content else {}
-        talk_id = create_data.get("id")
-        if not talk_id:
-            return {
-                "provider": "did",
-                "status": "failed",
-                "voice_id": voice_id,
-                "error": "missing_talk_id",
+                "error": "empty_script",
             }
 
-        status_url = f"{create_url}/{talk_id}"
-        result_url = None
-        status_value = "created"
-        error_message = ""
-        for _ in range(90):
-            poll_resp = requests.get(status_url, headers=headers, timeout=60)
-            if poll_resp.status_code >= 400:
-                error_message = f"poll_failed:{poll_resp.status_code}:{(poll_resp.text or '')[:300]}"
-                break
-            poll_data = poll_resp.json() if poll_resp.content else {}
-            status_value = str(poll_data.get("status", "")).lower()
-            if status_value == "done":
-                result_url = poll_data.get("result_url")
-                break
-            if status_value in {"error", "failed", "rejected"}:
-                error_message = str(poll_data.get("error", "failed"))
-                break
-            time.sleep(2.2)
+        while len(did_sources) < len(segments):
+            did_sources.append(did_sources[-1])
 
-        if not result_url:
-            return {
-                "provider": "did",
-                "talk_id": talk_id,
-                "status": status_value or "failed",
-                "voice_id": voice_id,
-                "error": error_message or "no_result_url",
-            }
+        segment_outputs = []
+        segment_talk_ids = []
+        segment_result_urls = []
+        for idx, segment_text in enumerate(segments):
+            segment_path = output_path if len(segments) == 1 else output_path.replace(".mp4", f"_did_seg_{idx + 1}.mp4")
+            segment_outputs.append(segment_path)
+            preferred_source = did_sources[idx % len(did_sources)]
+            candidate_sources = [preferred_source] + [u for u in did_sources if u != preferred_source]
+            talk_meta = None
+            candidate_errors = []
+            for source_candidate in candidate_sources:
+                attempt_meta = _did_create_and_download_talk(
+                    create_url=create_url,
+                    headers=headers,
+                    source_image_url=source_candidate,
+                    script_text=segment_text,
+                    voice_id=voice_id,
+                    output_path=segment_path,
+                )
+                if attempt_meta.get("status") == "done":
+                    talk_meta = attempt_meta
+                    talk_meta["source_url_used"] = source_candidate
+                    break
+                candidate_errors.append(f"{source_candidate} => {attempt_meta.get('error', 'unknown_error')}")
 
-        ok = _download_binary_file(result_url, output_path)
-        if not ok:
-            return {
-                "provider": "did",
-                "talk_id": talk_id,
-                "status": "failed",
-                "voice_id": voice_id,
-                "error": "result_download_failed",
-            }
+            if not talk_meta or talk_meta.get("status") != "done":
+                return {
+                    "provider": "did",
+                    "status": "failed",
+                    "voice_id": voice_id,
+                    "segment_index": idx + 1,
+                    "segment_count": len(segments),
+                    "error": "segment_failed_all_sources",
+                    "segment_errors": candidate_errors,
+                    "talk_id": (talk_meta or {}).get("talk_id"),
+                }
+            if talk_meta.get("talk_id"):
+                segment_talk_ids.append(talk_meta["talk_id"])
+            if talk_meta.get("result_url"):
+                segment_result_urls.append(talk_meta["result_url"])
+
+        if len(segment_outputs) > 1:
+            final_clip = None
+            clips = []
+            try:
+                for segment_path in segment_outputs:
+                    clips.append(VideoFileClip(segment_path))
+                final_clip = concatenate_videoclips(clips, method="compose")
+                final_clip.write_videofile(
+                    output_path,
+                    fps=24,
+                    codec="libx264",
+                    audio_codec="aac",
+                    preset="medium",
+                    threads=2,
+                    logger=None,
+                )
+            except Exception as exc:
+                return {
+                    "provider": "did",
+                    "status": "failed",
+                    "voice_id": voice_id,
+                    "error": f"stitch_failed:{exc}",
+                }
+            finally:
+                for c in clips:
+                    try:
+                        c.close()
+                    except Exception:
+                        pass
+                if final_clip is not None:
+                    try:
+                        final_clip.close()
+                    except Exception:
+                        pass
+                for segment_path in segment_outputs:
+                    try:
+                        if segment_path != output_path and os.path.exists(segment_path):
+                            os.remove(segment_path)
+                    except Exception:
+                        pass
 
         return {
             "provider": "did",
-            "talk_id": talk_id,
-            "result_url": result_url,
+            "talk_id": segment_talk_ids[-1] if segment_talk_ids else None,
+            "talk_ids": segment_talk_ids,
+            "result_url": segment_result_urls[-1] if segment_result_urls else None,
+            "result_urls": segment_result_urls,
             "status": "done",
             "voice_id": voice_id,
-            "error": error_message,
+            "segment_count": len(segments),
+            "source_count": len(did_sources),
+            "error": "",
         }
     except Exception as exc:
         return {
@@ -357,6 +502,167 @@ def _extract_face_patch(presenter_image: Image.Image | None):
     patch = presenter_image.crop((left, top, left + crop_size, top + crop_size))
     patch = ImageOps.fit(patch, (220, 220), method=Image.Resampling.LANCZOS)
     return patch.filter(ImageFilter.SMOOTH_MORE)
+
+
+def _render_did_fullbody_source_image(
+    *,
+    face_patch: Image.Image | None,
+    startup_name: str,
+    output_path: str,
+    pose_index: int = 0,
+):
+    """
+    Gera uma imagem vertical de corpo inteiro para D-ID (palco + plateia + gestos).
+    Serve para transformar foto meio-corpo em um visual de apresentador completo.
+    """
+    width, height = 1024, 1536
+    img = Image.new("RGB", (width, height), (10, 17, 31))
+    draw = ImageDraw.Draw(img)
+
+    # Fundo com gradiente simples de palco
+    for y in range(height):
+        t = y / max(1, height - 1)
+        r = int(8 + 20 * (1 - t))
+        g = int(15 + 36 * (1 - t))
+        b = int(26 + 62 * (1 - t))
+        draw.line([(0, y), (width, y)], fill=(r, g, b))
+
+    # Luzes e tela institucional
+    draw.polygon([(0, 0), (220, 0), (80, 420)], outline=(68, 124, 196))
+    draw.polygon([(width, 0), (width - 220, 0), (width - 80, 420)], outline=(68, 124, 196))
+    draw.rounded_rectangle((250, 115, width - 70, 285), radius=20, fill=(20, 38, 68), outline=(92, 156, 230), width=3)
+    draw.text((280, 160), "Global Startup Summit", fill=(224, 236, 255), font=_load_font(34))
+    draw.text((280, 208), "Palestra para grande audiência", fill=(178, 201, 232), font=_load_font(24))
+
+    # Plateia gigante
+    base_y = height - 45
+    for row in range(10):
+        y = base_y - row * 46
+        crowd_count = 22 + row * 8
+        head_r = max(4, 12 - row)
+        shade = int(24 + row * 8)
+        for i in range(crowd_count):
+            x = int((i + 0.5) * width / crowd_count)
+            draw.ellipse((x - head_r, y - head_r, x + head_r, y + head_r), fill=(shade, shade, shade + 6))
+            if row >= 2:
+                draw.rectangle((x - max(2, head_r // 2), y + head_r - 1, x + max(2, head_r // 2), y + head_r + 9), fill=(shade - 2, shade - 2, shade + 4))
+
+    # Personagem corpo inteiro
+    cx = width // 2
+    top = 340
+    skin = (212, 164, 136)
+    suit_dark = (18, 30, 56)
+    suit_mid = (28, 47, 84)
+    shirt = (229, 234, 242)
+    tie = (164, 34, 58)
+
+    # Pernas
+    draw.rounded_rectangle((cx - 66, top + 520, cx - 12, top + 815), radius=18, fill=(14, 26, 49))
+    draw.rounded_rectangle((cx + 12, top + 520, cx + 66, top + 815), radius=18, fill=(14, 26, 49))
+    draw.rounded_rectangle((cx - 86, top + 805, cx - 4, top + 842), radius=10, fill=(8, 12, 22))
+    draw.rounded_rectangle((cx + 4, top + 805, cx + 86, top + 842), radius=10, fill=(8, 12, 22))
+
+    # Tronco
+    draw.rounded_rectangle((cx - 130, top + 188, cx + 130, top + 564), radius=44, fill=suit_dark, outline=(102, 178, 250), width=4)
+    draw.polygon([(cx - 44, top + 212), (cx - 9, top + 360), (cx - 78, top + 360)], fill=suit_mid)
+    draw.polygon([(cx + 44, top + 212), (cx + 9, top + 360), (cx + 78, top + 360)], fill=suit_mid)
+    draw.polygon([(cx - 12, top + 212), (cx + 12, top + 212), (cx + 23, top + 338), (cx - 23, top + 338)], fill=shirt)
+    draw.rectangle((cx - 7, top + 236, cx + 7, top + 430), fill=tie)
+    draw.polygon([(cx - 7, top + 430), (cx + 7, top + 430), (cx, top + 486)], fill=tie)
+    draw.polygon([(cx + 48, top + 290), (cx + 76, top + 290), (cx + 66, top + 312)], fill=(242, 242, 242))
+
+    # Braços em 3 poses para dar sensação de gestos entre segmentos D-ID
+    left_shoulder = (cx - 90, top + 266)
+    right_shoulder = (cx + 90, top + 266)
+    if pose_index % 3 == 0:
+        left_elbow = (cx - 208, top + 326)
+        left_hand = (cx - 256, top + 280)
+        right_elbow = (cx + 188, top + 236)
+        right_hand = (cx + 256, top + 200)
+    elif pose_index % 3 == 1:
+        left_elbow = (cx - 182, top + 266)
+        left_hand = (cx - 246, top + 242)
+        right_elbow = (cx + 176, top + 296)
+        right_hand = (cx + 238, top + 334)
+    else:
+        left_elbow = (cx - 158, top + 350)
+        left_hand = (cx - 204, top + 420)
+        right_elbow = (cx + 172, top + 256)
+        right_hand = (cx + 236, top + 228)
+
+    draw.line([left_shoulder, left_elbow], fill=suit_mid, width=34, joint="curve")
+    draw.line([left_elbow, left_hand], fill=suit_mid, width=26, joint="curve")
+    draw.ellipse((left_hand[0] - 17, left_hand[1] - 17, left_hand[0] + 17, left_hand[1] + 17), fill=skin)
+    draw.line([right_shoulder, right_elbow], fill=suit_mid, width=34, joint="curve")
+    draw.line([right_elbow, right_hand], fill=suit_mid, width=26, joint="curve")
+    draw.ellipse((right_hand[0] - 17, right_hand[1] - 17, right_hand[0] + 17, right_hand[1] + 17), fill=skin)
+
+    # Cabeça + face enviada
+    head_size = 186
+    head_left = cx - head_size // 2
+    head_top = top + 28
+    draw.ellipse((head_left - 3, head_top - 3, head_left + head_size + 3, head_top + head_size + 3), fill=(225, 204, 182))
+    if face_patch is not None:
+        face = ImageOps.fit(face_patch, (head_size, head_size), method=Image.Resampling.LANCZOS)
+        mask = Image.new("L", (head_size, head_size), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse((0, 0, head_size, head_size), fill=255)
+        img.paste(face, (head_left, head_top), mask)
+    else:
+        draw.ellipse((head_left, head_top, head_left + head_size, head_top + head_size), fill=skin)
+        initials = (startup_name[:2] or "AI").upper()
+        draw.text((head_left + 56, head_top + 64), initials, fill=(255, 255, 255), font=_load_font(58))
+    draw.ellipse((head_left, head_top, head_left + head_size, head_top + head_size), outline=(122, 206, 252), width=4)
+
+    # Púlpito frontal para reforçar ambiente de palestra
+    podium_top = top + 452
+    draw.rounded_rectangle((cx - 170, podium_top, cx + 170, podium_top + 352), radius=24, fill=(20, 31, 55), outline=(86, 146, 220), width=4)
+    draw.rounded_rectangle((cx - 112, podium_top + 82, cx + 112, podium_top + 152), radius=12, fill=(32, 64, 112))
+    draw.text((cx - 88, podium_top + 106), (startup_name or "Startup")[:16], fill=(231, 240, 255), font=_load_font(22))
+    draw.line([(cx - 25, podium_top + 8), (cx - 42, podium_top - 65)], fill=(126, 146, 176), width=5)
+    draw.line([(cx + 25, podium_top + 8), (cx + 42, podium_top - 65)], fill=(126, 146, 176), width=5)
+    draw.ellipse((cx - 49, podium_top - 77, cx - 35, podium_top - 63), fill=(156, 170, 190))
+    draw.ellipse((cx + 35, podium_top - 77, cx + 49, podium_top - 63), fill=(156, 170, 190))
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    img.save(output_path, format="PNG", optimize=True)
+
+
+def build_did_presenter_source_urls(
+    presenter_image_path: str | None,
+    presenter_image_url: str | None,
+    startup_name: str,
+) -> list[str]:
+    """
+    Cria imagens de corpo inteiro (poses diferentes) e devolve URLs públicas.
+    Útil quando a foto enviada é meio corpo e queremos palco dinâmico no D-ID.
+    """
+    if not presenter_image_path or not presenter_image_url:
+        return []
+    if not os.path.exists(presenter_image_path):
+        return []
+
+    try:
+        presenter_image = _prepare_presenter_image(presenter_image_path)
+        face_patch = _extract_face_patch(presenter_image)
+        source_dir = os.path.dirname(presenter_image_path)
+        base_name = Path(presenter_image_path).stem
+        url_base = presenter_image_url.rsplit("/", 1)[0]
+        urls = []
+
+        for pose_index in range(3):
+            file_name = f"{base_name}_did_fullbody_pose_{pose_index + 1}.png"
+            file_path = os.path.join(source_dir, file_name)
+            _render_did_fullbody_source_image(
+                face_patch=face_patch,
+                startup_name=startup_name,
+                output_path=file_path,
+                pose_index=pose_index,
+            )
+            urls.append(f"{url_base}/{file_name}")
+        return urls
+    except Exception:
+        return []
 
 
 def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):
@@ -693,6 +999,7 @@ def generate_explainer_video(
     output_path: str,
     presenter_image_path: str | None = None,
     presenter_image_url: str | None = None,
+    presenter_source_urls: list[str] | None = None,
 ):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plan = build_video_plan_from_analysis(analysis)
@@ -705,6 +1012,7 @@ def generate_explainer_video(
         plan=plan,
         source_image_url=presenter_image_url or "",
         output_path=output_path,
+        source_image_urls=presenter_source_urls or [],
     )
     if realistic_meta and realistic_meta.get("status") == "done":
         return {
@@ -720,6 +1028,9 @@ def generate_explainer_video(
             "realistic_provider": realistic_meta.get("provider"),
             "realistic_result_url": realistic_meta.get("result_url"),
             "realistic_talk_id": realistic_meta.get("talk_id"),
+            "realistic_talk_ids": realistic_meta.get("talk_ids", []),
+            "realistic_segment_count": realistic_meta.get("segment_count", 1),
+            "realistic_source_count": realistic_meta.get("source_count", len(presenter_source_urls or [])),
         }
 
     clips = []
