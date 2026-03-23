@@ -306,6 +306,32 @@ python3 manage.py runserver 0.0.0.0:8000
 
 ---
 
+## 10.5) Deploy gratuito com CI/CD (Render + GitHub Actions)
+
+Foi preparado deploy continuo para ambiente gratuito da Render:
+
+- blueprint: `render.yaml`
+- workflow: `.github/workflows/deploy-render-main.yml`
+- comando web: `Procfile`
+
+### Fluxo
+
+1. Crie um serviço Web na Render a partir deste repositório.
+2. Copie o **Deploy Hook URL** do serviço.
+3. No GitHub, configure os secrets do repositório:
+   - `RENDER_DEPLOY_HOOK_URL` (obrigatório)
+   - `RENDER_HEALTHCHECK_URL` (opcional, ex.: `https://<app>.onrender.com/login/`)
+4. Ao fazer merge/push na branch `main`, a action dispara deploy automaticamente.
+
+Observações:
+
+- Para recursos GPT/D-ID em produção, configure também na Render:
+  - `OPENAI_API_KEY`
+  - `DID_API_KEY`
+- Se usar PostgreSQL gerenciado, configure `DATABASE_URL`.
+
+---
+
 ## 11) Operacao e monitoramento
 
 - Jobs assincromos de treino e video usam estado em cache.

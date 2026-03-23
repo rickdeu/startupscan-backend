@@ -1,0 +1,40 @@
+name: Deploy Render on main merge
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${RENDER_DEPLOY_HOOK_URL}" ]; then
+            echo "::error::Secret RENDER_DEPLOY_HOOK_URL não configurado."
+            exit 1
+          fi
+          curl -fsSL -X POST "${RENDER_DEPLOY_HOOK_URL}"
+
+      - name: Optional healthcheck
+        env:
+          RENDER_HEALTHCHECK_URL: ${{ secrets.RENDER_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "${RENDER_HEALTHCHECK_URL}" ]; then
+            echo "Sem RENDER_HEALTHCHECK_URL; a verificação foi ignorada."
+            exit 0
+          fi
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsSL "${RENDER_HEALTHCHECK_URL}" > /dev/null; then
+              echo "Healthcheck OK"
+              exit 0
+            fi
+            echo "Aguardando aplicação ficar saudável... tentativa ${i}/10"
+            sleep 15
+          done
+          echo "::error::Healthcheck falhou."
+          exit 1

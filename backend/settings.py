@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+try:
+    import dj_database_url
+except Exception:  # pragma: no cover - fallback quando pacote não está disponível
+    dj_database_url = None
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,13 +24,35 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_list(name: str, default: list[str] | None = None) -> list[str]:
+    raw = str(os.getenv(name, "") or "").strip()
+    items = [part.strip() for part in raw.split(",") if part.strip()]
+    if items:
+        return items
+    return list(default or [])
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-crkp-(b387n6l!ucz8)!-p0f^faj5hw9p%9n-%vgrf1lw4m&l3'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-crkp-(b387n6l!ucz8)!-p0f^faj5hw9p%9n-%vgrf1lw4m&l3")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = _env_list(
+    "DJANGO_ALLOWED_HOSTS",
+    ["127.0.0.1", "localhost", "testserver", ".trycloudflare.com", ".onrender.com"],
+)
+CSRF_TRUSTED_ORIGINS = _env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    ["https://*.trycloudflare.com", "https://*.onrender.com"],
+)
 
 
 # Application definition
@@ -45,6 +72,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -87,11 +115,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 }"""
 
 # Use dj_database_url to parse the DATABASE_URL into Django's DATABASES configuration
-DB_USERNAME = os.getenv('POSTGRES_USER', 'vultradmin')
-DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '$sR77Rg!nUD(oy5r_HSD6VSK')
-DB_DATABASE = os.getenv('POSTGRES_DB', 'temp_database')
-DB_HOST = os.getenv('POSTGRES_HOST', 'vultr-prod-6417c5e2-c5ac-4dd5-bb0e-c2dfed3c4c54-vultr-prod-7668.vultrdb.com')
-DB_PORT = os.getenv('POSTGRES_PORT', '16751')
+DB_USERNAME = os.getenv('POSTGRES_USER', '')
+DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+DB_DATABASE = os.getenv('POSTGRES_DB', '')
+DB_HOST = os.getenv('POSTGRES_HOST', '')
+DB_PORT = os.getenv('POSTGRES_PORT', '')
 DB_IS_AVAILABLE = all([
     DB_USERNAME, 
     DB_PASSWORD, 
@@ -100,10 +128,19 @@ DB_IS_AVAILABLE = all([
     DB_PORT
 ])
 
-DB_IGNORE_SSL= os.getenv('DB_IGNORE_SSL') == "true"
+DB_IGNORE_SSL = _env_bool('DB_IGNORE_SSL', False)
 
 
-if DB_IS_AVAILABLE:
+database_url = str(os.getenv("DATABASE_URL", "") or "").strip()
+if database_url and dj_database_url is not None:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            database_url,
+            conn_max_age=600,
+            ssl_require=not DB_IGNORE_SSL,
+        )
+    }
+elif DB_IS_AVAILABLE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -118,6 +155,13 @@ if DB_IS_AVAILABLE:
         DATABASES['default']['OPTIONS'] = {
             'sslmode': 'require',
         }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 
@@ -205,6 +249,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 AI_MODELS_DIR = os.environ.get('AI_MODELS_DIR', os.path.join(BASE_DIR, 'ai_models'))
 DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE_DIR, 'data'))
