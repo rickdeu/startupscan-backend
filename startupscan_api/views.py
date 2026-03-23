@@ -10,13 +10,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.core.files.storage import FileSystemStorage
 from django.contrib import messages
 from django.contrib.auth import login
 from startupscan_api.forms import RegisterForm
-from startupscan_api.models import PitchAnalysis
+from startupscan_api.models import IdeaPitchSubmission, PitchAnalysis
 from startupscan_api.services.model_training import (
     ensure_model_exists,
     predict_pitch_score,
@@ -526,7 +526,7 @@ class DashboardView(View):
 
 class IdeaPitchBuilderView(View):
     """
-    Formulário simplificado para gerar pitch em PDF apenas com a ideia de negócio.
+    Formulário simplificado para guardar ideia no banco.
     """
 
     required_fields = {
@@ -537,14 +537,8 @@ class IdeaPitchBuilderView(View):
         "business_model": "Modelo de negócio",
     }
 
-    def get(self, request):
-        context = {
-            "form_data": {"model_source": "local"},
-            "errors": {},
-        }
-        return render(request, "analyzer/idea_pitch_form.html", context)
-
-    def post(self, request):
+    @staticmethod
+    def _collect_form_data(request):
         form_data = {
             "startup_name": request.POST.get("startup_name", "").strip(),
             "one_liner": request.POST.get("one_liner", "").strip(),
@@ -561,49 +555,186 @@ class IdeaPitchBuilderView(View):
             "call_to_action": request.POST.get("call_to_action", "").strip(),
             "model_source": request.POST.get("model_source", "local").strip().lower(),
         }
-
         if form_data["model_source"] not in {"local", "gpt"}:
             form_data["model_source"] = "local"
+        return form_data
 
+    def _validate(self, form_data):
         errors = {}
         for field, label in self.required_fields.items():
             if not form_data.get(field):
                 errors[field] = f"{label} é obrigatório."
+        return errors
+
+    def get(self, request):
+        context = {
+            "form_data": {"model_source": "local"},
+            "errors": {},
+        }
+        return render(request, "analyzer/idea_pitch_form.html", context)
+
+    def post(self, request):
+        form_data = self._collect_form_data(request)
+        errors = self._validate(form_data)
 
         if errors:
-            messages.error(request, "Preencha os campos obrigatórios para gerar o pitch.")
+            messages.error(request, "Preencha os campos obrigatórios para guardar a ideia.")
             return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": errors})
 
         try:
-            pitch_payload = generate_pitch_from_idea(form_data, model_source=form_data["model_source"])
-
-            media_root = settings.MEDIA_ROOT
-            try:
-                os.makedirs(media_root, exist_ok=True)
-            except OSError:
-                media_root = os.path.join(settings.BASE_DIR, "media")
-                os.makedirs(media_root, exist_ok=True)
-
-            target_dir = os.path.join(media_root, "idea_pitches")
-            os.makedirs(target_dir, exist_ok=True)
-            safe_name = "".join(ch if ch.isalnum() else "_" for ch in form_data["startup_name"]).strip("_").lower()
-            safe_name = safe_name or "startup"
-            output_path = os.path.join(
-                target_dir,
-                f"pitch_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            submission = IdeaPitchSubmission.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                startup_name=form_data["startup_name"],
+                one_liner=form_data["one_liner"],
+                problem=form_data["problem"],
+                solution=form_data["solution"],
+                target_customer=form_data["target_customer"],
+                market_size=form_data["market_size"],
+                business_model=form_data["business_model"],
+                competitive_advantage=form_data["competitive_advantage"],
+                traction=form_data["traction"],
+                team=form_data["team"],
+                funding_goal=form_data["funding_goal"],
+                use_of_funds=form_data["use_of_funds"],
+                call_to_action=form_data["call_to_action"],
+                model_source=form_data["model_source"],
             )
-            export_pitch_pdf(pitch_payload, output_path)
-
-            return FileResponse(
-                open(output_path, "rb"),
-                as_attachment=True,
-                filename=f"pitch_{safe_name}.pdf",
-                content_type="application/pdf",
+            messages.success(
+                request,
+                "Informações guardadas com sucesso. Revise os dados e clique em 'Gerar Pitch Completo'.",
             )
+            return redirect("idea_pitch_detail", submission_id=submission.id)
         except Exception as exc:
-            logger.error("Falha ao gerar pitch PDF: %s", str(exc), exc_info=True)
-            messages.error(request, "Não foi possível gerar o pitch em PDF. Tente novamente.")
+            logger.error("Falha ao guardar submissão de ideia: %s", str(exc), exc_info=True)
+            messages.error(request, "Não foi possível guardar a ideia. Tente novamente.")
             return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": {}})
+
+
+class IdeaPitchDetailView(View):
+    """
+    Página de revisão da ideia guardada + ação de gerar pitch completo.
+    """
+
+    @staticmethod
+    def _can_access(request, submission):
+        if submission.user_id and request.user.is_authenticated:
+            return submission.user_id == request.user.id
+        if submission.user_id and not request.user.is_authenticated:
+            return False
+        return True
+
+    @staticmethod
+    def _to_payload(submission):
+        return {
+            "startup_name": submission.startup_name,
+            "one_liner": submission.one_liner,
+            "problem": submission.problem,
+            "solution": submission.solution,
+            "target_customer": submission.target_customer,
+            "market_size": submission.market_size,
+            "business_model": submission.business_model,
+            "competitive_advantage": submission.competitive_advantage,
+            "traction": submission.traction,
+            "team": submission.team,
+            "funding_goal": submission.funding_goal,
+            "use_of_funds": submission.use_of_funds,
+            "call_to_action": submission.call_to_action,
+        }
+
+    def get(self, request, submission_id):
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+        if not self._can_access(request, submission):
+            return redirect("dashboard")
+
+        context = {
+            "submission": submission,
+            "generated_pitch": submission.generated_pitch if submission.status == "generated" else {},
+        }
+        return render(request, "analyzer/idea_pitch_detail.html", context)
+
+    def post(self, request, submission_id):
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+        if not self._can_access(request, submission):
+            return redirect("dashboard")
+
+        action = request.POST.get("action", "generate").strip().lower()
+        if action != "generate":
+            return redirect("idea_pitch_detail", submission_id=submission.id)
+
+        try:
+            pitch_payload = generate_pitch_from_idea(
+                self._to_payload(submission),
+                model_source=submission.model_source,
+            )
+            submission.generated_pitch = pitch_payload
+            submission.status = "generated"
+            submission.generated_at = timezone.now()
+            submission.save(update_fields=["generated_pitch", "status", "generated_at", "updated_at"])
+            messages.success(request, "Pitch completo gerado com sucesso. Já está pronto para apresentação.")
+        except Exception as exc:
+            logger.error("Falha ao gerar pitch completo: %s", str(exc), exc_info=True)
+            messages.error(request, "Não foi possível gerar o pitch completo. Tente novamente.")
+
+        return redirect("idea_pitch_detail", submission_id=submission.id)
+
+
+class IdeaPitchPDFView(View):
+    """
+    Exporta PDF do pitch completo a partir da submissão guardada.
+    """
+
+    def get(self, request, submission_id):
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+        if submission.user_id and request.user.is_authenticated and submission.user_id != request.user.id:
+            return redirect("dashboard")
+        if submission.user_id and not request.user.is_authenticated:
+            return redirect("login")
+
+        if submission.status != "generated" or not submission.generated_pitch:
+            payload = {
+                "startup_name": submission.startup_name,
+                "one_liner": submission.one_liner,
+                "problem": submission.problem,
+                "solution": submission.solution,
+                "target_customer": submission.target_customer,
+                "market_size": submission.market_size,
+                "business_model": submission.business_model,
+                "competitive_advantage": submission.competitive_advantage,
+                "traction": submission.traction,
+                "team": submission.team,
+                "funding_goal": submission.funding_goal,
+                "use_of_funds": submission.use_of_funds,
+                "call_to_action": submission.call_to_action,
+            }
+            generated = generate_pitch_from_idea(payload, model_source=submission.model_source)
+            submission.generated_pitch = generated
+            submission.status = "generated"
+            submission.generated_at = timezone.now()
+            submission.save(update_fields=["generated_pitch", "status", "generated_at", "updated_at"])
+
+        media_root = settings.MEDIA_ROOT
+        try:
+            os.makedirs(media_root, exist_ok=True)
+        except OSError:
+            media_root = os.path.join(settings.BASE_DIR, "media")
+            os.makedirs(media_root, exist_ok=True)
+
+        target_dir = os.path.join(media_root, "idea_pitches")
+        os.makedirs(target_dir, exist_ok=True)
+        safe_name = "".join(ch if ch.isalnum() else "_" for ch in submission.startup_name).strip("_").lower()
+        safe_name = safe_name or "startup"
+        output_path = os.path.join(
+            target_dir,
+            f"pitch_{safe_name}_{submission.id}.pdf",
+        )
+        export_pitch_pdf(submission.generated_pitch, output_path)
+
+        return FileResponse(
+            open(output_path, "rb"),
+            as_attachment=True,
+            filename=f"pitch_completo_{safe_name}.pdf",
+            content_type="application/pdf",
+        )
 
 
 class PitchFormView(View):
