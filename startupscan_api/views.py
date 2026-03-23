@@ -72,6 +72,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.utils import timezone
 from django.http import FileResponse, JsonResponse
+from django.http import HttpResponseRedirect
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import activate
 
 from startupscan_api.roles import (
     ROLE_ADMIN,
@@ -85,6 +88,7 @@ from startupscan_api.roles import (
     role_home_url,
     role_home_url_name,
 )
+from startupscan_api.i18n import normalize_ui_language, to_django_language
 
 from .utils import (
     prepare_features,
@@ -2600,6 +2604,31 @@ def register_view(request):
         form = RegisterForm()
     
     return render(request, 'analyzer/register.html', {'form': form})
+
+
+def set_ui_language(request):
+    if request.method != "POST":
+        return redirect("dashboard")
+
+    selected = normalize_ui_language(request.POST.get("language", "pt"))
+    django_lang = to_django_language(selected)
+
+    request.session["ui_language"] = selected
+    request.session["django_language"] = django_lang
+    activate(django_lang)
+
+    next_url = (request.POST.get("next") or request.META.get("HTTP_REFERER") or "").strip()
+    if not url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = reverse("dashboard")
+
+    response = HttpResponseRedirect(next_url)
+    response.set_cookie("ui_language", selected, max_age=60 * 60 * 24 * 365, samesite="Lax")
+    response.set_cookie("django_language", django_lang, max_age=60 * 60 * 24 * 365, samesite="Lax")
+    return response
 
 
 

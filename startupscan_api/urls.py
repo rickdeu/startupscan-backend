@@ -29,6 +29,7 @@ from .views import (
     BatchAnalysisView,
     ModelRetrainView,
     TrainingStatusView,
+    set_ui_language,
     register_view
 )
 
@@ -65,4 +66,5 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
     path('register/', register_view, name='register'),
+    path('set-language/', set_ui_language, name='set_ui_language'),
 ]

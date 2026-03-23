@@ -6,7 +6,7 @@
         <div class="col-md-8 col-lg-6">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0 text-center">Criar Nova Conta</h2>
+                    <h2 class="mb-0 text-center">{{ ui_text.register_title }}</h2>
                 </div>
                 <div class="card-body">
                     <form method="post">
@@ -14,7 +14,7 @@
                         
                         {% if form.errors %}
                             <div class="alert alert-danger">
-                                <strong>Erro!</strong> Por favor, corrija os seguintes erros:
+                                {{ ui_text.register_error }}
                                 <ul>
                                 {% for field, errors in form.errors.items %}
                                     {% for error in errors %}
@@ -28,7 +28,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="{{ form.first_name.id_for_label }}">Nome</label>
+                                    <label for="{{ form.first_name.id_for_label }}">{{ ui_text.first_name }}</label>
                                     {{ form.first_name }}
                                     {% if form.first_name.errors %}
                                         <div class="invalid-feedback d-block">
@@ -39,7 +39,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="{{ form.last_name.id_for_label }}">Sobrenome</label>
+                                    <label for="{{ form.last_name.id_for_label }}">{{ ui_text.last_name }}</label>
                                     {{ form.last_name }}
                                     {% if form.last_name.errors %}
                                         <div class="invalid-feedback d-block">
@@ -51,7 +51,7 @@
                         </div>
                         
                         <div class="form-group mb-3">
-                            <label for="{{ form.username.id_for_label }}">Nome de Usuário</label>
+                            <label for="{{ form.username.id_for_label }}">{{ ui_text.username }}</label>
                             {{ form.username }}
                             <small class="form-text text-muted">Obrigatório. 150 caracteres ou menos. Letras, números e @/./+/-/_ apenas.</small>
                             {% if form.username.errors %}
@@ -62,7 +62,7 @@
                         </div>
                         
                         <div class="form-group mb-3">
-                            <label for="{{ form.email.id_for_label }}">E-mail</label>
+                            <label for="{{ form.email.id_for_label }}">{{ ui_text.email }}</label>
                             {{ form.email }}
                             {% if form.email.errors %}
                                 <div class="invalid-feedback d-block">
@@ -72,7 +72,7 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label for="{{ form.profile_role.id_for_label }}">Perfil de Utilizador</label>
+                            <label for="{{ form.profile_role.id_for_label }}">{{ ui_text.user_profile }}</label>
                             {{ form.profile_role }}
                             <small class="form-text text-muted">
                                 Escolha o perfil que melhor representa o seu acesso no sistema.
@@ -115,13 +115,13 @@
                         
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-user-plus me-2"></i> Registrar
+                                <i class="fas fa-user-plus me-2"></i> {{ ui_text.register_button }}
                             </button>
                         </div>
                     </form>
                     
                     <div class="mt-4 text-center">
-                        <p class="mb-0">Já tem uma conta? <a href="{% url 'login' %}">Faça login</a></p>
+                        <p class="mb-0">{{ ui_text.already_have_account }} <a href="{% url 'login' %}">{{ ui_text.login_now }}</a></p>
                     </div>
                 </div>
             </div>

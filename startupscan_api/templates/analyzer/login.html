@@ -6,12 +6,12 @@
         <div class="col-md-8 col-lg-6">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0 text-center">Login</h2>
+                    <h2 class="mb-0 text-center">{{ ui_text.login_title }}</h2>
                 </div>
                 <div class="card-body">
                     {% if form.errors %}
                         <div class="alert alert-danger">
-                            <strong>Erro!</strong> Usuário ou senha incorretos.
+                            {{ ui_text.login_error }}
                         </div>
                     {% endif %}
                     
@@ -19,28 +19,28 @@
                         {% csrf_token %}
                         
                         <div class="form-group mb-3">
-                            <label for="{{ form.username.id_for_label }}">Nome de Usuário</label>
+                            <label for="{{ form.username.id_for_label }}">{{ ui_text.username }}</label>
                             <input type="text" name="username" class="form-control" required id="id_username">
                         </div>
                         
                         <div class="form-group mb-4">
-                            <label for="{{ form.password.id_for_label }}">Senha</label>
+                            <label for="{{ form.password.id_for_label }}">{{ ui_text.password }}</label>
                             <input type="password" name="password" class="form-control" required id="id_password">
                         </div>
                         
                         <div class="d-grid gap-2 mb-3">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-sign-in-alt me-2"></i> Entrar
+                                <i class="fas fa-sign-in-alt me-2"></i> {{ ui_text.login }}
                             </button>
                         </div>
                         
                         <div class="text-center">
-                            <a href="#">Esqueceu sua senha?</a>
+                            <a href="#">{{ ui_text.forgot_password }}</a>
                         </div>
                     </form>
                     
                     <div class="mt-4 text-center">
-                        <p class="mb-0">Não tem uma conta? <a href="{% url 'register' %}">Registre-se</a></p>
+                        <p class="mb-0">{{ ui_text.no_account }} <a href="{% url 'register' %}">{{ ui_text.register_now }}</a></p>
                     </div>
                 </div>
             </div>
