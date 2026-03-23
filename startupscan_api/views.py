@@ -124,6 +124,9 @@ class RoleRequiredMixin(LoginRequiredMixin):
 
     def dispatch(self, request, *args, **kwargs):
         role = get_user_role(request.user)
+        if role == ROLE_ADMIN:
+            # Admin tem acesso total independentemente da matriz de papéis da view.
+            return super().dispatch(request, *args, **kwargs)
         if role not in set(self.allowed_roles or []):
             messages.error(request, "O seu perfil não tem permissão para acessar esta página.")
             return _redirect_for_role(request, fallback_role=role)
@@ -1112,6 +1115,8 @@ class IdeaPitchDetailView(RoleRequiredMixin, View):
 
     @staticmethod
     def _can_access(request, submission):
+        if get_user_role(request.user) == ROLE_ADMIN:
+            return True
         if submission.user_id and request.user.is_authenticated:
             return submission.user_id == request.user.id
         if submission.user_id and not request.user.is_authenticated:
@@ -1344,7 +1349,12 @@ class IdeaPitchPDFView(RoleRequiredMixin, View):
 
     def get(self, request, submission_id):
         submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
-        if submission.user_id and request.user.is_authenticated and submission.user_id != request.user.id:
+        if (
+            get_user_role(request.user) != ROLE_ADMIN
+            and submission.user_id
+            and request.user.is_authenticated
+            and submission.user_id != request.user.id
+        ):
             return redirect("dashboard")
         if submission.user_id and not request.user.is_authenticated:
             return redirect("login")
@@ -1841,7 +1851,12 @@ class PitchReportPDFView(RoleRequiredMixin, View):
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
-        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+        if (
+            get_user_role(request.user) != ROLE_ADMIN
+            and analysis.user
+            and request.user.is_authenticated
+            and analysis.user_id != request.user.id
+        ):
             return redirect("dashboard")
 
         media_root = settings.MEDIA_ROOT
@@ -1870,7 +1885,12 @@ class PitchInvestorPDFView(RoleRequiredMixin, View):
 
     def get(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
-        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+        if (
+            get_user_role(request.user) != ROLE_ADMIN
+            and analysis.user
+            and request.user.is_authenticated
+            and analysis.user_id != request.user.id
+        ):
             return redirect("dashboard")
 
         try:
@@ -1936,7 +1956,12 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
-        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+        if (
+            get_user_role(request.user) != ROLE_ADMIN
+            and analysis.user
+            and request.user.is_authenticated
+            and analysis.user_id != request.user.id
+        ):
             return redirect("dashboard")
 
         try:
@@ -2039,7 +2064,12 @@ class PitchPresenterGenderDetectView(RoleRequiredMixin, View):
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
-        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+        if (
+            get_user_role(request.user) != ROLE_ADMIN
+            and analysis.user
+            and request.user.is_authenticated
+            and analysis.user_id != request.user.id
+        ):
             return JsonResponse({"ok": False, "error": "Acesso negado."}, status=403)
 
         presenter_image = request.FILES.get("presenter_image")
@@ -2095,7 +2125,12 @@ class PitchExplainerVideoProgressView(RoleRequiredMixin, View):
 
     def get(self, request, analysis_id, job_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
-        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+        if (
+            get_user_role(request.user) != ROLE_ADMIN
+            and analysis.user
+            and request.user.is_authenticated
+            and analysis.user_id != request.user.id
+        ):
             return JsonResponse({"error": "Acesso negado"}, status=403)
 
         state = cache.get(_video_generation_cache_key(job_id))
@@ -2417,7 +2452,7 @@ class ConnectionInterestUpdateView(RoleRequiredMixin, View):
         can_manage = role in {ROLE_ADMIN, ROLE_ANALISTA} or (
             role == ROLE_EMPREENDEDOR and interest.entrepreneur_id == request.user.id
         )
-        can_withdraw = interest.investor_id == request.user.id
+        can_withdraw = interest.investor_id == request.user.id or role in {ROLE_ADMIN, ROLE_ANALISTA}
 
         if action == "withdraw" and can_withdraw:
             interest.status = InvestorConnectionInterest.STATUS_WITHDRAWN
