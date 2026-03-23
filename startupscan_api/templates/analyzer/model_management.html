@@ -7,7 +7,13 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-1">Gestão de Modelos</h2>
-        <p class="text-muted mb-0">Treinar, editar, ativar, retreinar e remover modelos de avaliação.</p>
+        <p class="text-muted mb-0">
+            {% if user_role_access.can_model_admin_actions %}
+            Treinar, editar, ativar, retreinar e remover modelos de avaliação.
+            {% else %}
+            Treinar, retreinar e monitorar modelos de avaliação (edição/ativação/remoção restritas ao admin).
+            {% endif %}
+        </p>
     </div>
     <span class="badge rounded-pill bg-primary">Ativo: {{ active_model }}</span>
 </div>
@@ -111,12 +117,14 @@
                         <td>{{ model.updated_at|date:"d/m/Y H:i" }}</td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
+                                {% if user_role_access.can_model_admin_actions %}
                                 <form method="post" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="set_active">
                                     <input type="hidden" name="model_name" value="{{ model.name }}">
                                     <button class="btn btn-sm btn-outline-success" type="submit">Ativar</button>
                                 </form>
+                                {% endif %}
                                 <form method="post" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="retrain">
@@ -124,13 +132,16 @@
                                     <input type="hidden" name="dataset_source" value="enhanced">
                                     <button class="btn btn-sm btn-outline-primary" type="submit">Retreinar</button>
                                 </form>
+                                {% if user_role_access.can_model_admin_actions %}
                                 <form method="post" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="model_name" value="{{ model.name }}">
                                     <button class="btn btn-sm btn-outline-danger" type="submit">Deletar</button>
                                 </form>
+                                {% endif %}
                             </div>
+                            {% if user_role_access.can_model_admin_actions %}
                             <details class="mt-2">
                                 <summary class="small text-muted">Editar metadados</summary>
                                 <form method="post" class="mt-2">
@@ -142,6 +153,9 @@
                                     <button class="btn btn-sm btn-secondary" type="submit">Salvar</button>
                                 </form>
                             </details>
+                            {% else %}
+                            <div class="small text-muted mt-2">Edição/ativação/exclusão disponíveis apenas para administrador.</div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
