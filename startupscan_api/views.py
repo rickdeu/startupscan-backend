@@ -52,7 +52,23 @@ from startupscan_api.services.pitch_video import (
 )
 
 import joblib
-from celery.result import AsyncResult
+try:
+    from celery.result import AsyncResult
+except Exception:  # pragma: no cover - fallback para runtime sem Celery instalado
+    class AsyncResult:  # type: ignore[override]
+        def __init__(self, task_id):
+            self.id = task_id
+            self.status = "UNAVAILABLE"
+            self.result = None
+
+        def ready(self):
+            return False
+
+        def failed(self):
+            return False
+
+        def successful(self):
+            return False
 from django.core.management import call_command
 from django.core.cache import cache
 from django.db import close_old_connections
