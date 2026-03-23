@@ -4,6 +4,7 @@ import os
 import textwrap
 import asyncio
 import time
+import math
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -11,7 +12,7 @@ import numpy as np
 import requests
 from django.utils import timezone
 from gtts import gTTS
-from moviepy import AudioFileClip, ImageClip, afx, concatenate_videoclips
+from moviepy import AudioFileClip, ImageClip, VideoClip, afx, concatenate_videoclips
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 
 try:
@@ -321,6 +322,136 @@ def _prepare_presenter_image(image_path: str | None):
         return None
 
 
+def _extract_face_patch(presenter_image: Image.Image | None):
+    """Extrai um recorte aproximado do rosto (funciona mesmo sem detector facial)."""
+    if presenter_image is None:
+        return None
+    w, h = presenter_image.size
+    if w < 40 or h < 40:
+        return None
+
+    # Heurística: rosto costuma estar no terço superior e mais próximo do centro.
+    crop_size = int(min(w, h) * 0.42)
+    crop_size = max(80, min(crop_size, min(w, h)))
+    center_x = w // 2
+    center_y = int(h * 0.26)
+    left = max(0, min(w - crop_size, center_x - crop_size // 2))
+    top = max(0, min(h - crop_size, center_y - crop_size // 2))
+    patch = presenter_image.crop((left, top, left + crop_size, top + crop_size))
+    patch = ImageOps.fit(patch, (220, 220), method=Image.Resampling.LANCZOS)
+    return patch.filter(ImageFilter.SMOOTH_MORE)
+
+
+def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):
+    """Cria efeito de plateia grande ao fundo para cenário de palestra."""
+    base_y = height - 24
+    rows = 6
+    for row in range(rows):
+        y = base_y - row * 34
+        crowd_count = 24 + row * 7
+        head_r = max(4, 10 - row)
+        shade = int(26 + row * 10 + pulse * 12)
+        for i in range(crowd_count):
+            x = int((i + 0.5) * (width / crowd_count) + ((-1) ** i) * (row + 1) * 1.2)
+            draw.ellipse((x - head_r, y - head_r, x + head_r, y + head_r), fill=(shade, shade, shade + 8))
+            if row >= 2:
+                draw.rectangle(
+                    (x - max(2, head_r // 2), y + head_r - 1, x + max(2, head_r // 2), y + head_r + 8),
+                    fill=(shade - 3, shade - 3, shade + 4),
+                )
+
+
+def _draw_full_body_presenter(
+    img: Image.Image,
+    character_name: str,
+    face_patch: Image.Image | None,
+    motion_t: float,
+    scene_index: int,
+):
+    """Desenha apresentador de corpo inteiro com gestos animados."""
+    draw = ImageDraw.Draw(img)
+    pulse = 0.5 + 0.5 * math.sin(motion_t * 2.6 + scene_index * 0.9)
+
+    cx = 205 + int(math.sin(motion_t * 1.2 + scene_index * 0.6) * 14)
+    top = 120 + int(math.sin(motion_t * 2.0 + scene_index * 0.3) * 5)
+
+    # Sombra de palco
+    draw.ellipse((cx - 120, 560, cx + 120, 620), fill=(8, 11, 18))
+
+    suit_dark = (20, 35, 66)
+    suit_mid = (31, 52, 93)
+    shirt = (226, 232, 240)
+    tie = (192, 43, 60)
+    skin = (205, 156, 128)
+
+    # Pernas e sapatos
+    draw.rounded_rectangle((cx - 55, top + 360, cx - 8, top + 530), radius=16, fill=(16, 27, 51))
+    draw.rounded_rectangle((cx + 8, top + 360, cx + 55, top + 530), radius=16, fill=(16, 27, 51))
+    draw.rounded_rectangle((cx - 72, top + 522, cx - 2, top + 548), radius=8, fill=(9, 13, 25))
+    draw.rounded_rectangle((cx + 2, top + 522, cx + 72, top + 548), radius=8, fill=(9, 13, 25))
+
+    # Tronco
+    draw.rounded_rectangle((cx - 92, top + 150, cx + 92, top + 392), radius=36, fill=suit_dark, outline=(106, 184, 255), width=3)
+    draw.polygon([(cx - 34, top + 166), (cx - 7, top + 270), (cx - 54, top + 270)], fill=suit_mid)
+    draw.polygon([(cx + 34, top + 166), (cx + 7, top + 270), (cx + 54, top + 270)], fill=suit_mid)
+    draw.polygon([(cx - 11, top + 166), (cx + 11, top + 166), (cx + 20, top + 255), (cx - 20, top + 255)], fill=shirt)
+    draw.rectangle((cx - 6, top + 182, cx + 6, top + 300), fill=tie)
+    draw.polygon([(cx - 6, top + 300), (cx + 6, top + 300), (cx, top + 332)], fill=tie)
+
+    # Braços com gestos animados
+    left_shoulder = (cx - 66, top + 196)
+    right_shoulder = (cx + 66, top + 196)
+
+    left_elbow = (
+        left_shoulder[0] - int(58 + 24 * pulse),
+        left_shoulder[1] + int(14 + 18 * math.sin(motion_t * 2.1 + 1.0)),
+    )
+    left_hand = (
+        left_elbow[0] - int(50 + 20 * math.sin(motion_t * 2.7 + 0.7)),
+        left_elbow[1] - int(34 + 18 * pulse),
+    )
+
+    right_elbow = (
+        right_shoulder[0] + int(52 + 18 * math.sin(motion_t * 1.9 + 0.8)),
+        right_shoulder[1] - int(10 + 22 * pulse),
+    )
+    right_hand = (
+        right_elbow[0] + int(58 + 18 * pulse),
+        right_elbow[1] - int(30 + 16 * math.sin(motion_t * 2.5 + 1.8)),
+    )
+
+    draw.line([left_shoulder, left_elbow], fill=suit_mid, width=26, joint="curve")
+    draw.line([left_elbow, left_hand], fill=suit_mid, width=20, joint="curve")
+    draw.ellipse((left_hand[0] - 15, left_hand[1] - 15, left_hand[0] + 15, left_hand[1] + 15), fill=skin)
+
+    draw.line([right_shoulder, right_elbow], fill=suit_mid, width=26, joint="curve")
+    draw.line([right_elbow, right_hand], fill=suit_mid, width=20, joint="curve")
+    draw.ellipse((right_hand[0] - 15, right_hand[1] - 15, right_hand[0] + 15, right_hand[1] + 15), fill=skin)
+
+    # Cabeça (usa face enviada quando disponível)
+    head_size = 128
+    head_left = cx - head_size // 2
+    head_top = top + 20
+    draw.ellipse((head_left - 2, head_top - 2, head_left + head_size + 2, head_top + head_size + 2), fill=(222, 201, 180))
+    if face_patch is not None:
+        face = ImageOps.fit(face_patch, (head_size, head_size), method=Image.Resampling.LANCZOS)
+        mask = Image.new("L", (head_size, head_size), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse((0, 0, head_size, head_size), fill=255)
+        img.paste(face, (head_left, head_top), mask)
+    else:
+        draw.ellipse((head_left, head_top, head_left + head_size, head_top + head_size), fill=skin)
+        initials = (character_name[:2] or "AI").upper()
+        draw.text((head_left + 28, head_top + 40), initials, fill=(255, 255, 255), font=_load_font(46))
+    draw.ellipse((head_left, head_top, head_left + head_size, head_top + head_size), outline=(125, 211, 252), width=3)
+
+    # Reflexo no palco para sensação mais cinematográfica
+    glow_r = int(40 + pulse * 18)
+    glow_g = int(96 + pulse * 30)
+    glow_b = int(150 + pulse * 40)
+    draw.ellipse((cx - 155, 84, cx + 155, 406), outline=(glow_r, glow_g, glow_b), width=3)
+
+
 def _draw_scene(
     scene,
     character_name: str,
@@ -329,6 +460,8 @@ def _draw_scene(
     index: int,
     total: int,
     presenter_image: Image.Image | None = None,
+    presenter_face_patch: Image.Image | None = None,
+    motion_t: float = 0.0,
 ):
     width, height = 1280, 720
     if presenter_image is not None:
@@ -344,19 +477,34 @@ def _draw_scene(
     title_font = _load_font(48)
     body_font = _load_font(34)
     small_font = _load_font(24)
+    pulse = 0.5 + 0.5 * math.sin(motion_t * 2.2 + index * 0.8)
 
     # Header
     draw.rectangle((0, 0, width, 86), fill=(22, 38, 67))
     draw.text((30, 22), f"{startup_name} · Potencial de Investimento", fill=(255, 255, 255), font=small_font)
     draw.text((1040, 22), f"Score {score:.1f}/10", fill=(125, 211, 252), font=small_font)
 
+    # Spotlights de palco + plateia
+    draw.ellipse((-120, 70, 260, 520), outline=(69, 112, 170), width=3)
+    draw.ellipse((190, 96, 540, 512), outline=(69, 112, 170), width=2)
+    draw.ellipse((80, 420, 380, 670), fill=(9, 14, 24))
+    draw.ellipse((0, 470, 430, 760), fill=(7, 10, 18))
+    _draw_audience(draw, width, height, pulse)
+
     # Avatar/personagem
     if presenter_image is not None:
-        portrait = ImageOps.fit(presenter_image.copy(), (310, 430), method=Image.Resampling.LANCZOS)
-        img.paste(portrait, (30, 145))
-        draw.rounded_rectangle((25, 140, 345, 580), radius=18, outline=(125, 211, 252), width=4)
+        _draw_full_body_presenter(
+            img=img,
+            character_name=character_name,
+            face_patch=presenter_face_patch,
+            motion_t=motion_t,
+            scene_index=index,
+        )
     else:
-        avatar_center = (170, 320)
+        avatar_center = (
+            170 + int(math.sin(motion_t * 1.6 + index * 0.7) * 9),
+            320 + int(math.sin(motion_t * 2.0 + index * 0.2) * 6),
+        )
         avatar_radius = 110
         draw.ellipse(
             (
@@ -371,15 +519,18 @@ def _draw_scene(
         )
         initials = (character_name[:2] or "AI").upper()
         draw.text((avatar_center[0] - 38, avatar_center[1] - 28), initials, fill=(255, 255, 255), font=_load_font(60))
-    draw.text((45, 600), f"Apresentador: {character_name}", fill=(255, 255, 255), font=small_font)
+    draw.text((45, 600), f"Apresentador no palco: {character_name}", fill=(255, 255, 255), font=small_font)
 
     # Speech card
-    draw.rounded_rectangle((320, 130, 1220, 620), radius=24, fill=(15, 25, 45), outline=(59, 130, 246), width=3)
-    draw.text((360, 170), scene["title"], fill=(191, 219, 254), font=title_font)
-    wrapped = textwrap.fill(scene["text"], width=55)
-    draw.text((360, 255), wrapped, fill=(255, 255, 255), font=body_font, spacing=10)
+    draw.rounded_rectangle((355, 130, 1230, 620), radius=24, fill=(15, 25, 45), outline=(59, 130, 246), width=3)
+    draw.text((390, 170), scene["title"], fill=(191, 219, 254), font=title_font)
+    wrapped = scene.get("_wrapped_text")
+    if not wrapped:
+        wrapped = textwrap.fill(scene["text"], width=49)
+        scene["_wrapped_text"] = wrapped
+    draw.text((390, 255), wrapped, fill=(255, 255, 255), font=body_font, spacing=10)
 
-    draw.text((360, 585), f"Cena {index}/{total}", fill=(148, 163, 184), font=small_font)
+    draw.text((390, 585), f"Cena {index}/{total}", fill=(148, 163, 184), font=small_font)
 
     return np.array(img)
 
@@ -458,17 +609,35 @@ def generate_explainer_video(
         }
 
     clips = []
+    presenter_face_patch = _extract_face_patch(presenter_image)
     for idx, scene in enumerate(plan.scenes, start=1):
-        frame = _draw_scene(
-            scene,
-            plan.character_name,
-            startup_name,
-            score,
-            idx,
-            len(plan.scenes),
-            presenter_image=presenter_image,
-        )
-        clip = ImageClip(frame).with_duration(float(scene["duration"]))
+        duration = float(scene["duration"])
+        if presenter_image is not None:
+            clip = VideoClip(
+                lambda t, _scene=scene, _idx=idx: _draw_scene(
+                    _scene,
+                    plan.character_name,
+                    startup_name,
+                    score,
+                    _idx,
+                    len(plan.scenes),
+                    presenter_image=presenter_image,
+                    presenter_face_patch=presenter_face_patch,
+                    motion_t=float(t) + (_idx * 0.75),
+                ),
+                duration=duration,
+            )
+        else:
+            frame = _draw_scene(
+                scene,
+                plan.character_name,
+                startup_name,
+                score,
+                idx,
+                len(plan.scenes),
+                presenter_image=presenter_image,
+            )
+            clip = ImageClip(frame).with_duration(duration)
         clips.append(clip)
 
     final_clip = concatenate_videoclips(clips, method="compose")
@@ -519,6 +688,7 @@ def generate_explainer_video(
         "generated_at": timezone.now().isoformat(),
         "narration_preview": plan.narration[:300],
         "presenter_image_used": bool(presenter_image),
+        "animation_mode": "full_body_stage_motion" if presenter_image is not None else "static_avatar",
         "did_attempted": bool(realistic_meta),
         "did_status": (realistic_meta or {}).get("status"),
         "did_error": (realistic_meta or {}).get("error"),
