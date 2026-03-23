@@ -1245,6 +1245,11 @@ class PitchExplainerVideoGenerateView(View):
                     presenter_path = None
                 try:
                     presenter_url = request.build_absolute_uri(analysis.presenter_face_image_file.url)
+                    # D-ID aceita apenas URLs HTTPS para source_url.
+                    if presenter_url.startswith("http://"):
+                        host = request.get_host().split(":")[0].lower()
+                        if host not in {"localhost", "127.0.0.1", "testserver"}:
+                            presenter_url = "https://" + presenter_url[len("http://") :]
                 except Exception:
                     presenter_url = None
 
