@@ -4,6 +4,7 @@ from .views import (
     BatchAnalysisStatusView,
     DashboardView,
     InvestorDashboardView,
+    IdeaPitchBuilderView,
     ModelManagementView,
     PitchFormView,
     PitchReportPDFView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path('investors/', InvestorDashboardView.as_view(), name='investor_dashboard'),
 
     path('', DashboardView.as_view(), name='dashboard'),
+    path('pitch/builder/', IdeaPitchBuilderView.as_view(), name='idea_pitch_builder'),
     path('analyze/form/', PitchFormView.as_view(), name='pitch_form'),
     path('results/<int:analysis_id>/', PitchResultsView.as_view(), name='pitch_results'),
     path('results/<int:analysis_id>/pdf/', PitchReportPDFView.as_view(), name='pitch_report_pdf'),
