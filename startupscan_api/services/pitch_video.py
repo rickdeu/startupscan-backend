@@ -525,6 +525,118 @@ def _stylize_stage_cinematic_text(script_text: str) -> str:
     return merged
 
 
+def _normalize_gender_label(value: str | None) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"male", "man", "masculino", "homem"}:
+        return "male"
+    if normalized in {"female", "woman", "feminino", "mulher"}:
+        return "female"
+    return "unknown"
+
+
+def _extract_gender_from_deepface_result(result) -> str:
+    if isinstance(result, list) and result:
+        return _extract_gender_from_deepface_result(result[0])
+    if not isinstance(result, dict):
+        return "unknown"
+
+    direct = _normalize_gender_label(result.get("dominant_gender"))
+    if direct != "unknown":
+        return direct
+
+    gender_block = result.get("gender")
+    if isinstance(gender_block, dict):
+        man_score = float(gender_block.get("Man", 0.0) or 0.0)
+        woman_score = float(gender_block.get("Woman", 0.0) or 0.0)
+        if man_score > woman_score:
+            return "male"
+        if woman_score > man_score:
+            return "female"
+    return "unknown"
+
+
+def _infer_presenter_gender_from_image(image_path: str | None) -> str:
+    if not image_path or not os.path.exists(image_path):
+        return "unknown"
+
+    try:
+        from deepface import DeepFace
+
+        analysis = DeepFace.analyze(
+            img_path=image_path,
+            actions=["gender"],
+            enforce_detection=False,
+            detector_backend="opencv",
+            silent=True,
+        )
+        inferred = _extract_gender_from_deepface_result(analysis)
+        if inferred != "unknown":
+            return inferred
+    except Exception:
+        pass
+
+    # Fallback leve por nome de arquivo quando não for possível inferir via modelo.
+    name_hint = Path(image_path).name.lower()
+    if any(token in name_hint for token in ["woman", "female", "mulher", "femin"]):
+        return "female"
+    if any(token in name_hint for token in ["man", "male", "homem", "masc"]):
+        return "male"
+    return "unknown"
+
+
+def _resolve_voice_profile(presenter_gender: str | None) -> dict:
+    gender = _normalize_gender_label(presenter_gender)
+    did_generic = os.getenv("DID_VOICE_ID", "").strip()
+    edge_ao_generic = os.getenv("EDGE_TTS_VOICE_PT_AO", "").strip()
+
+    if gender == "female":
+        did_candidates = [
+            os.getenv("DID_VOICE_ID_FEMALE", "").strip(),
+            "pt-PT-RaquelNeural",
+            "pt-BR-FranciscaNeural",
+            did_generic,
+            "pt-PT-DuarteNeural",
+        ]
+        edge_candidates = [
+            os.getenv("EDGE_TTS_VOICE_PT_AO_FEMALE", "").strip(),
+            os.getenv("EDGE_TTS_VOICE_FEMALE", "").strip(),
+            "pt-PT-RaquelNeural",
+            "pt-BR-FranciscaNeural",
+            edge_ao_generic,
+            "pt-PT-DuarteNeural",
+            "pt-BR-AntonioNeural",
+        ]
+    elif gender == "male":
+        did_candidates = [
+            os.getenv("DID_VOICE_ID_MALE", "").strip(),
+            "pt-PT-DuarteNeural",
+            "pt-BR-AntonioNeural",
+            did_generic,
+            "pt-PT-RaquelNeural",
+        ]
+        edge_candidates = [
+            os.getenv("EDGE_TTS_VOICE_PT_AO_MALE", "").strip(),
+            os.getenv("EDGE_TTS_VOICE_MALE", "").strip(),
+            edge_ao_generic,
+            "pt-PT-DuarteNeural",
+            "pt-BR-AntonioNeural",
+            "pt-PT-RaquelNeural",
+            "pt-BR-FranciscaNeural",
+        ]
+    else:
+        did_candidates = [did_generic, "pt-PT-DuarteNeural", "pt-PT-RaquelNeural", "pt-BR-AntonioNeural"]
+        edge_candidates = [edge_ao_generic, "pt-PT-DuarteNeural", "pt-PT-RaquelNeural", "pt-BR-AntonioNeural"]
+
+    did_candidates = [voice for voice in did_candidates if voice]
+    edge_candidates = [voice for voice in edge_candidates if voice]
+    did_voice_id = did_candidates[0] if did_candidates else "pt-PT-DuarteNeural"
+    return {
+        "gender": gender,
+        "did_voice_id": did_voice_id,
+        "edge_voices": edge_candidates,
+    }
+
+
 def _did_create_and_download_talk(
     *,
     create_url: str,
@@ -622,6 +734,7 @@ def _try_generate_realistic_video_did(
     source_image_url: str,
     output_path: str,
     source_image_urls: list[str] | None = None,
+    presenter_gender: str | None = None,
     progress_callback=None,
 ):
     """
@@ -645,7 +758,8 @@ def _try_generate_realistic_video_did(
     auth_value = api_key if api_key.lower().startswith("basic ") else f"Basic {api_key}"
     base_url = os.getenv("DID_API_BASE_URL", "https://api.d-id.com").rstrip("/")
     create_url = f"{base_url}/talks"
-    voice_id = os.getenv("DID_VOICE_ID", "pt-PT-DuarteNeural")
+    voice_profile = _resolve_voice_profile(presenter_gender)
+    voice_id = voice_profile.get("did_voice_id") or "pt-PT-DuarteNeural"
 
     headers = {
         "Authorization": auth_value,
@@ -669,6 +783,7 @@ def _try_generate_realistic_video_did(
                 "provider": "did",
                 "status": "failed",
                 "voice_id": voice_id,
+                "voice_gender_target": voice_profile.get("gender", "unknown"),
                 "error": "empty_script",
             }
 
@@ -735,6 +850,7 @@ def _try_generate_realistic_video_did(
                                 "result_urls": [rescue_meta.get("result_url")] if rescue_meta.get("result_url") else [],
                                 "status": "done",
                                 "voice_id": voice_id,
+                                "voice_gender_target": voice_profile.get("gender", "unknown"),
                                 "segment_count": 1,
                                 "source_count": len(did_sources),
                                 "style_mode": "cinematic_stage_presenter_rescue",
@@ -745,6 +861,7 @@ def _try_generate_realistic_video_did(
                     "provider": "did",
                     "status": "failed",
                     "voice_id": voice_id,
+                    "voice_gender_target": voice_profile.get("gender", "unknown"),
                     "segment_index": idx + 1,
                     "segment_count": len(segments),
                     "error": "segment_failed_all_sources",
@@ -778,6 +895,7 @@ def _try_generate_realistic_video_did(
                     "provider": "did",
                     "status": "failed",
                     "voice_id": voice_id,
+                    "voice_gender_target": voice_profile.get("gender", "unknown"),
                     "error": f"stitch_failed:{exc}",
                 }
             finally:
@@ -806,6 +924,7 @@ def _try_generate_realistic_video_did(
             "result_urls": segment_result_urls,
             "status": "done",
             "voice_id": voice_id,
+            "voice_gender_target": voice_profile.get("gender", "unknown"),
             "segment_count": len(segments),
             "source_count": len(did_sources),
             "style_mode": "cinematic_stage_presenter",
@@ -816,6 +935,7 @@ def _try_generate_realistic_video_did(
             "provider": "did",
             "status": "failed",
             "voice_id": voice_id,
+            "voice_gender_target": voice_profile.get("gender", "unknown"),
             "error": f"exception:{exc}",
         }
 
@@ -1320,33 +1440,40 @@ def _draw_scene(
     return np.array(img)
 
 
-async def _edge_tts_save(text: str, audio_path: str) -> bool:
+async def _edge_tts_save(text: str, audio_path: str, preferred_voices: list[str] | None = None) -> tuple[bool, str]:
     if edge_tts is None:
-        return False
-    preferred_voices = [
-        os.getenv("EDGE_TTS_VOICE_PT_AO", "").strip(),
-        "pt-PT-DuarteNeural",
-        "pt-PT-RaquelNeural",
-        "pt-BR-AntonioNeural",
-    ]
-    preferred_voices = [v for v in preferred_voices if v]
+        return False, ""
+    voices = [str(v).strip() for v in (preferred_voices or []) if str(v).strip()]
+    if not voices:
+        voices = [
+            os.getenv("EDGE_TTS_VOICE_PT_AO", "").strip(),
+            "pt-PT-DuarteNeural",
+            "pt-PT-RaquelNeural",
+            "pt-BR-AntonioNeural",
+        ]
+        voices = [v for v in voices if v]
 
-    for voice in preferred_voices:
+    for voice in voices:
         try:
             communicate = edge_tts.Communicate(text=text, voice=voice, rate="+0%", pitch="+0Hz")
             await communicate.save(audio_path)
-            return True
+            return True, voice
         except Exception:
             continue
-    return False
+    return False, ""
 
 
-def _generate_tts_audio(narration_text: str, audio_path: str) -> tuple[bool, str]:
+def _generate_tts_audio(
+    narration_text: str,
+    audio_path: str,
+    *,
+    preferred_voices: list[str] | None = None,
+) -> tuple[bool, str]:
     # 1) tenta voz neural (mais natural e próxima do sotaque desejado)
     try:
-        ok = asyncio.run(_edge_tts_save(narration_text, audio_path))
+        ok, used_voice = asyncio.run(_edge_tts_save(narration_text, audio_path, preferred_voices=preferred_voices))
         if ok:
-            return True, "edge-tts-pt"
+            return True, f"edge-tts:{used_voice}"
     except Exception:
         pass
 
@@ -1382,6 +1509,8 @@ def generate_explainer_video(
     startup_name = payload["startup_name"]
     score = payload["score"]
     presenter_image = _prepare_presenter_image(presenter_image_path)
+    presenter_gender = _infer_presenter_gender_from_image(presenter_image_path)
+    voice_profile = _resolve_voice_profile(presenter_gender)
 
     realistic_meta = None
     should_try_did = mode in {"auto", "did_only"}
@@ -1392,6 +1521,7 @@ def generate_explainer_video(
             source_image_url=presenter_image_url or "",
             output_path=output_path,
             source_image_urls=presenter_source_urls or [],
+            presenter_gender=presenter_gender,
             progress_callback=progress_callback,
         )
     if realistic_meta and realistic_meta.get("status") == "done":
@@ -1400,6 +1530,7 @@ def generate_explainer_video(
             "engine_used": f"{plan.engine_used}+did",
             "character_name": plan.character_name,
             "voice_engine": f"did:{realistic_meta.get('voice_id')}",
+            "voice_gender_target": realistic_meta.get("voice_gender_target", voice_profile.get("gender", "unknown")),
             "accent_target": "angola",
             "scene_count": len(plan.scenes),
             "generated_at": timezone.now().isoformat(),
@@ -1415,6 +1546,7 @@ def generate_explainer_video(
             "target_duration_sec": _plan_total_duration_seconds(plan),
             "duration_range_sec": [MIN_VIDEO_SECONDS, MAX_VIDEO_SECONDS],
             "generation_mode": mode,
+            "presenter_gender_inferred": presenter_gender,
         }
 
     if mode == "did_only":
@@ -1486,7 +1618,11 @@ def generate_explainer_video(
 
         final_clip = concatenate_videoclips(clips, method="compose")
 
-        has_audio, tts_engine = _generate_tts_audio(plan.narration, tmp_audio_path)
+        has_audio, tts_engine = _generate_tts_audio(
+            plan.narration,
+            tmp_audio_path,
+            preferred_voices=voice_profile.get("edge_voices") or None,
+        )
         if has_audio and os.path.exists(tmp_audio_path):
             audio_clip = AudioFileClip(tmp_audio_path)
 
@@ -1571,6 +1707,7 @@ def generate_explainer_video(
         "engine_used": plan.engine_used,
         "character_name": plan.character_name,
         "voice_engine": tts_engine,
+        "voice_gender_target": voice_profile.get("gender", "unknown"),
         "accent_target": "angola",
         "scene_count": len(plan.scenes),
         "generated_at": timezone.now().isoformat(),
@@ -1583,4 +1720,5 @@ def generate_explainer_video(
         "did_status": (realistic_meta or {}).get("status"),
         "did_error": (realistic_meta or {}).get("error"),
         "generation_mode": mode,
+        "presenter_gender_inferred": presenter_gender,
     }
