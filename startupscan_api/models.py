@@ -87,6 +87,12 @@ class PitchAnalysis(models.Model):
         blank=True,
         verbose_name="Arquivo de Vídeo"
     )
+    explainer_video_file = models.FileField(
+        upload_to='pitches/explainer/%Y/%m/%d/',
+        null=True,
+        blank=True,
+        verbose_name="Vídeo Explicativo IA"
+    )
     document_file = models.FileField(
         upload_to='pitches/docs/%Y/%m/%d/',
         null=True,
@@ -221,6 +227,8 @@ class PitchAnalysis(models.Model):
             links['audio'] = self.audio_file.url
         if self.video_file:
             links['video'] = self.video_file.url
+        if self.explainer_video_file:
+            links['explainer_video'] = self.explainer_video_file.url
         if self.document_file:
             links['document'] = self.document_file.url
         return links
