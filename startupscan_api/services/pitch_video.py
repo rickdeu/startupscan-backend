@@ -403,12 +403,78 @@ def _enforce_keynote_duration(plan: VideoPlan, payload: dict) -> VideoPlan:
     return plan
 
 
+def _build_conclusion_scene(payload: dict) -> dict:
+    startup_name = payload.get("startup_name", "Startup")
+    score = float(payload.get("score", 0) or 0)
+    return {
+        "title": "Conclusão da Apresentação",
+        "text": (
+            f"Em conclusão, {startup_name} demonstra uma oportunidade real de investimento com score {score:.1f}/10, "
+            "fundamentos estratégicos e potencial de escala sustentável. "
+            "Obrigado pela atenção. Estamos prontos para avançar com os próximos passos da captação."
+        ),
+        "duration": 18,
+    }
+
+
+def _scene_looks_like_conclusion(scene: dict) -> bool:
+    title = str(scene.get("title", "") or "").lower()
+    text = str(scene.get("text", "") or "").lower()
+    blob = f"{title} {text}"
+    keywords = [
+        "conclus",
+        "encerr",
+        "mensagem final",
+        "final da apresenta",
+        "obrigado",
+        "próximos passos da captação",
+    ]
+    return any(k in blob for k in keywords)
+
+
+def _ensure_plan_has_conclusion(plan: VideoPlan, payload: dict) -> VideoPlan:
+    if not plan.scenes:
+        scene = _build_conclusion_scene(payload)
+        return VideoPlan(
+            scenes=[scene],
+            narration=scene["text"],
+            character_name=plan.character_name or payload.get("startup_name", "Startup"),
+            engine_used=plan.engine_used or "local",
+        )
+
+    if _scene_looks_like_conclusion(plan.scenes[-1]):
+        return plan
+
+    conclusion = _build_conclusion_scene(payload)
+    total = _plan_total_duration_seconds(plan)
+    scenes = [dict(s) for s in plan.scenes]
+
+    if total <= (MAX_KEYNOTE_SECONDS - 14):
+        scenes.append(conclusion)
+    else:
+        # Se já está no limite, substitui a última cena mantendo duração adequada.
+        replacement = dict(conclusion)
+        last_duration = int(float(scenes[-1].get("duration", 18) or 18))
+        replacement["duration"] = max(12, min(28, last_duration))
+        scenes[-1] = replacement
+
+    narration = " ".join(str(s.get("text", "") or "") for s in scenes).strip()
+    return VideoPlan(
+        scenes=scenes,
+        narration=narration or plan.narration,
+        character_name=plan.character_name,
+        engine_used=plan.engine_used,
+    )
+
+
 def build_video_plan_from_analysis(analysis) -> VideoPlan:
     payload = _analysis_payload(analysis)
     plan = _gpt_video_plan(payload)
     if plan is None:
         plan = _local_video_plan(payload)
-    return _enforce_keynote_duration(plan, payload)
+    plan = _enforce_keynote_duration(plan, payload)
+    plan = _ensure_plan_has_conclusion(plan, payload)
+    return plan
 
 
 def _download_binary_file(url: str, output_path: str) -> bool:
