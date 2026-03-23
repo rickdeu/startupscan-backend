@@ -1,4 +1,5 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from .views import (
     BatchAnalysisResultsView,
     BatchAnalysisStatusView,
@@ -9,6 +10,8 @@ from .views import (
     IdeaPitchBuilderView,
     ModelTrainingProgressView,
     ModelManagementView,
+    RoleBasedLoginView,
+    RoleHomeView,
     PitchFormView,
     PitchExplainerVideoGenerateView,
     PitchPresenterGenderDetectView,
@@ -22,7 +25,6 @@ from .views import (
     TrainingStatusView,
     register_view
 )
-from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('analyze/', StartupPitchAnalyzer.as_view(), name='pitch-analyzer'),
@@ -34,6 +36,7 @@ urlpatterns = [
     path('models/', ModelManagementView.as_view(), name='model_management'),
     path('models/training/progress/<str:job_id>/', ModelTrainingProgressView.as_view(), name='model_training_progress'),
     path('investors/', InvestorDashboardView.as_view(), name='investor_dashboard'),
+    path('home/', RoleHomeView.as_view(), name='role_home'),
 
     path('', DashboardView.as_view(), name='dashboard'),
     path('pitch/builder/', IdeaPitchBuilderView.as_view(), name='idea_pitch_builder'),
@@ -46,8 +49,7 @@ urlpatterns = [
     path('results/<int:analysis_id>/video/generate/', PitchExplainerVideoGenerateView.as_view(), name='pitch_explainer_video_generate'),
     path('results/<int:analysis_id>/video/detect-gender/', PitchPresenterGenderDetectView.as_view(), name='pitch_presenter_gender_detect'),
     path('results/<int:analysis_id>/video/progress/<str:job_id>/', PitchExplainerVideoProgressView.as_view(), name='pitch_explainer_video_progress'),
-    #path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('login/', auth_views.LoginView.as_view(template_name='analyzer/login.html'), name='login'),
+    path('login/', RoleBasedLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
     path('register/', register_view, name='register'),

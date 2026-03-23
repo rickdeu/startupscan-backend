@@ -1,5 +1,5 @@
 from django.contrib import admin
-from startupscan_api.models import PitchAnalysis
+from startupscan_api.models import PitchAnalysis, UserProfile
 from django.utils.html import format_html
 
 @admin.register(PitchAnalysis)
@@ -242,3 +242,11 @@ class PitchAnalysisAdmin(admin.ModelAdmin):
         if not request.user.is_superuser:
             excluded += ['metadata', 'model_version', 'ip_address']
         return excluded
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "role", "created_at", "updated_at")
+    list_filter = ("role", "created_at")
+    search_fields = ("user__username", "user__email", "user__first_name", "user__last_name")
+    readonly_fields = ("created_at", "updated_at")
