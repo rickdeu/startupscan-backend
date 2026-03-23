@@ -642,9 +642,38 @@ def _extract_gender_from_deepface_result(result) -> str:
     return "unknown"
 
 
-def _infer_presenter_gender_from_image(image_path: str | None) -> str:
+def _extract_gender_detection_details(result) -> dict:
+    if isinstance(result, list) and result:
+        return _extract_gender_detection_details(result[0])
+    if not isinstance(result, dict):
+        return {"gender": "unknown", "confidence": None}
+
+    dominant = _normalize_gender_label(result.get("dominant_gender"))
+    gender_block = result.get("gender")
+    confidence = None
+    gender = dominant if dominant in {"male", "female"} else "unknown"
+
+    if isinstance(gender_block, dict):
+        man_score = float(gender_block.get("Man", 0.0) or 0.0)
+        woman_score = float(gender_block.get("Woman", 0.0) or 0.0)
+        total = man_score + woman_score
+        if gender == "unknown":
+            if man_score > woman_score:
+                gender = "male"
+            elif woman_score > man_score:
+                gender = "female"
+        if total > 0 and gender in {"male", "female"}:
+            confidence = (man_score / total) if gender == "male" else (woman_score / total)
+    return {"gender": gender, "confidence": confidence}
+
+
+def detect_presenter_gender(image_path: str | None) -> dict:
+    """
+    Detecta gênero provável do apresentador para orientar a voz.
+    Retorna: gender (male/female/unknown), confidence (0-1|None), method.
+    """
     if not image_path or not os.path.exists(image_path):
-        return "unknown"
+        return {"gender": "unknown", "confidence": None, "method": "unavailable"}
 
     try:
         from deepface import DeepFace
@@ -656,19 +685,27 @@ def _infer_presenter_gender_from_image(image_path: str | None) -> str:
             detector_backend="opencv",
             silent=True,
         )
-        inferred = _extract_gender_from_deepface_result(analysis)
-        if inferred != "unknown":
-            return inferred
+        details = _extract_gender_detection_details(analysis)
+        if details["gender"] != "unknown":
+            return {
+                "gender": details["gender"],
+                "confidence": details["confidence"],
+                "method": "deepface",
+            }
     except Exception:
         pass
 
     # Fallback leve por nome de arquivo quando não for possível inferir via modelo.
     name_hint = Path(image_path).name.lower()
     if any(token in name_hint for token in ["woman", "female", "mulher", "femin"]):
-        return "female"
+        return {"gender": "female", "confidence": None, "method": "filename_hint"}
     if any(token in name_hint for token in ["man", "male", "homem", "masc"]):
-        return "male"
-    return "unknown"
+        return {"gender": "male", "confidence": None, "method": "filename_hint"}
+    return {"gender": "unknown", "confidence": None, "method": "unknown"}
+
+
+def _infer_presenter_gender_from_image(image_path: str | None) -> str:
+    return _normalize_gender_label(detect_presenter_gender(image_path).get("gender"))
 
 
 def _resolve_voice_profile(presenter_gender: str | None) -> dict:
@@ -1636,6 +1673,7 @@ def generate_explainer_video(
     presenter_image_path: str | None = None,
     presenter_image_url: str | None = None,
     presenter_source_urls: list[str] | None = None,
+    presenter_gender_override: str | None = None,
     generation_mode: str = "auto",
     progress_callback=None,
 ):
@@ -1648,7 +1686,10 @@ def generate_explainer_video(
     startup_name = payload["startup_name"]
     score = payload["score"]
     presenter_image = _prepare_presenter_image(presenter_image_path)
-    presenter_gender = _infer_presenter_gender_from_image(presenter_image_path)
+    gender_detect = detect_presenter_gender(presenter_image_path)
+    inferred_gender = _normalize_gender_label(gender_detect.get("gender"))
+    override_gender = _normalize_gender_label(presenter_gender_override)
+    presenter_gender = override_gender if override_gender in {"male", "female"} else inferred_gender
     voice_profile = _resolve_voice_profile(presenter_gender)
 
     realistic_meta = None
@@ -1687,7 +1728,10 @@ def generate_explainer_video(
             "target_duration_sec": _plan_total_duration_seconds(plan),
             "duration_range_sec": [MIN_VIDEO_SECONDS, MAX_VIDEO_SECONDS],
             "generation_mode": mode,
-            "presenter_gender_inferred": presenter_gender,
+            "presenter_gender_inferred": inferred_gender,
+            "presenter_gender_selected": presenter_gender,
+            "presenter_gender_detection_method": gender_detect.get("method"),
+            "presenter_gender_detection_confidence": gender_detect.get("confidence"),
         }
 
     if mode == "did_only":
@@ -1861,5 +1905,8 @@ def generate_explainer_video(
         "did_status": (realistic_meta or {}).get("status"),
         "did_error": (realistic_meta or {}).get("error"),
         "generation_mode": mode,
-        "presenter_gender_inferred": presenter_gender,
+        "presenter_gender_inferred": inferred_gender,
+        "presenter_gender_selected": presenter_gender,
+        "presenter_gender_detection_method": gender_detect.get("method"),
+        "presenter_gender_detection_confidence": gender_detect.get("confidence"),
     }
