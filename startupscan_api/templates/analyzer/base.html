@@ -42,6 +42,11 @@
                     <i class="fas fa-hand-holding-dollar"></i><span>Investidores</span>
                 </a>
                 {% endif %}
+                {% if user.is_authenticated and user_role_access.can_connections %}
+                <a class="sidebar-link {% if '/connections/' in request.path %}active{% endif %}" href="{% url 'connections_hub' %}">
+                    <i class="fas fa-link"></i><span>Conexões</span>
+                </a>
+                {% endif %}
                 {% if user.is_authenticated and user_role_access.can_models %}
                 <a class="sidebar-link {% if '/models/' in request.path %}active{% endif %}" href="{% url 'model_management' %}">
                     <i class="fas fa-sliders"></i><span>Modelos</span>

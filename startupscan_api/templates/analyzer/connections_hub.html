@@ -1,0 +1,126 @@
+{% extends "analyzer/base.html" %}
+
+{% block topbar_title %}Fluxo de Conexões{% endblock %}
+{% block topbar_subtitle %}Interesses de investidores e ligação com empreendedores{% endblock %}
+
+{% block content %}
+<div class="hero-panel p-4 mb-4">
+    <h2 class="mb-2">Conexões entre Investidores e Empreendedores</h2>
+    <p class="mb-0">Acompanhe interesses enviados, respostas e estado das conexões.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <span class="kpi-label">Interesses enviados</span>
+            <h3>{{ kpi_sent }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <span class="kpi-label">Interesses recebidos</span>
+            <h3>{{ kpi_received }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <span class="kpi-label">Conexões iniciadas</span>
+            <h3>{{ kpi_connected }}</h3>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Interesses que enviei</h5>
+    </div>
+    <div class="card-body">
+        {% if sent_interests %}
+        <div class="row g-3">
+            {% for interest in sent_interests %}
+            <div class="col-lg-6">
+                <div class="border rounded p-3 h-100">
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong>{{ interest.analysis.startup_name|default:"Startup" }}</strong>
+                        <span class="badge bg-info">{{ interest.get_status_display }}</span>
+                    </div>
+                    <p class="small text-muted mb-2">
+                        Empreendedor:
+                        {{ interest.entrepreneur.first_name|default:interest.entrepreneur.username|default:"Não associado" }}
+                    </p>
+                    {% if interest.investor_message %}
+                    <p class="mb-2"><strong>Minha mensagem:</strong> {{ interest.investor_message }}</p>
+                    {% endif %}
+                    {% if interest.entrepreneur_reply %}
+                    <p class="mb-2"><strong>Resposta:</strong> {{ interest.entrepreneur_reply }}</p>
+                    {% endif %}
+                    <div class="small text-muted mb-2">
+                        Atualizado em {{ interest.updated_at|date:"d/m/Y H:i" }}
+                    </div>
+                    {% if interest.status == 'pending' or interest.status == 'reviewing' %}
+                    <form method="post" action="{% url 'connection_interest_update' interest.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="withdraw">
+                        <button class="btn btn-sm btn-outline-danger" type="submit">
+                            Retirar interesse
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Ainda não existem interesses enviados.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Interesses recebidos</h5>
+    </div>
+    <div class="card-body">
+        {% if received_interests %}
+        <div class="row g-3">
+            {% for interest in received_interests %}
+            <div class="col-lg-6">
+                <div class="border rounded p-3 h-100">
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong>{{ interest.analysis.startup_name|default:"Startup" }}</strong>
+                        <span class="badge bg-secondary">{{ interest.get_status_display }}</span>
+                    </div>
+                    <p class="small text-muted mb-2">
+                        Investidor:
+                        {{ interest.investor.first_name|default:interest.investor.username }}
+                    </p>
+                    {% if interest.investor_message %}
+                    <p class="mb-2"><strong>Mensagem do investidor:</strong> {{ interest.investor_message }}</p>
+                    {% endif %}
+                    {% if interest.entrepreneur_reply %}
+                    <p class="mb-2"><strong>Última resposta:</strong> {{ interest.entrepreneur_reply }}</p>
+                    {% endif %}
+                    <div class="small text-muted mb-2">
+                        Atualizado em {{ interest.updated_at|date:"d/m/Y H:i" }}
+                    </div>
+                    <form method="post" action="{% url 'connection_interest_update' interest.id %}">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <textarea class="form-control form-control-sm" name="entrepreneur_reply" rows="2" placeholder="Resposta opcional ao investidor"></textarea>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-warning" type="submit" name="action" value="reviewing">Marcar em análise</button>
+                            <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">Iniciar conexão</button>
+                            <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">Recusar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Ainda não existem interesses recebidos.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
