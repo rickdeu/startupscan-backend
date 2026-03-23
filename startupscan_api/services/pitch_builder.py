@@ -4,10 +4,9 @@ import hashlib
 from datetime import datetime
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfgen import canvas
 
 
 def _build_pitch_uniqueness_key(idea_data: dict) -> str:
@@ -176,115 +175,382 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> di
     return _normalize_payload(_local_pitch_fallback(idea_data), "local")
 
 
-def export_pitch_pdf(pitch_payload: dict, output_path: str):
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "PitchTitle",
-        parent=styles["Heading1"],
-        fontSize=20,
-        textColor=colors.HexColor("#0f172a"),
-        spaceAfter=9,
+def _safe_str(value, default: str = "") -> str:
+    text = str(value if value is not None else default).strip()
+    return text or default
+
+
+def _wrap_text_lines(text: str, max_chars: int = 80) -> list[str]:
+    text = " ".join((_safe_str(text, "")).split())
+    if not text:
+        return []
+    words = text.split(" ")
+    lines = []
+    current = []
+    current_len = 0
+    for word in words:
+        add_len = len(word) + (1 if current else 0)
+        if current and current_len + add_len > max_chars:
+            lines.append(" ".join(current))
+            current = [word]
+            current_len = len(word)
+        else:
+            current.append(word)
+            current_len += add_len
+    if current:
+        lines.append(" ".join(current))
+    return lines
+
+
+def _truncate_text(text: str, max_chars: int = 340) -> str:
+    text = _safe_str(text, "")
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars].rsplit(" ", 1)[0].strip()
+    return (cut or text[:max_chars]).rstrip() + "..."
+
+
+def _palette_for_slide(index: int) -> dict:
+    palettes = [
+        {
+            "bg": colors.HexColor("#060B1A"),
+            "band": colors.HexColor("#1D4ED8"),
+            "card": colors.HexColor("#0F172A"),
+            "text": colors.HexColor("#F8FAFC"),
+            "muted": colors.HexColor("#BFDBFE"),
+            "accent": colors.HexColor("#22D3EE"),
+            "shape1": colors.HexColor("#172554"),
+            "shape2": colors.HexColor("#1E3A8A"),
+        },
+        {
+            "bg": colors.HexColor("#0B1020"),
+            "band": colors.HexColor("#7C3AED"),
+            "card": colors.HexColor("#111827"),
+            "text": colors.HexColor("#F8FAFC"),
+            "muted": colors.HexColor("#DDD6FE"),
+            "accent": colors.HexColor("#F472B6"),
+            "shape1": colors.HexColor("#312E81"),
+            "shape2": colors.HexColor("#4C1D95"),
+        },
+        {
+            "bg": colors.HexColor("#09121B"),
+            "band": colors.HexColor("#0EA5E9"),
+            "card": colors.HexColor("#0F172A"),
+            "text": colors.HexColor("#F8FAFC"),
+            "muted": colors.HexColor("#BAE6FD"),
+            "accent": colors.HexColor("#2DD4BF"),
+            "shape1": colors.HexColor("#164E63"),
+            "shape2": colors.HexColor("#155E75"),
+        },
+    ]
+    return palettes[index % len(palettes)]
+
+
+def _draw_background(pdf: canvas.Canvas, width: float, height: float, palette: dict):
+    pdf.setFillColor(palette["bg"])
+    pdf.rect(0, 0, width, height, stroke=0, fill=1)
+
+    pdf.setFillColor(palette["shape1"])
+    pdf.circle(width * 0.92, height * 0.82, 90, stroke=0, fill=1)
+    pdf.setFillColor(palette["shape2"])
+    pdf.circle(width * 0.84, height * 0.68, 130, stroke=0, fill=1)
+    pdf.setFillColor(palette["band"])
+    pdf.rect(0, height - 42, width, 42, stroke=0, fill=1)
+
+
+def _draw_footer(
+    pdf: canvas.Canvas,
+    width: float,
+    page_number: int,
+    total_pages: int,
+    engine_used: str,
+    uniqueness_key: str,
+    palette: dict,
+):
+    footer_text = (
+        f"StartupScan Pitch Deck | Motor: {engine_used} | "
+        f"ID: {uniqueness_key or 'manual'} | Slide {page_number}/{total_pages}"
     )
-    subtitle_style = ParagraphStyle(
-        "PitchSubtitle",
-        parent=styles["Normal"],
-        fontSize=10,
-        textColor=colors.HexColor("#475569"),
-        spaceAfter=10,
+    pdf.setFillColor(palette["muted"])
+    pdf.setFont("Helvetica", 9)
+    pdf.drawString(28, 16, footer_text)
+
+
+def _draw_cover_slide(
+    pdf: canvas.Canvas,
+    width: float,
+    height: float,
+    title: str,
+    slogan: str,
+    startup_name: str,
+    subtitle: str,
+    palette: dict,
+):
+    pdf.setFillColor(palette["text"])
+    pdf.setFont("Helvetica-Bold", 35)
+    y = height - 130
+    for line in _wrap_text_lines(title, max_chars=32)[:2]:
+        pdf.drawString(52, y, line)
+        y -= 40
+
+    pdf.setFillColor(palette["muted"])
+    pdf.setFont("Helvetica", 15)
+    for line in _wrap_text_lines(_truncate_text(slogan, 180), max_chars=65)[:3]:
+        pdf.drawString(52, y, line)
+        y -= 22
+
+    pdf.setFillColor(palette["card"])
+    pdf.roundRect(52, 86, width - 104, 124, 16, stroke=0, fill=1)
+    pdf.setFillColor(palette["accent"])
+    pdf.setFont("Helvetica-Bold", 13)
+    pdf.drawString(72, 183, "APRESENTACAO EXECUTIVA")
+    pdf.setFillColor(palette["text"])
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(72, 160, f"Startup: {startup_name}")
+    pdf.drawString(72, 140, subtitle)
+    pdf.drawString(72, 120, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
+    initials = (_safe_str(startup_name, "ST")[:2]).upper()
+    pdf.setFillColor(palette["band"])
+    pdf.circle(width - 110, 148, 44, stroke=0, fill=1)
+    pdf.setFillColor(colors.white)
+    pdf.setFont("Helvetica-Bold", 22)
+    text_w = stringWidth(initials, "Helvetica-Bold", 22)
+    pdf.drawString(width - 110 - (text_w / 2), 141, initials)
+
+
+def _draw_visual_metrics(
+    pdf: canvas.Canvas,
+    title: str,
+    width: float,
+    y_start: float,
+    card_height: float,
+    palette: dict,
+):
+    seed = int(hashlib.sha256(title.encode("utf-8")).hexdigest()[:6], 16)
+    labels = ["Impacto", "Escala", "Retorno"]
+    levels = [
+        40 + (seed % 56),
+        40 + ((seed // 7) % 56),
+        40 + ((seed // 13) % 56),
+    ]
+    x_base = width - 230
+    bar_w = 42
+    gap = 16
+    max_h = card_height - 72
+
+    pdf.setFillColor(palette["muted"])
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(x_base, y_start + card_height - 24, "Indicadores visuais")
+
+    for idx, value in enumerate(levels):
+        x = x_base + (idx * (bar_w + gap))
+        h = max(18, max_h * (value / 100.0))
+        pdf.setFillColor(colors.HexColor("#1F2937"))
+        pdf.roundRect(x, y_start + 26, bar_w, max_h, 5, stroke=0, fill=1)
+        pdf.setFillColor(palette["accent"])
+        pdf.roundRect(x, y_start + 26, bar_w, h, 5, stroke=0, fill=1)
+        pdf.setFillColor(palette["text"])
+        pdf.setFont("Helvetica", 9)
+        pdf.drawCentredString(x + (bar_w / 2), y_start + 14, labels[idx])
+
+
+def _draw_content_slide(
+    pdf: canvas.Canvas,
+    width: float,
+    height: float,
+    title: str,
+    subtitle: str,
+    bullets: list[str],
+    palette: dict,
+):
+    pdf.setFillColor(palette["text"])
+    pdf.setFont("Helvetica-Bold", 27)
+    y = height - 100
+    for line in _wrap_text_lines(_safe_str(title, "Slide"), max_chars=42)[:2]:
+        pdf.drawString(52, y, line)
+        y -= 34
+
+    if subtitle:
+        pdf.setFillColor(palette["muted"])
+        pdf.setFont("Helvetica", 12)
+        for line in _wrap_text_lines(_truncate_text(subtitle, 190), max_chars=72)[:2]:
+            pdf.drawString(52, y, line)
+            y -= 18
+
+    card_x = 52
+    card_y = 66
+    card_w = width - 104
+    card_h = height - 186
+
+    pdf.setFillColor(palette["card"])
+    pdf.roundRect(card_x, card_y, card_w, card_h, 16, stroke=0, fill=1)
+    pdf.setFillColor(palette["band"])
+    pdf.roundRect(card_x, card_y + card_h - 32, card_w, 32, 16, stroke=0, fill=1)
+
+    left_x = card_x + 24
+    left_y = card_y + card_h - 54
+    pdf.setFillColor(palette["text"])
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(left_x, left_y, "Pontos-chave")
+
+    text_y = left_y - 24
+    pdf.setFont("Helvetica", 11)
+    for raw_bullet in bullets[:6]:
+        bullet = _truncate_text(_safe_str(raw_bullet, "Sem informacao"), 180)
+        wrapped = _wrap_text_lines(bullet, max_chars=56)[:3]
+        if text_y < card_y + 30:
+            break
+        pdf.setFillColor(palette["accent"])
+        pdf.circle(left_x + 2, text_y + 5, 2.4, stroke=0, fill=1)
+        pdf.setFillColor(palette["text"])
+        if wrapped:
+            pdf.drawString(left_x + 12, text_y, wrapped[0])
+            text_y -= 15
+        for extra_line in wrapped[1:]:
+            if text_y < card_y + 30:
+                break
+            pdf.drawString(left_x + 12, text_y, extra_line)
+            text_y -= 14
+        text_y -= 8
+
+    _draw_visual_metrics(pdf, title, width, card_y, card_h, palette)
+
+
+def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
+    slides = []
+    title = _safe_str(pitch_payload.get("title"), "Pitch de Negocio")
+    slogan = _safe_str(pitch_payload.get("slogan"), "Proposta de valor em evolucao.")
+    startup_name = title.replace("Pitch de Negócio - ", "").replace("Pitch de Negocio - ", "").strip() or "Startup"
+
+    slides.append(
+        {
+            "title": title,
+            "subtitle": "Deck visual para apresentacao a investidores",
+            "bullets": [slogan],
+            "kind": "cover",
+            "startup_name": startup_name,
+        }
     )
 
-    story = []
-    story.append(Paragraph(pitch_payload.get("title", "Pitch de Negócio"), title_style))
-    story.append(
-        Paragraph(
-            f"Gerado automaticamente em {datetime.now().strftime('%d/%m/%Y %H:%M')} "
-            f"| Motor: {pitch_payload.get('engine_used', 'local')}",
-            subtitle_style,
+    elevator = _safe_str(pitch_payload.get("elevator_pitch"), "")
+    if elevator:
+        slides.append(
+            {
+                "title": "Elevator Pitch",
+                "subtitle": "Mensagem central em ate 90 segundos",
+                "bullets": _wrap_text_lines(_truncate_text(elevator, 440), max_chars=95)[:5],
+                "kind": "content",
+            }
         )
-    )
-    story.append(Paragraph(f"<b>Slogan:</b> {pitch_payload.get('slogan', '')}", styles["BodyText"]))
-    story.append(Spacer(1, 0.4 * cm))
-
-    elevator_pitch = pitch_payload.get("elevator_pitch", "")
-    if elevator_pitch:
-        story.append(Paragraph("<b>Elevator Pitch (60-90 segundos)</b>", styles["Heading3"]))
-        story.append(Paragraph(elevator_pitch, styles["BodyText"]))
-        story.append(Spacer(1, 0.25 * cm))
-
-    for section in pitch_payload.get("sections", []):
-        title = section.get("title", "Seção")
-        content = section.get("content", "")
-        story.append(Paragraph(f"<b>{title}</b>", styles["Heading3"]))
-        story.append(Paragraph(content or "Sem conteúdo informado.", styles["BodyText"]))
-        story.append(Spacer(1, 0.25 * cm))
-
-    investment = pitch_payload.get("investment", {}) or {}
-    story.append(Paragraph("<b>Estratégia de Captação</b>", styles["Heading3"]))
-    inv_table = Table(
-        [
-            ["Meta de captação", investment.get("funding_goal", "Não informado")],
-            ["Uso do capital", investment.get("use_of_funds", "Não informado")],
-        ],
-        colWidths=[5 * cm, 11 * cm],
-    )
-    inv_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#e2e8f0")),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                ("PADDING", (0, 0), (-1, -1), 6),
-            ]
-        )
-    )
-    story.append(inv_table)
-    story.append(Spacer(1, 0.35 * cm))
-
-    script_3min = pitch_payload.get("script_3min", []) or []
-    if script_3min:
-        story.append(Paragraph("<b>Roteiro para apresentação de 3 minutos</b>", styles["Heading3"]))
-        for idx, item in enumerate(script_3min, start=1):
-            story.append(Paragraph(f"{idx}. {item}", styles["BodyText"]))
-        story.append(Spacer(1, 0.3 * cm))
 
     deck = pitch_payload.get("pitch_deck", []) or []
-    if deck:
-        story.append(Paragraph("<b>Estrutura sugerida de Pitch Deck</b>", styles["Heading3"]))
-        deck_rows = [["Slide", "Título", "Pontos-chave"]]
-        for slide in deck:
-            bullets = slide.get("bullets", []) or []
-            bullets_text = " • ".join(str(b) for b in bullets if b)
-            deck_rows.append(
-                [
-                    str(slide.get("slide", "")),
-                    str(slide.get("title", "")),
-                    bullets_text or "Sem pontos informados",
-                ]
-            )
-        deck_table = Table(deck_rows, colWidths=[1.5 * cm, 4.5 * cm, 10 * cm])
-        deck_table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dbeafe")),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfdbfe")),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("PADDING", (0, 0), (-1, -1), 5),
-                ]
-            )
+    for item in deck[:10]:
+        title = _safe_str(item.get("title"), "Slide")
+        bullets = [str(b).strip() for b in (item.get("bullets", []) or []) if str(b).strip()]
+        if not bullets:
+            bullets = ["Sem pontos informados para este slide."]
+        slides.append(
+            {
+                "title": title,
+                "subtitle": f"Slide {item.get('slide', '')}".strip(),
+                "bullets": bullets,
+                "kind": "content",
+            }
         )
-        story.append(deck_table)
-        story.append(Spacer(1, 0.3 * cm))
 
-    story.append(Paragraph("<b>Fecho</b>", styles["Heading3"]))
-    story.append(Paragraph(pitch_payload.get("closing", ""), styles["BodyText"]))
+    if not deck:
+        sections = pitch_payload.get("sections", []) or []
+        for sec in sections[:8]:
+            sec_title = _safe_str(sec.get("title"), "Secao")
+            sec_content = _safe_str(sec.get("content"), "Sem conteudo informado.")
+            slides.append(
+                {
+                    "title": sec_title,
+                    "subtitle": "Resumo estrategico",
+                    "bullets": _wrap_text_lines(_truncate_text(sec_content, 420), max_chars=95)[:5],
+                    "kind": "content",
+                }
+            )
 
-    doc = SimpleDocTemplate(
-        output_path,
-        pagesize=A4,
-        rightMargin=1.5 * cm,
-        leftMargin=1.5 * cm,
-        topMargin=1.5 * cm,
-        bottomMargin=1.5 * cm,
+    investment = pitch_payload.get("investment", {}) or {}
+    funding = _safe_str(investment.get("funding_goal"), "Nao informado")
+    use_of_funds = _safe_str(investment.get("use_of_funds"), "Nao informado")
+    slides.append(
+        {
+            "title": "Capitacao e Uso de Capital",
+            "subtitle": "Plano financeiro para execucao e escala",
+            "bullets": [f"Meta de captacao: {funding}", f"Uso do capital: {use_of_funds}"],
+            "kind": "content",
+        }
     )
-    doc.build(story)
+
+    script = pitch_payload.get("script_3min", []) or []
+    if script:
+        timeline = [f"Passo {idx}: {item}" for idx, item in enumerate(script[:5], start=1)]
+        slides.append(
+            {
+                "title": "Roteiro de Apresentacao",
+                "subtitle": "Sequencia sugerida para apresentacao ao vivo",
+                "bullets": timeline,
+                "kind": "content",
+            }
+        )
+
+    closing = _safe_str(
+        pitch_payload.get("closing"),
+        "Obrigado pela atencao. Estamos prontos para os proximos passos da captacao.",
+    )
+    slides.append(
+        {
+            "title": "Conclusao",
+            "subtitle": "Mensagem final ao investidor",
+            "bullets": _wrap_text_lines(_truncate_text(closing, 420), max_chars=90)[:5],
+            "kind": "content",
+        }
+    )
+    return slides
+
+
+def export_pitch_pdf(pitch_payload: dict, output_path: str):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    slides = _build_pitch_slides(pitch_payload)
+    page_size = landscape(A4)
+    width, height = page_size
+
+    pdf = canvas.Canvas(output_path, pagesize=page_size)
+    engine_used = _safe_str(pitch_payload.get("engine_used"), "local")
+    uniqueness_key = _safe_str(pitch_payload.get("narrative_uniqueness_key"), "")
+    total_pages = len(slides)
+
+    for idx, slide in enumerate(slides, start=1):
+        palette = _palette_for_slide(idx - 1)
+        _draw_background(pdf, width, height, palette)
+
+        if slide.get("kind") == "cover":
+            _draw_cover_slide(
+                pdf=pdf,
+                width=width,
+                height=height,
+                title=_safe_str(slide.get("title"), "Pitch Deck"),
+                slogan=_safe_str((slide.get("bullets") or [""])[0], ""),
+                startup_name=_safe_str(slide.get("startup_name"), "Startup"),
+                subtitle=_safe_str(slide.get("subtitle"), ""),
+                palette=palette,
+            )
+        else:
+            _draw_content_slide(
+                pdf=pdf,
+                width=width,
+                height=height,
+                title=_safe_str(slide.get("title"), "Slide"),
+                subtitle=_safe_str(slide.get("subtitle"), ""),
+                bullets=[str(b) for b in (slide.get("bullets") or [])],
+                palette=palette,
+            )
+
+        _draw_footer(pdf, width, idx, total_pages, engine_used, uniqueness_key, palette)
+        pdf.showPage()
+
+    pdf.save()
     return output_path
