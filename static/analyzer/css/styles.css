@@ -3,10 +3,27 @@
     --app-primary: #275efe;
     --app-primary-soft: #eef3ff;
     --app-text: #1c2434;
+    --app-bg-1: #eef2ff;
+    --app-bg-2: #f8f9fc;
+    --app-bg-3: #f3f5fa;
+    --card-bg: #ffffff;
+    --card-border: #e5e7eb;
+    --muted-text: #6b7280;
+    --header-bg: #f8fbff;
+}
+
+.app-body,
+.card,
+.kpi-card,
+.hero-panel,
+.glass-card,
+.app-navbar,
+.app-footer {
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .app-body {
-    background: radial-gradient(circle at top right, #eef2ff 0%, #f8f9fc 45%, #f3f5fa 100%);
+    background: radial-gradient(circle at top right, var(--app-bg-1) 0%, var(--app-bg-2) 45%, var(--app-bg-3) 100%);
     color: var(--app-text);
     min-height: 100vh;
 }
@@ -62,9 +79,9 @@
 }
 
 .kpi-card {
-    background: #fff;
+    background: var(--card-bg);
     border-radius: 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--card-border);
     padding: 1rem;
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
@@ -73,21 +90,22 @@
     display: block;
     text-transform: uppercase;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--muted-text);
     margin-bottom: 0.35rem;
 }
 
 .card {
     border: 0;
     border-radius: 14px;
+    background: var(--card-bg);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .card-header {
     border-bottom: 1px solid #eef2f7;
     font-weight: 600;
-    background: #f8fbff;
-    color: #0f172a;
+    background: var(--header-bg);
+    color: var(--app-text);
 }
 
 .investor-thesis {
@@ -118,6 +136,14 @@ canvas {
     color: #fff;
 }
 
+.theme-toggle-btn {
+    min-width: 38px;
+}
+
+.table-responsive {
+    border-radius: 0 0 14px 14px;
+}
+
 .btn-primary {
     background: var(--app-primary);
     border-color: var(--app-primary);
@@ -137,4 +163,51 @@ details summary {
         width: 100%;
         margin-bottom: 0.5rem;
     }
+}
+
+html[data-theme="dark"] {
+    --app-text: #e5e7eb;
+    --app-bg-1: #0b1220;
+    --app-bg-2: #0f172a;
+    --app-bg-3: #111827;
+    --card-bg: #0f172a;
+    --card-border: #1f2937;
+    --muted-text: #9ca3af;
+    --header-bg: #111b2f;
+    --app-primary-soft: #1e293b;
+}
+
+html[data-theme="dark"] .glass-card {
+    background: rgba(15, 23, 42, 0.88);
+    color: #e5e7eb;
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .kpi-card h3,
+html[data-theme="dark"] .card h1,
+html[data-theme="dark"] .card h2,
+html[data-theme="dark"] .card h3,
+html[data-theme="dark"] .card h4,
+html[data-theme="dark"] .card h5,
+html[data-theme="dark"] .card h6 {
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .table {
+    color: #e5e7eb;
+}
+
+html[data-theme="dark"] .table th {
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .btn-outline-primary {
+    color: #93c5fd;
+    border-color: #3b82f6;
+}
+
+html[data-theme="dark"] .btn-outline-primary:hover {
+    color: #0b1220;
+    background: #60a5fa;
+    border-color: #60a5fa;
 }

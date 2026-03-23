@@ -6,6 +6,42 @@
     <p class="mb-0">Visualização estratégica das startups com maior potencial de retorno na plataforma.</p>
 </div>
 
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Score mínimo</label>
+                <input type="number" class="form-control" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Score máximo</label>
+                <input type="number" class="form-control" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Janela de tempo</label>
+                <select class="form-select" name="days">
+                    <option value="30" {% if filter_days == 30 %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90" {% if filter_days == 90 %}selected{% endif %}>Últimos 90 dias</option>
+                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>Últimos 180 dias</option>
+                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>Últimos 12 meses</option>
+                    <option value="0" {% if filter_days == 0 %}selected{% endif %}>Todo o período</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Motor</label>
+                <select class="form-select" name="engine">
+                    <option value="all" {% if filter_engine == "all" %}selected{% endif %}>Todos</option>
+                    <option value="local" {% if filter_engine == "local" %}selected{% endif %}>Local</option>
+                    <option value="gpt" {% if filter_engine == "gpt" %}selected{% endif %}>GPT</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i>Aplicar filtros</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="kpi-card">
@@ -94,6 +130,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const invLabels = {{ investor_labels_json|safe }};
+    const invIds = {{ investor_ids_json|safe }};
     const invScores = {{ investor_scores_json|safe }};
     const invRevenue = {{ investor_revenue_json|safe }};
     const invGrowth = {{ investor_growth_json|safe }};
@@ -102,7 +139,7 @@
 
     const scoreCtx = document.getElementById("investorScoreChart");
     if (scoreCtx) {
-        new Chart(scoreCtx, {
+        const investorScoreChart = new Chart(scoreCtx, {
             type: "bar",
             data: {
                 labels: invLabels,
@@ -121,16 +158,31 @@
                 }
             }
         });
+
+        scoreCtx.onclick = (evt) => {
+            const points = investorScoreChart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+            if (!points.length) return;
+            const idx = points[0].index;
+            const analysisId = invIds[idx];
+            if (analysisId) window.location.href = `/results/${analysisId}/`;
+        };
     }
 
     const growthCtx = document.getElementById("investorGrowthChart");
     if (growthCtx) {
-        new Chart(growthCtx, {
+        const scatterData = invGrowth.map((g, i) => ({
+            x: g,
+            y: invScores[i],
+            r: Math.max(4, Math.min(12, (invRevenue[i] || 0) / 1000000)),
+            analysisId: invIds[i]
+        }));
+
+        const investorGrowthChart = new Chart(growthCtx, {
             type: "scatter",
             data: {
                 datasets: [{
                     label: "Startups",
-                    data: invGrowth.map((g, i) => ({ x: g, y: invScores[i], r: 4 })),
+                    data: scatterData,
                     backgroundColor: "rgba(16,185,129,0.7)",
                     borderColor: "#059669"
                 }]
@@ -142,6 +194,14 @@
                 }
             }
         });
+
+        growthCtx.onclick = (evt) => {
+            const points = investorGrowthChart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+            if (!points.length) return;
+            const idx = points[0].index;
+            const point = scatterData[idx];
+            if (point && point.analysisId) window.location.href = `/results/${point.analysisId}/`;
+        };
     }
 </script>
 {% endblock %}

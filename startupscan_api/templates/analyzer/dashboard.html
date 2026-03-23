@@ -33,6 +33,42 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Score mínimo</label>
+                <input type="number" class="form-control" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Score máximo</label>
+                <input type="number" class="form-control" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Janela de tempo</label>
+                <select class="form-select" name="days">
+                    <option value="30" {% if filter_days == 30 %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90" {% if filter_days == 90 %}selected{% endif %}>Últimos 90 dias</option>
+                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>Últimos 180 dias</option>
+                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>Últimos 12 meses</option>
+                    <option value="0" {% if filter_days == 0 %}selected{% endif %}>Todo o período</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Motor</label>
+                <select class="form-select" name="engine">
+                    <option value="all" {% if filter_engine == "all" %}selected{% endif %}>Todos</option>
+                    <option value="local" {% if filter_engine == "local" %}selected{% endif %}>Local</option>
+                    <option value="gpt" {% if filter_engine == "gpt" %}selected{% endif %}>GPT</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i>Aplicar filtros</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="kpi-card">
@@ -161,6 +197,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const labels = {{ chart_labels_json|safe }};
+    const analysisIds = {{ chart_ids_json|safe }};
     const scores = {{ chart_scores_json|safe }};
     const revenues = {{ chart_revenues_json|safe }};
     const growth = {{ chart_growth_json|safe }};
@@ -170,7 +207,7 @@
 
     const scoreTrendCtx = document.getElementById("scoreTrendChart");
     if (scoreTrendCtx) {
-        new Chart(scoreTrendCtx, {
+        const scoreTrendChart = new Chart(scoreTrendCtx, {
             type: "line",
             data: {
                 labels: labels,
@@ -193,6 +230,14 @@
                 }
             }
         });
+
+        scoreTrendCtx.onclick = (evt) => {
+            const points = scoreTrendChart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+            if (!points.length) return;
+            const idx = points[0].index;
+            const analysisId = analysisIds[idx];
+            if (analysisId) window.location.href = `/results/${analysisId}/`;
+        };
     }
 
     const distributionCtx = document.getElementById("distributionChart");
@@ -215,7 +260,7 @@
 
     const momentumCtx = document.getElementById("financialMomentumChart");
     if (momentumCtx) {
-        new Chart(momentumCtx, {
+        const momentumChart = new Chart(momentumCtx, {
             type: "bar",
             data: {
                 labels: labels,
@@ -251,6 +296,14 @@
                 }
             }
         });
+
+        momentumCtx.onclick = (evt) => {
+            const points = momentumChart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+            if (!points.length) return;
+            const idx = points[0].index;
+            const analysisId = analysisIds[idx];
+            if (analysisId) window.location.href = `/results/${analysisId}/`;
+        };
     }
 </script>
 {% endblock %}
