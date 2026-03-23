@@ -46,15 +46,19 @@ def generate_visual_assets():
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
-    _draw_box(ax, 0.03, 0.55, 0.2, 0.28, "Frontend Web\n(Django Templates + JS)", "#dbeafe")
-    _draw_box(ax, 0.28, 0.55, 0.2, 0.28, "Camada de Views\n(DRF + Django Views)", "#dcfce7")
-    _draw_box(ax, 0.53, 0.55, 0.2, 0.28, "IA / Pipeline\nFeature Engineering + Scoring", "#ede9fe")
-    _draw_box(ax, 0.78, 0.55, 0.18, 0.28, "Persistencia\nSQLite/PostgreSQL", "#fee2e2")
-    _draw_box(ax, 0.40, 0.12, 0.2, 0.25, "Exportacao PDF\n(reportlab + graficos)", "#fef3c7")
+    _draw_box(ax, 0.02, 0.55, 0.17, 0.28, "Frontend Web\n(Django Templates + JS)", "#dbeafe")
+    _draw_box(ax, 0.22, 0.55, 0.17, 0.28, "Camada de Views\n(DRF + Django Views)", "#dcfce7")
+    _draw_box(ax, 0.42, 0.55, 0.17, 0.28, "IA / Pipeline\nScoring local + GPT", "#ede9fe")
+    _draw_box(ax, 0.62, 0.55, 0.17, 0.28, "Video IA\nD-ID/local/hibrido", "#fee2e2")
+    _draw_box(ax, 0.82, 0.55, 0.16, 0.28, "Persistencia\nSQLite/PostgreSQL", "#fde68a")
+    _draw_box(ax, 0.27, 0.12, 0.2, 0.25, "Exportacao PDF\nrelatorio + pitch deck", "#fef3c7")
+    _draw_box(ax, 0.54, 0.12, 0.2, 0.25, "Gestao de Modelos\nTreino + progresso realtime", "#ccfbf1")
     ax.annotate("", xy=(0.28, 0.69), xytext=(0.23, 0.69), arrowprops=dict(arrowstyle="->", lw=1.5))
-    ax.annotate("", xy=(0.53, 0.69), xytext=(0.48, 0.69), arrowprops=dict(arrowstyle="->", lw=1.5))
-    ax.annotate("", xy=(0.78, 0.69), xytext=(0.73, 0.69), arrowprops=dict(arrowstyle="->", lw=1.5))
-    ax.annotate("", xy=(0.50, 0.37), xytext=(0.50, 0.55), arrowprops=dict(arrowstyle="->", lw=1.5))
+    ax.annotate("", xy=(0.42, 0.69), xytext=(0.39, 0.69), arrowprops=dict(arrowstyle="->", lw=1.5))
+    ax.annotate("", xy=(0.62, 0.69), xytext=(0.59, 0.69), arrowprops=dict(arrowstyle="->", lw=1.5))
+    ax.annotate("", xy=(0.82, 0.69), xytext=(0.79, 0.69), arrowprops=dict(arrowstyle="->", lw=1.5))
+    ax.annotate("", xy=(0.36, 0.37), xytext=(0.46, 0.55), arrowprops=dict(arrowstyle="->", lw=1.5))
+    ax.annotate("", xy=(0.63, 0.37), xytext=(0.63, 0.55), arrowprops=dict(arrowstyle="->", lw=1.5))
     ax.set_title("Arquitetura da Plataforma", fontsize=12, weight="bold")
     architecture_path = os.path.join(ASSETS_DIR, "arquitetura_plataforma.png")
     fig.tight_layout()
@@ -175,6 +179,9 @@ def build_pdf():
             ["Analise com score final e categorias 0-10", "Implementado"],
             ["Relatorio automatico com pontos fortes e melhorias", "Implementado"],
             ["Exportacao de relatorio completo em PDF", "Implementado"],
+            ["Video IA com D-ID/local/hibrido + progresso realtime", "Implementado"],
+            ["Pitch PDF estilo slides com design automatico/manual", "Implementado"],
+            ["Gestao de modelos com treino realtime", "Implementado"],
             ["Dashboard com historico, progresso e comparacao por sector", "Implementado"],
         ],
         colWidths=[12 * cm, 4 * cm],
@@ -206,11 +213,12 @@ def build_pdf():
     story.append(Image(flow_path, width=17 * cm, height=8 * cm))
     story.append(PageBreak())
 
-    story.append(Paragraph("5. Logica de avaliacao e categorias", h2))
+    story.append(Paragraph("5. Logica de avaliacao, video e pitch deck", h2))
     story.append(
         Paragraph(
             "A avaliacao combina dados financeiros, qualidade textual, sinais multimodais e motor de inferencia "
-            "(local ou GPT). O relatorio devolve score final e categorias padronizadas de 0 a 10.",
+            "(local ou GPT). O relatorio devolve score final e categorias padronizadas de 0 a 10. "
+            "A plataforma tambem gera video explicativo (D-ID/local/hibrido) e pitch deck PDF visual com templates contextuais.",
             body,
         )
     )
@@ -240,8 +248,9 @@ def build_pdf():
         "Opcionalmente grave ou envie audio e video, e adicione link YouTube.",
         "Informe receita, crescimento e margem.",
         "Escolha motor local ou GPT e clique em 'Analisar Pitch'.",
-        "Veja o resultado com score, categorias e recomendacoes.",
-        "Baixe o relatorio PDF e acompanhe seu historico no dashboard.",
+        "No resultado, opcionalmente gere video IA escolhendo modo (D-ID/local/hibrido).",
+        "Para o pitch PDF, selecione design automatico por contexto ou design premium manual.",
+        "Baixe relatorio PDF e pitch deck PDF e acompanhe seu historico no dashboard.",
     ]
     for idx, step in enumerate(steps, start=1):
         story.append(Paragraph(f"{idx}. {step}", body))
@@ -253,13 +262,24 @@ def build_pdf():
         "python3 manage.py check",
         "python3 manage.py runserver 0.0.0.0:8000",
         "python3 manage.py train_model --model-output ai_models/pitch_model.pkl",
+        "python3 docs/generate_engineering_pdf.py",
     ]:
         story.append(Paragraph(f"• {cmd}", body))
     story.append(Spacer(1, 0.2 * cm))
     story.append(
         Paragraph(
             "Para validacao funcional, recomenda-se testar submissao multimodal, geracao de score, "
-            "download de PDF e comparacao de desempenho por sector no dashboard.",
+            "video IA com barra de progresso, pitch PDF com diferentes templates e comparacao de desempenho por sector no dashboard.",
+            body,
+        )
+    )
+
+    story.append(Spacer(1, 0.35 * cm))
+    story.append(Paragraph("8. Publicacao da documentacao no Discord", h2))
+    story.append(
+        Paragraph(
+            "A entrega operacional inclui o envio do PDF tecnico para webhook Discord definido pelo projeto, "
+            "garantindo distribuicao imediata da documentacao apos atualizacoes.",
             body,
         )
     )
