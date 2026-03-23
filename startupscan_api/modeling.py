@@ -128,11 +128,19 @@ def _compute_consistency_accuracy(y_true, y_pred):
     return float(np.mean(np.abs(y_true - y_pred) <= 1.0))
 
 
-def train_and_evaluate(pitches_df, financial_df):
+def train_and_evaluate(pitches_df, financial_df, progress_callback=None):
     """
     Treina um modelo robusto de regressão para score de sucesso (0-10).
     Retorna bundle versionado + métricas de consistência.
     """
+    def _progress(value, message):
+        if callable(progress_callback):
+            try:
+                progress_callback(int(value), str(message))
+            except Exception:
+                pass
+
+    _progress(5, "Unificando dados de treino")
     merged = _merge_training_frames(pitches_df, financial_df)
     if len(merged) < 5:
         raise ValueError("Dataset insuficiente para treino robusto (mínimo 5 amostras).")
@@ -150,7 +158,14 @@ def train_and_evaluate(pitches_df, financial_df):
     else:
         factors = [1, 2]
 
+    total_iterations = max(1, len(factors) * 3)  # 3 candidatos por fator
+    current_iteration = 0
+
     for factor in factors:
+        _progress(
+            10 + int((current_iteration / total_iterations) * 55),
+            f"Preparando dados com fator de aumento {factor}x",
+        )
         augmented = _augment_dataset(merged, factor=factor, seed=42)
         train_frame = _build_modeling_frame(augmented)
         y = train_frame["success_score"].astype(float).values
@@ -189,6 +204,9 @@ def train_and_evaluate(pitches_df, financial_df):
         local_best_pred = None
 
         for name, model in candidates.items():
+            current_iteration += 1
+            pct = 12 + int((current_iteration / total_iterations) * 60)
+            _progress(pct, f"Avaliando candidato: {name} (fator {factor}x)")
             pipe = Pipeline(steps=[("preprocessor", preprocessor), ("model", model)])
             r2_scores = cross_val_score(pipe, eval_frame, y_eval, cv=cv, scoring="r2")
             mean_r2 = float(np.mean(r2_scores))
@@ -197,8 +215,10 @@ def train_and_evaluate(pitches_df, financial_df):
                 local_best_name = name
                 local_best = pipe
 
+        _progress(75, f"Validando melhor candidato do fator {factor}x")
         local_best_pred = cross_val_predict(local_best, eval_frame, y_eval, cv=cv)
         consistency_acc = _compute_consistency_accuracy(y_eval, local_best_pred)
+        _progress(82, f"Ajustando modelo final do fator {factor}x")
         local_best.fit(train_frame, y)
 
         metrics = {
@@ -226,8 +246,10 @@ def train_and_evaluate(pitches_df, financial_df):
         # Encerra cedo ao atingir a meta solicitada.
         if metrics["consistency_accuracy"] >= 0.90:
             logger.info("Training target reached with factor=%s", factor)
+            _progress(96, "Meta de consistência atingida; finalizando")
             return bundle, metrics
 
+    _progress(96, "Finalizando seleção do melhor bundle")
     return best_bundle, best_metrics
 
 

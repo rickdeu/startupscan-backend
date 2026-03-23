@@ -7,6 +7,7 @@ from .views import (
     IdeaPitchPDFView,
     InvestorDashboardView,
     IdeaPitchBuilderView,
+    ModelTrainingProgressView,
     ModelManagementView,
     PitchFormView,
     PitchReportPDFView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path('batch/status/<uuid:batch_id>/', BatchAnalysisStatusView.as_view(), name='batch-status'),
     path('batch/results/<uuid:batch_id>/', BatchAnalysisResultsView.as_view(), name='batch-results'),
     path('models/', ModelManagementView.as_view(), name='model_management'),
+    path('models/training/progress/<str:job_id>/', ModelTrainingProgressView.as_view(), name='model_training_progress'),
     path('investors/', InvestorDashboardView.as_view(), name='investor_dashboard'),
 
     path('', DashboardView.as_view(), name='dashboard'),
