@@ -104,6 +104,58 @@
 
             <div class="col-lg-4">
                 <div class="card mb-3">
+                    <div class="card-header">Anexos</div>
+                    <div class="card-body">
+                        <div class="small text-muted mb-1">Áudio</div>
+                        {% if analysis.audio_file %}
+                        <div class="mb-3">
+                            <audio controls class="w-100">
+                                <source src="{{ analysis.audio_file.url }}">
+                                Seu navegador não suporta reprodução de áudio.
+                            </audio>
+                            <a href="{{ analysis.audio_file.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank" rel="noopener">
+                                <i class="fas fa-download me-1"></i>Baixar Áudio
+                            </a>
+                        </div>
+                        {% elif analysis.metadata.sources.has_audio %}
+                        <p class="mb-3"><strong>Áudio:</strong> submetido (ficheiro não disponível para download).</p>
+                        {% else %}
+                        <p class="mb-3 text-muted">Sem áudio anexado.</p>
+                        {% endif %}
+
+                        <div class="small text-muted mb-1">Vídeo</div>
+                        {% if analysis.video_file %}
+                        <div class="mb-3">
+                            <video controls class="w-100" style="max-height: 180px;">
+                                <source src="{{ analysis.video_file.url }}">
+                                Seu navegador não suporta reprodução de vídeo.
+                            </video>
+                            <a href="{{ analysis.video_file.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank" rel="noopener">
+                                <i class="fas fa-download me-1"></i>Baixar Vídeo
+                            </a>
+                        </div>
+                        {% elif analysis.metadata.sources.has_video %}
+                        <p class="mb-3"><strong>Vídeo:</strong> submetido (ficheiro não disponível para download).</p>
+                        {% else %}
+                        <p class="mb-3 text-muted">Sem vídeo anexado.</p>
+                        {% endif %}
+
+                        <div>
+                            <div class="small text-muted mb-1">Ficheiro submetido</div>
+                            {% if analysis.document_file %}
+                            <a href="{{ analysis.document_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                                <i class="fas fa-file-arrow-down me-1"></i>Baixar Ficheiro
+                            </a>
+                            {% elif analysis.metadata.sources.text_file_name %}
+                            <p class="mb-0">{{ analysis.metadata.sources.text_file_name }} (nome registado)</p>
+                            {% else %}
+                            <p class="mb-0 text-muted">Sem ficheiro de documento anexado.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
                     <div class="card-header">Indicadores financeiros</div>
                     <div class="card-body">
                         <p><strong>Receita:</strong> AOA {{ analysis.revenue|floatformat:2 }}</p>

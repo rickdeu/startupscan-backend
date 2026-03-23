@@ -87,6 +87,12 @@ class PitchAnalysis(models.Model):
         blank=True,
         verbose_name="Arquivo de Vídeo"
     )
+    document_file = models.FileField(
+        upload_to='pitches/docs/%Y/%m/%d/',
+        null=True,
+        blank=True,
+        verbose_name="Ficheiro Submetido"
+    )
     submission_date = models.DateField(
         null=True,
         blank=True,
@@ -215,6 +221,8 @@ class PitchAnalysis(models.Model):
             links['audio'] = self.audio_file.url
         if self.video_file:
             links['video'] = self.video_file.url
+        if self.document_file:
+            links['document'] = self.document_file.url
         return links
 
 

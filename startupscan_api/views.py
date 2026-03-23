@@ -908,6 +908,7 @@ class PitchFormView(View):
                         industry=industry,
                         contact_email=contact_email,
                         text=text,
+                        text_file=text_file,
                         audio_file=audio_file,
                         video_file=video_file,
                         financial_data=financial_data,
@@ -971,7 +972,7 @@ class PitchFormView(View):
         
         return TempFileManager(audio_file, video_file)
 
-    def _save_analysis(self, request, startup_name, industry, contact_email, text, audio_file, video_file, 
+    def _save_analysis(self, request, startup_name, industry, contact_email, text, text_file, audio_file, video_file, 
                       financial_data, prediction, report, metadata):
         """Salva a análise no banco de dados"""
         valid_industries = {choice[0] for choice in PitchAnalysis.INDUSTRY_CHOICES}
@@ -984,6 +985,7 @@ class PitchFormView(View):
             industry=industry,
             contact_email=contact_email or None,
             text=text,
+            document_file=text_file,
             audio_file=audio_file,
             video_file=video_file,
             revenue=financial_data['revenue'],
