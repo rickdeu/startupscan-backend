@@ -630,11 +630,14 @@ def _try_generate_realistic_video_did(
     """
     api_key = os.getenv("DID_API_KEY", "").strip()
     did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
-    allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "0").strip().lower() in {"1", "true", "yes"}
-    if not did_sources and source_image_url and source_image_url.strip():
-        did_sources = [source_image_url.strip()]
-    elif allow_original_fallback and source_image_url and source_image_url.strip() and source_image_url.strip() not in did_sources:
-        did_sources.append(source_image_url.strip())
+    original_source = (source_image_url or "").strip()
+    # Mantém fallback do source original ativo por padrão para reduzir falhas em poses dinâmicas.
+    allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "1").strip().lower() in {"1", "true", "yes"}
+    if original_source and original_source not in did_sources:
+        if not did_sources or allow_original_fallback:
+            did_sources.append(original_source)
+    # Dedup mantendo ordem.
+    did_sources = list(dict.fromkeys(did_sources))
 
     if not api_key or not did_sources:
         return None
@@ -708,6 +711,36 @@ def _try_generate_realistic_video_did(
                 candidate_errors.append(f"{source_candidate} => {attempt_meta.get('error', 'unknown_error')}")
 
             if not talk_meta or talk_meta.get("status") != "done":
+                # Fallback de resgate: tenta uma versão condensada no source original.
+                rescue_error = ""
+                if original_source:
+                    rescue_script = " ".join(segments[: min(3, len(segments))]).strip()
+                    if len(rescue_script) > 900:
+                        rescue_script = rescue_script[:900].rsplit(" ", 1)[0].strip() + "."
+                    if rescue_script:
+                        rescue_meta = _did_create_and_download_talk(
+                            create_url=create_url,
+                            headers=headers,
+                            source_image_url=original_source,
+                            script_text=rescue_script,
+                            voice_id=voice_id,
+                            output_path=output_path,
+                        )
+                        if rescue_meta.get("status") == "done":
+                            return {
+                                "provider": "did",
+                                "talk_id": rescue_meta.get("talk_id"),
+                                "talk_ids": [rescue_meta.get("talk_id")] if rescue_meta.get("talk_id") else [],
+                                "result_url": rescue_meta.get("result_url"),
+                                "result_urls": [rescue_meta.get("result_url")] if rescue_meta.get("result_url") else [],
+                                "status": "done",
+                                "voice_id": voice_id,
+                                "segment_count": 1,
+                                "source_count": len(did_sources),
+                                "style_mode": "cinematic_stage_presenter_rescue",
+                                "error": "",
+                            }
+                        rescue_error = rescue_meta.get("error", "rescue_unknown_error")
                 return {
                     "provider": "did",
                     "status": "failed",
@@ -716,6 +749,7 @@ def _try_generate_realistic_video_did(
                     "segment_count": len(segments),
                     "error": "segment_failed_all_sources",
                     "segment_errors": candidate_errors,
+                    "rescue_error": rescue_error,
                     "talk_id": (talk_meta or {}).get("talk_id"),
                 }
             if talk_meta.get("talk_id"):
@@ -1386,10 +1420,17 @@ def generate_explainer_video(
     if mode == "did_only":
         did_status = (realistic_meta or {}).get("status") or "failed"
         did_error = (realistic_meta or {}).get("error") or "Falha não detalhada pela API D-ID."
+        segment_errors = (realistic_meta or {}).get("segment_errors") or []
+        rescue_error = (realistic_meta or {}).get("rescue_error") or ""
+        details = ""
+        if segment_errors:
+            details = " | fontes: " + " || ".join(str(err) for err in segment_errors[:3])
+        if rescue_error:
+            details += f" | rescue: {rescue_error}"
         raise ExplainerVideoGenerationError(
-            f"Falha na geração no modo D-ID selecionado: status={did_status}, erro={did_error}",
+            f"Falha na geração no modo D-ID selecionado: status={did_status}, erro={did_error}{details}",
             did_status=did_status,
-            did_error=did_error,
+            did_error=f"{did_error}{details}",
         )
     if not allow_local_render:
         raise ExplainerVideoGenerationError("Modo de geração inválido para fallback local.")

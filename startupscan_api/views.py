@@ -1725,6 +1725,7 @@ class PitchExplainerVideoGenerateView(View):
             presenter_path = None
             presenter_url = None
             presenter_source_urls = []
+            presenter_host = ""
             if analysis.presenter_face_image_file:
                 try:
                     presenter_path = analysis.presenter_face_image_file.path
@@ -1735,6 +1736,7 @@ class PitchExplainerVideoGenerateView(View):
                     # D-ID aceita apenas URLs HTTPS para source_url.
                     if presenter_url.startswith("http://"):
                         host = request.get_host().split(":")[0].lower()
+                        presenter_host = host
                         if host not in {"localhost", "127.0.0.1", "testserver"}:
                             presenter_url = "https://" + presenter_url[len("http://") :]
                 except Exception:
@@ -1751,6 +1753,12 @@ class PitchExplainerVideoGenerateView(View):
                 messages.error(
                     request,
                     "No modo D-ID, envie uma imagem real do apresentador antes de gerar o vídeo.",
+                )
+                return redirect("pitch_results", analysis_id=analysis.id)
+            if video_mode == "did_only" and presenter_url and presenter_url.startswith("http://") and presenter_host in {"localhost", "127.0.0.1", "testserver"}:
+                messages.error(
+                    request,
+                    "No modo D-ID, a imagem precisa de URL pública HTTPS. Abra o sistema pelo link externo e tente novamente.",
                 )
                 return redirect("pitch_results", analysis_id=analysis.id)
 
