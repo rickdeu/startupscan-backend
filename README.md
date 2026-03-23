@@ -1,139 +1,194 @@
-# StartupScan - Plataforma Multimodal para Pitch Automatizado de Startups
+# StartupScan - Plataforma Inteligente para Avaliação de Startups
 
-Plataforma web para avaliacao automatica de pitches com **entrada multimodal** (texto, documento, audio, video e link YouTube), geracao de **score de sucesso (0-10)**, **feedback por categoria**, dashboard interativo e **exportacao de relatorio em PDF**.
+Plataforma web multimodal para avaliar startups com IA, gerar relatórios técnicos, criar vídeos explicativos e produzir pitch decks em PDF com design automático por contexto ou design premium manual.
 
-## Objetivo
+## Visão geral
 
-Apoiar empreendedores na validacao de ideias com um fluxo rapido:
+O StartupScan foi desenhado para apoiar empreendedores, aceleradoras e investidores no ciclo completo:
 
-1. Submeter pitch (texto/doc/audio/video/youtube)
-2. Processar com IA (motor local ou GPT com fallback)
-3. Gerar score + recomendacoes automaticas
-4. Exibir progresso no dashboard
-5. Baixar relatorio final em PDF
+1. Receber pitch multimodal (texto, documento, áudio, vídeo e YouTube).
+2. Gerar análise com motor local ou GPT (com fallback automático).
+3. Exibir score e categorias de desempenho com recomendações acionáveis.
+4. Produzir relatório técnico em PDF.
+5. Gerar vídeo de apresentação (D-ID/local/híbrido) com progresso em tempo real.
+6. Criar pitch deck em PDF (estilo slides) com visual adaptado ao contexto da startup.
+
+---
 
 ## Funcionalidades principais
 
-### 1) Submissao multimodal
-- Texto direto no formulario
-- Upload de documento: `.txt`, `.md`, `.csv`, `.pdf`, `.docx`
-- Audio por upload ou gravacao no navegador (MediaRecorder)
-- Video por upload ou gravacao no navegador (MediaRecorder)
-- Link do YouTube opcional para contexto do pitch
+### 1) Submissão multimodal de pitch
+- Campo de texto livre.
+- Upload de ficheiros: `.txt`, `.md`, `.csv`, `.pdf`, `.docx`.
+- Áudio via upload ou gravação no navegador.
+- Vídeo via upload ou gravação no navegador.
+- URL de YouTube opcional para contexto adicional.
 
-### 2) Analise com IA
-- Escolha de motor:
+### 2) Avaliação inteligente com IA
+- Seleção de motor:
   - **local** (modelo treinado no projeto)
-  - **gpt** (quando `OPENAI_API_KEY` estiver configurada)
-- Fallback automatico para modelo local quando GPT indisponivel
-- Score final de sucesso em escala 0-10
-- Avaliacao por categoria (0-10):
-  - Clareza da ideia
+  - **gpt** (se `OPENAI_API_KEY` estiver configurada)
+- Fallback automático para o motor local.
+- Score final de 0 a 10.
+- Categorias de análise (0-10):
+  - Clareza
   - Proposta de valor
-  - Inovacao
-  - Viabilidade tecnica/financeira
+  - Inovação
+  - Viabilidade
   - Escalabilidade
   - Mercado-alvo
-  - Equipe fundadora
+  - Equipa
   - Sustentabilidade
 
-### 3) Relatorio automatico
-- Resumo executivo
-- Pontos fortes
-- Pontos a melhorar
-- Recomendacoes de proxima etapa
-- Bloco investidor (tese, prontidao, uso de capital, mitigacao)
-- Download do relatorio em PDF por analise
+### 3) Gestão de modelos de ML
+- Importar dataset externo.
+- Treinar novo modelo.
+- Retreinar modelo existente.
+- Definir modelo ativo.
+- Editar metadados.
+- Excluir modelo.
+- Progresso em tempo real por job de treino.
 
-### 4) Dashboard interativo
-- Historico de pitches enviados
-- Evolucao de score
-- Distribuicao de potencial
-- Tracao financeira
-- Comparacao por sector (benchmark)
+### 4) Vídeo explicativo da startup
+- Geração assíncrona com barra de progresso por fases.
+- Modos disponíveis:
+  - **D-ID + fallback local** (recomendado)
+  - **Apenas D-ID**
+  - **Apenas local**
+- Duração configurada no pipeline: **mínimo 1 minuto e máximo 3 minutos**.
+- Encerramento obrigatório com conclusão explícita no final.
+- Erros detalhados separados por cenário (D-ID e local).
 
-## Stack tecnica
+### 5) Pitch PDF em formato de apresentação (slides)
+- Geração de PDF tipo deck (1 página = 1 slide).
+- Capa visual, seções de conteúdo e conclusão.
+- Modo de design:
+  - **Design automático por contexto** (default)
+  - **Design premium manual** (template escolhido pelo utilizador)
+- Templates premium suportados:
+  - Orbit
+  - Grid
+  - Wave
+  - Diagonal
+  - Aurora
+  - Ribbon
+- Variação visual por assinatura única do pitch.
+
+### 6) Relatórios e dashboards
+- Relatório técnico de análise em PDF.
+- Dashboard operacional do utilizador.
+- Dashboard orientado a investidor.
+- Histórico de análises, score médio, distribuição por potencial e indicadores financeiros.
+
+---
+
+## Stack técnica
 
 - **Backend:** Django + Django REST Framework
-- **ML:** scikit-learn, pandas, numpy
-- **Documentos e PDF:** pypdf, python-docx, reportlab
-- **Visualizacao:** Chart.js, matplotlib
-- **Persistencia:** SQLite (dev), compatibilidade com PostgreSQL
+- **IA/Modelagem:** scikit-learn, pandas, numpy
+- **NLP/GPT:** OpenAI SDK (quando configurado)
+- **Vídeo/áudio:** moviepy, edge-tts, gTTS, integração D-ID
+- **PDF/Documentos:** reportlab, pypdf, python-docx
+- **Frontend:** Django Templates, Bootstrap, Chart.js, JS custom
+- **Persistência:** SQLite (dev), compatível com PostgreSQL
 
-## Estrutura de pastas (resumo)
+---
+
+## Estrutura resumida
 
 ```bash
 backend/
 startupscan_api/
   services/
-    pitch_input.py         # extracao de texto de documentos e merge multimodal
-    report_export.py       # geracao de PDF da analise
+    pitch_input.py          # extração e merge multimodal
+    report_export.py        # relatório técnico PDF
+    pitch_builder.py        # geração de pitch + pitch deck PDF visual
+    pitch_video.py          # geração de vídeo IA (D-ID/local)
+    model_registry.py       # gestão de modelos
   templates/analyzer/
-    pitch_form.html        # formulario multimodal + gravacao browser
-    dashboard.html         # analytics e comparacao por sector
-    result.html            # relatorio e download PDF
+    pitch_form.html
+    result.html
+    dashboard.html
+    investor_dashboard.html
+    model_management.html
 docs/
   generate_engineering_pdf.py
   Documentacao_Engenharia_Software.pdf
+README.md
 ```
 
-## Como executar localmente
+---
 
-1. Instalar dependencias:
+## Execução local
 
+### 1) Instalar dependências
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-2. Aplicar migracoes:
-
+### 2) Migrar base de dados
 ```bash
 python3 manage.py migrate
 ```
 
-3. (Opcional) Treinar modelo:
-
+### 3) (Opcional) Treinar modelo local inicial
 ```bash
 python3 manage.py train_model --model-output ai_models/pitch_model.pkl
 ```
 
-4. Subir servidor:
-
+### 4) Subir aplicação
 ```bash
 python3 manage.py runserver 0.0.0.0:8000
 ```
 
-## Endpoints importantes
+---
 
-- `GET /analyze/form/` - formulario multimodal
-- `POST /analyze/form/` - submissao de pitch
-- `GET /results/<analysis_id>/` - resultado da analise
-- `GET /results/<analysis_id>/pdf/` - download do relatorio PDF
-- `GET /` - dashboard do usuario
-- `GET /investor/dashboard/` - dashboard investidor
-- `POST /analyze/` - API de analise
+## Endpoints e páginas principais
 
-## Gerar documentacao PDF tecnica
+- `GET /` - Dashboard principal
+- `GET /analyze/form/` - Formulário de avaliação multimodal
+- `POST /analyze/form/` - Submissão e avaliação
+- `GET /results/<analysis_id>/` - Resultado da análise
+- `GET /results/<analysis_id>/pdf/` - Relatório PDF da análise
+- `GET /results/<analysis_id>/pitch/pdf/` - Pitch deck PDF (slides)
+- `POST /results/<analysis_id>/video/generate/` - Iniciar geração de vídeo
+- `GET /results/<analysis_id>/video/progress/<job_id>/` - Progresso do vídeo
+- `GET /models/` - Gestão de modelos
+- `GET /investors/` - Dashboard de investidores
+- `GET /pitch/builder/` - Formulário de ideia para pitch
 
+---
+
+## Geração de documentação técnica
+
+### Gerar PDF de engenharia
 ```bash
 python3 docs/generate_engineering_pdf.py
 ```
 
 Arquivo gerado:
+- `docs/Documentacao_Engenharia_Software.pdf`
 
-`docs/Documentacao_Engenharia_Software.pdf`
+### Atualizar documentação completa (README + PDF + envio webhook)
+Fluxo recomendado:
+1. Atualizar `README.md`.
+2. Executar `python3 docs/generate_engineering_pdf.py`.
+3. Enviar PDF para o webhook do Discord com `curl`.
 
-## Qualidade e validacao
+---
 
-Comandos de verificacao:
+## Validação e qualidade
+
+Comandos úteis:
 
 ```bash
 python3 manage.py check
 python3 manage.py test
 ```
 
-Tambem e recomendado executar testes funcionais de:
-- submissao com documento
-- analise com score e categorias
-- download de PDF
-- leitura de benchmark por sector no dashboard
+Teste funcional recomendado:
+- Submissão multimodal completa.
+- Geração de score + categorias + recomendações.
+- Geração de vídeo nos 3 modos (auto, did_only, local_only).
+- Exportação de pitch PDF nos 2 modos de design.
+- Download de relatório técnico PDF.
