@@ -255,6 +255,23 @@
 
 .table {
     color: var(--text-main);
+    --bs-table-bg: #0f172a;
+    --bs-table-color: #ffffff;
+    --bs-table-striped-bg: #15233a;
+    --bs-table-striped-color: #ffffff;
+    --bs-table-hover-bg: #1b2f4f;
+    --bs-table-hover-color: #ffffff;
+    --bs-table-border-color: #334155;
+    background-color: #0f172a !important;
+}
+
+.table > :not(caption) > * > * {
+    background-color: var(--bs-table-bg) !important;
+    color: #ffffff !important;
+}
+
+.table thead th {
+    background-color: #16253f !important;
 }
 
 .table th {
