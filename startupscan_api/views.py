@@ -2165,6 +2165,14 @@ class ModelManagementView(RoleRequiredMixin, View):
 
     def post(self, request):
         action = request.POST.get("action", "").strip()
+        user_role = get_user_role(request.user)
+        admin_only_actions = {"set_active", "save_meta", "delete"}
+        if user_role != ROLE_ADMIN and action in admin_only_actions:
+            messages.error(
+                request,
+                "Ação restrita ao administrador. O perfil Analista não pode editar, ativar ou deletar modelos.",
+            )
+            return redirect("model_management")
 
         try:
             if action == "fetch_external":
