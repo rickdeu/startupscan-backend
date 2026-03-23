@@ -61,6 +61,29 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
+def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:
+    """Normaliza mensagem de erro para exibição no frontend/API."""
+    raw = str(exc).strip() or exc.__class__.__name__
+    lower = raw.lower()
+
+    if "no module named" in lower:
+        normalized = f"Dependência ausente no servidor: {raw}"
+    elif "permission denied" in lower:
+        normalized = f"Permissão negada ao acessar ficheiros: {raw}"
+    elif "file is not a zip file" in lower:
+        normalized = "Ficheiro inválido/corrompido. Reenvie o anexo e tente novamente."
+    elif "cannot identify image file" in lower:
+        normalized = "Não foi possível ler a imagem enviada. Use JPG ou PNG válidos."
+    elif "ffmpeg" in lower:
+        normalized = f"Falha no processamento de mídia (ffmpeg): {raw}"
+    else:
+        normalized = raw
+
+    if len(normalized) > max_len:
+        normalized = normalized[: max_len - 3].rstrip() + "..."
+    return normalized
+
+
 def _safe_slug_model_name(raw_name):
     name = (raw_name or "").strip().lower()
     sanitized = []
@@ -546,8 +569,9 @@ class StartupPitchAnalyzer(APIView):
             
         except Exception as e:
             logger.error(f"Error processing pitch: {str(e)}", exc_info=True)
+            detail = _safe_exception_message(e)
             return Response(
-                {'error': 'An error occurred during analysis'},
+                {'error': f'An error occurred during analysis: {detail}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -1263,14 +1287,15 @@ class PitchFormView(View):
                     
             except Exception as e:
                 logger.error(f"Erro durante processamento: {str(e)}", exc_info=True)
-                messages.error(request, "Erro durante o processamento dos arquivos. Verifique os formatos.")
+                detail = _safe_exception_message(e)
+                messages.error(request, f"Erro durante o processamento: {detail}")
                 return self._render_form_with_data(request)
                 
         except Exception as e:
             logger.critical(f"Erro inesperado: {str(e)}", exc_info=True)
-            return render(request, 'analyzer/error.html', {
-                'error': 'Ocorreu um erro inesperado. Nossa equipe foi notificada.'
-            }, status=500)
+            detail = _safe_exception_message(e)
+            messages.error(request, f"Erro inesperado na validação: {detail}")
+            return self._render_form_with_data(request)
 
     # Métodos auxiliares
     def _is_valid_audio(self, audio_file):
