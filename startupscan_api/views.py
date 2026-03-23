@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import tempfile
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -836,7 +837,14 @@ class PitchReportPDFView(View):
         if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
             return redirect("dashboard")
 
-        reports_dir = os.path.join(settings.MEDIA_ROOT, "reports")
+        media_root = settings.MEDIA_ROOT
+        try:
+            os.makedirs(media_root, exist_ok=True)
+        except OSError:
+            media_root = os.path.join(settings.BASE_DIR, "media")
+            os.makedirs(media_root, exist_ok=True)
+
+        reports_dir = os.path.join(media_root, "reports")
         os.makedirs(reports_dir, exist_ok=True)
         output_path = os.path.join(reports_dir, f"analysis_report_{analysis.id}.pdf")
         export_analysis_pdf(analysis, output_path)
