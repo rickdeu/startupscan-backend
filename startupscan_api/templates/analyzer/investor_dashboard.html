@@ -108,6 +108,9 @@
                         </span>
                     </div>
                     <p class="small text-muted mb-2">Analisada em {{ analysis.created_at|date:"d/m/Y H:i" }}</p>
+                    <p class="small text-muted mb-2">
+                        Empreendedor: {{ analysis.user.first_name|default:analysis.user.username|default:"Não associado" }}
+                    </p>
                     <p class="mb-2"><strong>Tese:</strong> {{ analysis.investor_pitch.investment_thesis }}</p>
                     <p class="mb-2"><strong>Prontidão:</strong> {{ analysis.investor_pitch.funding_readiness }}</p>
                     <h6>Uso sugerido de capital</h6>
@@ -119,6 +122,34 @@
                     <div class="mt-3">
                         <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-outline-primary">Ver análise completa</a>
                     </div>
+                    {% if can_create_interest %}
+                    <div class="mt-3 pt-2 border-top">
+                        {% if analysis.user_interest %}
+                        <div class="small mb-2">
+                            <strong>Interesse registado:</strong>
+                            <span class="badge bg-info">{{ analysis.user_interest.get_status_display }}</span>
+                        </div>
+                        <a href="{% url 'connections_hub' %}" class="btn btn-sm btn-outline-light">
+                            Acompanhar conexão
+                        </a>
+                        {% elif analysis.user %}
+                        <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
+                            {% csrf_token %}
+                            <textarea
+                                class="form-control form-control-sm mb-2"
+                                name="investor_message"
+                                rows="2"
+                                placeholder="Mensagem opcional ao empreendedor (tese de interesse, ticket, timing...)"
+                            ></textarea>
+                            <button class="btn btn-sm btn-success" type="submit">
+                                <i class="fas fa-handshake me-1"></i>Demonstrar interesse
+                            </button>
+                        </form>
+                        {% else %}
+                        <div class="small text-muted">Sem empreendedor associado para conexão no momento.</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% empty %}

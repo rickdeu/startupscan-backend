@@ -83,6 +83,7 @@ def role_access_matrix(role: str) -> dict:
     can_models = is_admin or is_analista
     can_dashboard = is_admin or is_analista or is_publico or is_empreendedor
     can_idea_builder = can_pitch
+    can_connections = is_admin or is_analista or is_investidor or is_empreendedor
 
     return {
         "is_admin": is_admin,
@@ -95,5 +96,6 @@ def role_access_matrix(role: str) -> dict:
         "can_idea_builder": can_idea_builder,
         "can_investor": can_investor,
         "can_models": can_models,
+        "can_connections": can_connections,
     }
 
