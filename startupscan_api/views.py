@@ -1750,7 +1750,8 @@ class PitchExplainerVideoGenerateView(View):
                         presenter_image_path=presenter_path,
                         presenter_image_url=presenter_url,
                     )
-                    presenter_source_urls = [real_only_url or presenter_url]
+                    presenter_url = real_only_url or presenter_url
+                    presenter_source_urls = [presenter_url]
                 else:
                     presenter_source_urls = build_did_presenter_source_urls(
                         presenter_image_path=presenter_path,
