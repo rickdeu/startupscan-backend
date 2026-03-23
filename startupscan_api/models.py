@@ -401,3 +401,51 @@ class InvestorConnectionInterest(models.Model):
     def __str__(self):
         startup = self.analysis.startup_name or f"Análise #{self.analysis_id}"
         return f"{self.investor.username} -> {startup} ({self.status})"
+
+
+class IdeaPublicFeedback(models.Model):
+    """
+    Interações do público geral com ideias publicadas na plataforma.
+    """
+
+    submission = models.ForeignKey(
+        IdeaPitchSubmission,
+        on_delete=models.CASCADE,
+        related_name="public_feedbacks",
+        verbose_name="Ideia",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="idea_public_feedbacks",
+        verbose_name="Utilizador",
+    )
+    stars = models.PositiveSmallIntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Estrelas (1 a 5)",
+    )
+    endorsed = models.BooleanField(
+        default=False,
+        verbose_name="Apoia esta ideia",
+    )
+    comment = models.TextField(blank=True, default="", verbose_name="Comentário público")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "Feedback Público de Ideia"
+        verbose_name_plural = "Feedbacks Públicos de Ideias"
+        constraints = [
+            models.UniqueConstraint(fields=["submission", "user"], name="unique_public_feedback_per_user_submission")
+        ]
+        indexes = [
+            models.Index(fields=["stars"]),
+            models.Index(fields=["endorsed"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["updated_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} -> {self.submission.startup_name} ({self.stars} estrelas)"

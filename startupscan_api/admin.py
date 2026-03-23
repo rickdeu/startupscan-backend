@@ -1,5 +1,10 @@
 from django.contrib import admin
-from startupscan_api.models import PitchAnalysis, UserProfile, InvestorConnectionInterest
+from startupscan_api.models import (
+    IdeaPublicFeedback,
+    InvestorConnectionInterest,
+    PitchAnalysis,
+    UserProfile,
+)
 from django.utils.html import format_html
 
 @admin.register(PitchAnalysis)
@@ -272,3 +277,11 @@ class InvestorConnectionInterestAdmin(admin.ModelAdmin):
         "entrepreneur_reply",
     )
     readonly_fields = ("created_at", "updated_at", "responded_at")
+
+
+@admin.register(IdeaPublicFeedback)
+class IdeaPublicFeedbackAdmin(admin.ModelAdmin):
+    list_display = ("id", "submission", "user", "stars", "endorsed", "created_at", "updated_at")
+    list_filter = ("stars", "endorsed", "created_at")
+    search_fields = ("submission__startup_name", "user__username", "comment")
+    readonly_fields = ("created_at", "updated_at")
