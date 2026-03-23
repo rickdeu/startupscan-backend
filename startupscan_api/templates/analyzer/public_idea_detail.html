@@ -1,0 +1,102 @@
+{% extends "analyzer/base.html" %}
+
+{% block title %}{{ submission.startup_name }} - Ideia{% endblock %}
+{% block topbar_title %}{{ submission.startup_name }}{% endblock %}
+{% block topbar_subtitle %}Avalie com estrelas, comente e fortaleça o ranking público{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{% url 'public_ideas' %}" class="btn btn-outline-light btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Voltar à lista de ideias
+    </a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm bg-dark-subtle h-100">
+            <div class="card-body">
+                {% if submission.one_liner %}
+                <p class="text-white-50 mb-2">{{ submission.one_liner }}</p>
+                {% endif %}
+                <h6>Problema</h6>
+                <p class="text-white-50">{{ submission.problem }}</p>
+                <h6>Solução</h6>
+                <p class="text-white-50">{{ submission.solution }}</p>
+                <h6>Cliente-alvo</h6>
+                <p class="text-white-50">{{ submission.target_customer }}</p>
+                {% if submission.business_model %}
+                <h6>Modelo de negócio</h6>
+                <p class="text-white-50">{{ submission.business_model }}</p>
+                {% endif %}
+                {% if submission.competitive_advantage %}
+                <h6>Diferencial competitivo</h6>
+                <p class="text-white-50">{{ submission.competitive_advantage }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm bg-dark-subtle mb-3">
+            <div class="card-body">
+                <h6 class="mb-3">Resumo de engajamento</h6>
+                <div class="mb-2">
+                    <span class="badge text-bg-warning">
+                        <i class="fas fa-star me-1"></i>{{ stats.avg_stars|default:0|floatformat:1 }}/5
+                    </span>
+                </div>
+                <div class="small text-muted">Avaliações: {{ stats.feedback_count|default:0 }}</div>
+                <div class="small text-muted">Apoios: {{ stats.endorsement_count|default:0 }}</div>
+                <div class="small text-muted">Comentários: {{ stats.comments_count|default:0 }}</div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm bg-dark-subtle">
+            <div class="card-body">
+                <h6 class="mb-3">A sua avaliação</h6>
+                <form method="post" action="{% url 'public_idea_feedback' submission.id %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label" for="id_stars">Estrelas</label>
+                        <select class="form-select" id="id_stars" name="stars" required>
+                            <option value="">Selecione...</option>
+                            {% for star in "12345" %}
+                            <option value="{{ star }}"{% if my_feedback and my_feedback.stars|stringformat:"s" == star %} selected{% endif %}>{{ star }} estrela{% if star != "1" %}s{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="id_endorsed" name="endorsed" {% if my_feedback and my_feedback.endorsed %}checked{% endif %}>
+                        <label class="form-check-label" for="id_endorsed">Quero apoiar publicamente esta ideia</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="id_comment">Comentário</label>
+                        <textarea class="form-control" id="id_comment" name="comment" rows="4" maxlength="2000" placeholder="Partilhe opinião, sugestões e pontos de melhoria.">{% if my_feedback %}{{ my_feedback.comment }}{% endif %}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-paper-plane me-1"></i>{% if my_feedback %}Atualizar feedback{% else %}Enviar feedback{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm bg-dark-subtle">
+    <div class="card-body">
+        <h6 class="mb-3">Comentários da comunidade</h6>
+        {% for item in comments %}
+        <div class="border rounded p-3 mb-2 bg-black bg-opacity-25">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                <strong>{{ item.user.get_full_name|default:item.user.username }}</strong>
+                <div class="small text-muted">
+                    <i class="fas fa-star text-warning me-1"></i>{{ item.stars }}/5
+                    {% if item.endorsed %}<span class="ms-2 badge text-bg-success">Apoiou</span>{% endif %}
+                </div>
+            </div>
+            <div class="text-white-50">{{ item.comment }}</div>
+        </div>
+        {% empty %}
+        <p class="text-white-50 mb-0">Ainda não existem comentários. Seja o primeiro a participar.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -20,7 +20,7 @@ from django.core.files import File
 from django.contrib import messages
 from django.contrib.auth import login
 from startupscan_api.forms import RegisterForm
-from startupscan_api.models import IdeaPitchSubmission, InvestorConnectionInterest, PitchAnalysis
+from startupscan_api.models import IdeaPitchSubmission, IdeaPublicFeedback, InvestorConnectionInterest, PitchAnalysis
 from startupscan_api.services.model_training import (
     ensure_model_exists,
     predict_pitch_score,
@@ -56,7 +56,7 @@ from celery.result import AsyncResult
 from django.core.management import call_command
 from django.core.cache import cache
 from django.db import close_old_connections
-from django.db.models import Avg, Count, Max
+from django.db.models import Avg, Count, Max, Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.utils import timezone
@@ -908,7 +908,7 @@ class BatchAnalysisResultsView(APIView):
 
 class DashboardView(RoleRequiredMixin, View):
     """Dashboard inicial"""
-    allowed_roles = {ROLE_PUBLICO, ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
     def get(self, request):
         role = get_user_role(request.user)
         if request.user.is_authenticated and request.path == "/" and role_home_url_name(role) != "dashboard":
@@ -1181,6 +1181,159 @@ class IdeaPitchDetailView(RoleRequiredMixin, View):
             messages.error(request, "Não foi possível gerar o pitch completo. Tente novamente.")
 
         return redirect("idea_pitch_detail", submission_id=submission.id)
+
+
+class PublicIdeasView(RoleRequiredMixin, View):
+    """
+    Área do perfil público: visualização e ranking de ideias da plataforma.
+    """
+
+    allowed_roles = {ROLE_PUBLICO}
+
+    @staticmethod
+    def _ranking_points(submission) -> float:
+        avg_stars = float(getattr(submission, "avg_stars", 0) or 0)
+        endorsements = int(getattr(submission, "endorsement_count", 0) or 0)
+        feedbacks = int(getattr(submission, "feedback_count", 0) or 0)
+        # Peso maior para qualidade (estrelas), com reforço por apoio e atividade.
+        return round((avg_stars * 18.0) + (endorsements * 4.0) + (feedbacks * 2.0), 2)
+
+    def get(self, request):
+        query = (request.GET.get("q") or "").strip()
+        submissions_qs = IdeaPitchSubmission.objects.all()
+        if query:
+            submissions_qs = submissions_qs.filter(
+                Q(startup_name__icontains=query)
+                | Q(one_liner__icontains=query)
+                | Q(problem__icontains=query)
+                | Q(solution__icontains=query)
+                | Q(target_customer__icontains=query)
+            )
+
+        submissions_qs = submissions_qs.annotate(
+            avg_stars=Avg("public_feedbacks__stars"),
+            feedback_count=Count("public_feedbacks", distinct=True),
+            endorsement_count=Count("public_feedbacks", filter=Q(public_feedbacks__endorsed=True), distinct=True),
+            comments_count=Count(
+                "public_feedbacks",
+                filter=(~Q(public_feedbacks__comment="") & ~Q(public_feedbacks__comment__isnull=True)),
+                distinct=True,
+            ),
+        )
+
+        submissions = list(submissions_qs)
+        for submission in submissions:
+            submission.ranking_points = self._ranking_points(submission)
+
+        submissions.sort(
+            key=lambda item: (
+                item.ranking_points,
+                float(getattr(item, "avg_stars", 0) or 0),
+                int(getattr(item, "endorsement_count", 0) or 0),
+                item.created_at,
+            ),
+            reverse=True,
+        )
+        for idx, submission in enumerate(submissions, start=1):
+            submission.rank_position = idx
+
+        my_feedback_by_submission = {}
+        if submissions and request.user.is_authenticated:
+            submission_ids = [item.id for item in submissions]
+            my_feedbacks = IdeaPublicFeedback.objects.filter(
+                user=request.user,
+                submission_id__in=submission_ids,
+            ).values("submission_id", "stars", "endorsed")
+            my_feedback_by_submission = {
+                row["submission_id"]: {"stars": row["stars"], "endorsed": row["endorsed"]}
+                for row in my_feedbacks
+            }
+            for submission in submissions:
+                submission.my_feedback = my_feedback_by_submission.get(submission.id)
+
+        context = {
+            "ideas": submissions,
+            "search_query": query,
+            "total_ideas": len(submissions),
+        }
+        return render(request, "analyzer/public_ideas.html", context)
+
+
+class PublicIdeaDetailView(RoleRequiredMixin, View):
+    """
+    Detalhe da ideia pública com comentários e avaliação por estrelas.
+    """
+
+    allowed_roles = {ROLE_PUBLICO}
+
+    def get(self, request, submission_id):
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+        feedback_qs = IdeaPublicFeedback.objects.filter(submission=submission).select_related("user")
+
+        stats = feedback_qs.aggregate(
+            avg_stars=Avg("stars"),
+            feedback_count=Count("id"),
+            endorsement_count=Count("id", filter=Q(endorsed=True)),
+            comments_count=Count("id", filter=(~Q(comment="") & ~Q(comment__isnull=True))),
+        )
+        my_feedback = None
+        if request.user.is_authenticated:
+            my_feedback = feedback_qs.filter(user=request.user).first()
+
+        comments = feedback_qs.exclude(comment="").order_by("-updated_at")
+
+        context = {
+            "submission": submission,
+            "stats": stats,
+            "my_feedback": my_feedback,
+            "comments": comments,
+        }
+        return render(request, "analyzer/public_idea_detail.html", context)
+
+
+class PublicIdeaFeedbackView(RoleRequiredMixin, View):
+    """
+    Cria/atualiza feedback público (estrelas, comentário e apoio) para uma ideia.
+    """
+
+    allowed_roles = {ROLE_PUBLICO}
+
+    def post(self, request, submission_id):
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+
+        stars_raw = (request.POST.get("stars") or "").strip()
+        comment = (request.POST.get("comment") or "").strip()
+        endorsed = (request.POST.get("endorsed") or "").strip().lower() in {"1", "true", "on", "yes"}
+
+        try:
+            stars = int(stars_raw)
+        except (TypeError, ValueError):
+            messages.error(request, "Selecione uma nota válida entre 1 e 5 estrelas.")
+            return redirect("public_idea_detail", submission_id=submission.id)
+
+        if stars < 1 or stars > 5:
+            messages.error(request, "A nota deve estar entre 1 e 5 estrelas.")
+            return redirect("public_idea_detail", submission_id=submission.id)
+
+        if len(comment) > 2000:
+            comment = comment[:2000]
+
+        feedback, created = IdeaPublicFeedback.objects.update_or_create(
+            submission=submission,
+            user=request.user,
+            defaults={
+                "stars": stars,
+                "comment": comment,
+                "endorsed": endorsed,
+            },
+        )
+
+        if created:
+            messages.success(request, "Obrigado! O seu feedback foi registado.")
+        else:
+            messages.success(request, "O seu feedback foi atualizado com sucesso.")
+
+        return redirect("public_idea_detail", submission_id=submission.id)
 
 
 class IdeaPitchPDFView(RoleRequiredMixin, View):
