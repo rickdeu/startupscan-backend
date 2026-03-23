@@ -2,7 +2,6 @@ import os
 import tempfile
 from datetime import datetime
 
-import matplotlib.pyplot as plt
 from django.conf import settings
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -19,6 +18,11 @@ from reportlab.platypus import (
 
 
 def _build_category_chart(categories: dict, target_path: str):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     labels = list(categories.keys())
     values = [float(categories[k]) for k in labels]
 
