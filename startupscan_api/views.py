@@ -3,7 +3,7 @@ import json
 import logging
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -32,6 +32,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db.models import Avg, Count, Max
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils import timezone
 
 from .utils import (
     prepare_features,
@@ -400,12 +401,45 @@ from django.views import View
 class DashboardView(View):
     """Dashboard inicial"""
     def get(self, request):
+        try:
+            min_score = float(request.GET.get("min_score", 0) or 0)
+        except ValueError:
+            min_score = 0.0
+        try:
+            max_score = float(request.GET.get("max_score", 10) or 10)
+        except ValueError:
+            max_score = 10.0
+        try:
+            days = int(request.GET.get("days", 90) or 90)
+        except ValueError:
+            days = 90
+        engine = str(request.GET.get("engine", "all")).strip().lower()
+        if engine not in {"all", "local", "gpt"}:
+            engine = "all"
+
+        min_score = max(0.0, min(10.0, min_score))
+        max_score = max(0.0, min(10.0, max_score))
+        if max_score < min_score:
+            max_score = min_score
+
+        all_scored = PitchAnalysis.objects.exclude(success_score__isnull=True)
+        if days > 0:
+            all_scored = all_scored.filter(created_at__gte=timezone.now() - timedelta(days=days))
+        if engine != "all":
+            all_scored = all_scored.filter(metadata__analysis_engine_requested=engine)
+        all_scored = all_scored.filter(success_score__gte=min_score, success_score__lte=max_score)
+
         if not request.user.is_authenticated:
             recent_analyses = PitchAnalysis.objects.none()
         else:
-            recent_analyses = PitchAnalysis.objects.filter(user=request.user).order_by('-created_at')[:8]
-
-        all_scored = PitchAnalysis.objects.exclude(success_score__isnull=True)
+            recent_qs = (
+                PitchAnalysis.objects.filter(user=request.user, success_score__isnull=False)
+                .filter(success_score__gte=min_score, success_score__lte=max_score)
+            )
+            if engine != "all":
+                recent_qs = recent_qs.filter(metadata__analysis_engine_requested=engine)
+            recent_analyses = recent_qs.order_by('-created_at')[:8]
+            
         global_stats = all_scored.aggregate(
             avg_score=Avg("success_score"),
             total=Count("id"),
@@ -417,6 +451,7 @@ class DashboardView(View):
         history = list(all_scored.order_by("-created_at")[:24])
         history.reverse()
         chart_labels = [f"#{item.id}" for item in history]
+        chart_ids = [item.id for item in history]
         chart_scores = [float(item.success_score or 0) for item in history]
         chart_revenues = [float(item.revenue or 0) for item in history]
         chart_growth = [float(item.growth_rate or 0) for item in history]
@@ -432,10 +467,15 @@ class DashboardView(View):
             'active_model': active_model,
             'models_count': len(models),
             'chart_labels_json': json.dumps(chart_labels),
+            'chart_ids_json': json.dumps(chart_ids),
             'chart_scores_json': json.dumps(chart_scores),
             'chart_revenues_json': json.dumps(chart_revenues),
             'chart_growth_json': json.dumps(chart_growth),
             'chart_distribution_json': json.dumps(score_distribution),
+            'filter_min_score': min_score,
+            'filter_max_score': max_score,
+            'filter_days': days,
+            'filter_engine': engine,
         })
 
 class PitchFormView(View):
@@ -873,7 +913,33 @@ class InvestorDashboardView(View):
     """Dashboard público para investidores visualizarem potenciais de startups"""
 
     def get(self, request):
-        analyses = PitchAnalysis.objects.exclude(success_score__isnull=True).order_by("-created_at")
+        try:
+            min_score = float(request.GET.get("min_score", 0) or 0)
+        except ValueError:
+            min_score = 0.0
+        try:
+            max_score = float(request.GET.get("max_score", 10) or 10)
+        except ValueError:
+            max_score = 10.0
+        try:
+            days = int(request.GET.get("days", 180) or 180)
+        except ValueError:
+            days = 180
+        engine = str(request.GET.get("engine", "all")).strip().lower()
+        if engine not in {"all", "local", "gpt"}:
+            engine = "all"
+
+        min_score = max(0.0, min(10.0, min_score))
+        max_score = max(0.0, min(10.0, max_score))
+        if max_score < min_score:
+            max_score = min_score
+
+        analyses = PitchAnalysis.objects.exclude(success_score__isnull=True)
+        if days > 0:
+            analyses = analyses.filter(created_at__gte=timezone.now() - timedelta(days=days))
+        if engine != "all":
+            analyses = analyses.filter(metadata__analysis_engine_requested=engine)
+        analyses = analyses.filter(success_score__gte=min_score, success_score__lte=max_score).order_by("-created_at")
         top_analyses = list(analyses[:12])
 
         for analysis in top_analyses:
@@ -907,6 +973,7 @@ class InvestorDashboardView(View):
 
         recent_investor = list(analyses[:20])
         investor_labels = [f"#{a.id}" for a in recent_investor]
+        investor_ids = [a.id for a in recent_investor]
         investor_scores = [float(a.success_score or 0) for a in recent_investor]
         investor_revenue = [float(a.revenue or 0) for a in recent_investor]
         investor_growth = [float(a.growth_rate or 0) for a in recent_investor]
@@ -919,9 +986,14 @@ class InvestorDashboardView(View):
             "kpi_max_score": round(float(summary["max_score"] or 0), 2),
             "active_model": get_active_model_name(),
             "investor_labels_json": json.dumps(investor_labels),
+            "investor_ids_json": json.dumps(investor_ids),
             "investor_scores_json": json.dumps(investor_scores),
             "investor_revenue_json": json.dumps(investor_revenue),
             "investor_growth_json": json.dumps(investor_growth),
+            "filter_min_score": min_score,
+            "filter_max_score": max_score,
+            "filter_days": days,
+            "filter_engine": engine,
         }
         return render(request, "analyzer/investor_dashboard.html", context)
 
