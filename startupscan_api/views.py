@@ -15,6 +15,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.core.files.storage import FileSystemStorage
+from django.core.files import File
 from django.contrib import messages
 from django.contrib.auth import login
 from startupscan_api.forms import RegisterForm
@@ -36,6 +37,7 @@ from startupscan_api.services.model_registry import (
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.services.pitch_builder import generate_pitch_from_idea, export_pitch_pdf
+from startupscan_api.services.pitch_video import generate_explainer_video
 
 import joblib
 from celery.result import AsyncResult
@@ -1206,6 +1208,55 @@ class PitchReportPDFView(View):
             filename=f"relatorio_pitch_{analysis.id}.pdf",
             content_type="application/pdf",
         )
+
+
+class PitchExplainerVideoGenerateView(View):
+    """Gera vídeo explicativo do potencial da startup com base na avaliação."""
+
+    def post(self, request, analysis_id):
+        analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
+        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+            return redirect("dashboard")
+
+        try:
+            media_root = settings.MEDIA_ROOT
+            try:
+                os.makedirs(media_root, exist_ok=True)
+            except OSError:
+                media_root = os.path.join(settings.BASE_DIR, "media")
+                os.makedirs(media_root, exist_ok=True)
+
+            temp_dir = os.path.join(media_root, "generated_videos")
+            os.makedirs(temp_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            temp_output = os.path.join(temp_dir, f"explainer_{analysis.id}_{timestamp}.mp4")
+
+            video_meta = generate_explainer_video(analysis, temp_output)
+
+            final_name = f"explainer_{analysis.id}.mp4"
+            with open(temp_output, "rb") as fh:
+                analysis.explainer_video_file.save(final_name, File(fh), save=False)
+
+            metadata = analysis.metadata or {}
+            metadata["explainer_video"] = video_meta
+            analysis.metadata = metadata
+            analysis.save(update_fields=["explainer_video_file", "metadata", "updated_at"])
+
+            try:
+                if os.path.exists(temp_output):
+                    os.remove(temp_output)
+            except OSError:
+                pass
+
+            messages.success(request, "Vídeo explicativo gerado com sucesso.")
+        except Exception as exc:
+            logger.error("Falha ao gerar vídeo explicativo: %s", str(exc), exc_info=True)
+            messages.error(
+                request,
+                "Não foi possível gerar o vídeo explicativo agora. Tente novamente em instantes.",
+            )
+
+        return redirect("pitch_results", analysis_id=analysis.id)
 
 
 class ModelManagementView(LoginRequiredMixin, View):
