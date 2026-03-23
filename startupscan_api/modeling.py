@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import hashlib
 from datetime import datetime
 
 import numpy as np
@@ -14,6 +15,45 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
+
+
+def _build_uniqueness_key(text, financial_data, metadata):
+    payload = {
+        "startup_name": (metadata or {}).get("startup_name", ""),
+        "industry": (metadata or {}).get("industry", ""),
+        "analysis_context_id": (metadata or {}).get("analysis_context_id", ""),
+        "financial_data": financial_data or {},
+        "text_sample": (text or "")[:500],
+        "text_len": len(text or ""),
+    }
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
+
+
+def _ensure_unique_report_language(report: dict, startup_name: str, uniqueness_key: str):
+    report = report if isinstance(report, dict) else {}
+    summary = str(report.get("summary", "") or "").strip()
+    startup_label = startup_name.strip() or "startup avaliada"
+    signature = f"Análise exclusiva para {startup_label}."
+    if signature not in summary:
+        if summary:
+            summary = f"{summary} {signature}"
+        else:
+            summary = f"Avaliação estratégica personalizada para {startup_label}. {signature}"
+    report["summary"] = summary
+
+    recommendations = report.get("recommendations")
+    if not isinstance(recommendations, list):
+        recommendations = []
+    unique_line = (
+        f"Construir narrativa de captação exclusiva para {startup_label}, "
+        f"com tese diferenciada de investidor ({uniqueness_key})."
+    )
+    if unique_line not in recommendations:
+        recommendations.insert(0, unique_line)
+    report["recommendations"] = recommendations[:8]
+    report["narrative_uniqueness_key"] = uniqueness_key
+    return report
 
 
 def _merge_training_frames(pitches_df, financial_df):
@@ -323,22 +363,33 @@ def analyze_with_gpt(text, financial_data, metadata):
 
         model_name = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         client = OpenAI(api_key=api_key)
+        startup_name = str((metadata or {}).get("startup_name", "") or "").strip()
+        uniqueness_key = _build_uniqueness_key(text, financial_data, metadata)
 
         prompt = {
             "text": text,
             "financial_data": financial_data,
             "metadata": metadata,
+            "startup_name": startup_name,
+            "uniqueness_key": uniqueness_key,
             "task": (
                 "Avalie o pitch e responda em JSON com campos: "
-                "score (0-10), summary, strengths (lista), weaknesses (lista), recommendations (lista)."
+                "score (0-10), summary, strengths (lista), weaknesses (lista), recommendations (lista). "
+                "A narrativa deve ser exclusiva para esta startup e não pode reutilizar texto genérico idêntico."
             ),
         }
         response = client.chat.completions.create(
             model=model_name,
-            temperature=0.2,
+            temperature=0.65,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Você é especialista em avaliação de startups."},
+                {
+                    "role": "system",
+                    "content": (
+                        "Você é especialista em avaliação de startups e storytelling para investimento. "
+                        "Produza análise personalizada e única por startup, evitando roteiros repetidos."
+                    ),
+                },
                 {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
             ],
         )
@@ -354,6 +405,7 @@ def analyze_with_gpt(text, financial_data, metadata):
             "weaknesses": data.get("weaknesses", []),
             "recommendations": data.get("recommendations", []),
         }
+        report = _ensure_unique_report_language(report, startup_name, uniqueness_key)
         return score, report, "gpt"
     except Exception as exc:
         logger.warning("GPT analysis failed, fallback to local model: %s", str(exc), exc_info=True)

@@ -1,4 +1,5 @@
 from .commom_imports import *
+import hashlib
 
 
 # 🔊 9. Função de Processamento de Áudio Completa
@@ -427,6 +428,14 @@ def generate_interpretable_report(score, metadata):
     text_meta = metadata.get("text", {}) if isinstance(metadata, dict) else {}
     readability = float(text_meta.get("readability", 50) or 50)
     sentiment_score = float(text_meta.get("sentiment_score", 0.5) or 0.5)
+    startup_name = str((metadata or {}).get("startup_name", "") or "").strip() if isinstance(metadata, dict) else ""
+    industry = str((metadata or {}).get("industry", "") or "").strip() if isinstance(metadata, dict) else ""
+    uniqueness_raw = (
+        f"{startup_name}|{industry}|{score:.3f}|{revenue:.2f}|{growth_rate:.2f}|{profit_margin:.2f}|"
+        f"{text_meta.get('word_count', 0)}|{text_meta.get('dominant_topic', '')}"
+    )
+    uniqueness_key = hashlib.sha256(uniqueness_raw.encode("utf-8")).hexdigest()[:10]
+    startup_label = startup_name or "startup avaliada"
 
     clarity = max(0.0, min(10.0, (readability / 10.0)))
     proposta_valor = max(0.0, min(10.0, score * 0.95 + sentiment_score))
@@ -472,6 +481,17 @@ def generate_interpretable_report(score, metadata):
         "Reforçar o pitch com provas de mercado (pilotos, LOIs e cases de clientes).",
     ]
 
+    narrative_angles = [
+        f"Abordagem orientada a expansão comercial para {startup_label}.",
+        f"Abordagem focada em eficiência operacional e retenção para {startup_label}.",
+        f"Abordagem centrada em diferenciação competitiva para {startup_label}.",
+    ]
+    angle = narrative_angles[int(uniqueness_key, 16) % len(narrative_angles)]
+    base_recommendations.insert(
+        0,
+        f"Assinatura narrativa única ({uniqueness_key}): {angle}",
+    )
+
     investment_thesis = (
         "Startup com sinais claros de escalabilidade e capacidade de geração de valor."
         if score >= 7.5
@@ -490,10 +510,12 @@ def generate_interpretable_report(score, metadata):
     return {
         "status": "local_report",
         "summary": (
-            f"Classificação: {maturity}. O modelo indica score {score:.1f}/10, "
-            f"com crescimento de {growth_rate:.1f}% e margem de {profit_margin:.1f}%."
+            f"Classificação: {maturity}. Para {startup_label}, o modelo indica score {score:.1f}/10, "
+            f"com crescimento de {growth_rate:.1f}% e margem de {profit_margin:.1f}%. "
+            f"Ângulo estratégico: {angle}"
         ),
         "final_score": round(score, 1),
+        "narrative_uniqueness_key": uniqueness_key,
         "category_scores": category_scores,
         "strengths": base_strengths,
         "weaknesses": base_weaknesses,

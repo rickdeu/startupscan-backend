@@ -2,6 +2,7 @@ import io
 import json
 import os
 import re
+import hashlib
 import textwrap
 import asyncio
 import time
@@ -48,6 +49,32 @@ class ExplainerVideoGenerationError(RuntimeError):
         self.local_error = local_error
 
 
+def _build_video_uniqueness_key(payload: dict) -> str:
+    raw = json.dumps(
+        {
+            "startup_name": payload.get("startup_name", ""),
+            "score": payload.get("score", 0),
+            "summary": payload.get("summary", ""),
+            "growth_rate": payload.get("growth_rate", 0),
+            "profit_margin": payload.get("profit_margin", 0),
+            "revenue": payload.get("revenue", 0),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
+
+
+def _narrative_tagline(startup_name: str, uniqueness_key: str) -> str:
+    options = [
+        f"{startup_name} avança com estratégia de escala responsável e impacto mensurável.",
+        f"{startup_name} combina visão de mercado com execução disciplinada para captação.",
+        f"{startup_name} apresenta crescimento com tese clara de valor para investidores.",
+        f"{startup_name} demonstra diferencial competitivo com foco em tração sustentável.",
+    ]
+    return options[int(uniqueness_key, 16) % len(options)]
+
+
 def _load_font(size: int):
     candidates = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -87,6 +114,7 @@ def _local_video_plan(payload: dict) -> VideoPlan:
     recommendations = payload.get("recommendations", [])
     investor_pitch = payload.get("investor_pitch", {})
     category_scores = payload.get("category_scores", {})
+    uniqueness_key = _build_video_uniqueness_key(payload)
 
     thesis = investor_pitch.get("investment_thesis", "Oportunidade com potencial relevante para investidores.")
     readiness = investor_pitch.get("funding_readiness", "Em evolução")
@@ -97,11 +125,20 @@ def _local_video_plan(payload: dict) -> VideoPlan:
         sorted_items = sorted(category_scores.items(), key=lambda kv: float(kv[1]), reverse=True)[:3]
         top_categories = [f"{k.replace('_', ' ').title()}: {v}/10" for k, v in sorted_items]
 
+    stage_tones = [
+        "com discurso orientado a investidores de crescimento",
+        "com foco em execução e governança para escala",
+        "com narrativa de mercado e diferenciação competitiva",
+        "com mensagem de tração e previsibilidade de receita",
+    ]
+    tone = stage_tones[int(uniqueness_key, 16) % len(stage_tones)]
+    narrative_tagline = _narrative_tagline(startup_name, uniqueness_key)
+
     scenes = [
         {
             "title": "Apresentação da Startup",
             "text": f"Olá, eu sou {character_name}. Hoje vou apresentar o potencial de {startup_name} para investidores. "
-            f"O score atual da startup é {score:.1f} de 10.",
+            f"O score atual da startup é {score:.1f} de 10, {tone}.",
             "duration": 7,
         },
         {
@@ -141,6 +178,14 @@ def _local_video_plan(payload: dict) -> VideoPlan:
             else "Recomendamos acelerar estratégia comercial, fortalecer produto e preparar a captação com foco no mercado angolano.",
             "duration": 8,
         },
+        {
+            "title": "Mensagem Final ao Investidor",
+            "text": (
+                f"{startup_name} apresenta um enredo próprio de valor e crescimento. "
+                f"{narrative_tagline}"
+            ),
+            "duration": 6,
+        },
     ]
     narration = " ".join(scene["text"] for scene in scenes)
     return VideoPlan(scenes=scenes, narration=narration, character_name=character_name, engine_used="local")
@@ -155,20 +200,29 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
 
         client = OpenAI(api_key=api_key)
         model_name = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+        uniqueness_key = _build_video_uniqueness_key(payload)
         prompt = {
             "task": (
                 "Crie um roteiro criativo em portugues para video explicativo de potencial de startup. "
                 "Retorne JSON com: character_name, narration, scenes(list de objetos com title,text,duration). "
-                "Duração total entre 45 e 70 segundos."
+                "Duração total entre 45 e 70 segundos. "
+                "Este roteiro deve ser único para esta startup e não pode reaproveitar estrutura textual genérica."
             ),
+            "uniqueness_key": uniqueness_key,
             "analysis_payload": payload,
         }
         resp = client.chat.completions.create(
             model=model_name,
-            temperature=0.45,
+            temperature=0.72,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Você é roteirista de vídeos de investimento para startups."},
+                {
+                    "role": "system",
+                    "content": (
+                        "Você é roteirista de vídeos de investimento para startups. "
+                        "Cada roteiro precisa ser exclusivo para a startup, evitando repetição literal."
+                    ),
+                },
                 {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
             ],
         )
@@ -183,6 +237,11 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
             duration = int(float(s.get("duration", 7) or 7))
             duration = max(4, min(12, duration))
             fixed_scenes.append({"title": title, "text": text, "duration": duration})
+        if fixed_scenes:
+            fixed_scenes[-1]["text"] = (
+                f"{fixed_scenes[-1]['text']} "
+                f"{_narrative_tagline(payload['startup_name'], uniqueness_key)}"
+            )
         narration = str(data.get("narration", "")).strip() or " ".join(scene["text"] for scene in fixed_scenes)
         character_name = str(data.get("character_name", payload["startup_name"])).strip() or payload["startup_name"]
         return VideoPlan(
