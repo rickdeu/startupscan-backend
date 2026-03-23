@@ -80,6 +80,92 @@ def _narrative_tagline(startup_name: str, uniqueness_key: str) -> str:
     return options[int(uniqueness_key, 16) % len(options)]
 
 
+def _int_to_pt_word(value: int) -> str:
+    table = {
+        0: "zero",
+        1: "um",
+        2: "dois",
+        3: "tres",
+        4: "quatro",
+        5: "cinco",
+        6: "seis",
+        7: "sete",
+        8: "oito",
+        9: "nove",
+        10: "dez",
+        11: "onze",
+        12: "doze",
+        13: "treze",
+        14: "catorze",
+        15: "quinze",
+        16: "dezasseis",
+        17: "dezassete",
+        18: "dezoito",
+        19: "dezanove",
+        20: "vinte",
+    }
+    return table.get(int(value), str(int(value)))
+
+
+def _number_for_speech_pt(token: str) -> str:
+    raw = str(token or "").strip()
+    if not raw:
+        return ""
+    normalized = raw.replace(",", ".")
+    if "." in normalized:
+        left, right = normalized.split(".", 1)
+        left = left.strip() or "0"
+        right = re.sub(r"\D", "", right)
+        if right:
+            return f"{left} virgula {' '.join(right)}"
+        return left
+    if re.fullmatch(r"\d+", normalized):
+        return _int_to_pt_word(int(normalized))
+    return raw
+
+
+def _normalize_numeric_ratio_for_tts(text: str) -> str:
+    """
+    Evita leitura de razão como data (ex.: 6.1/10 -> 6 virgula 1 por dez).
+    """
+    source = " ".join((text or "").split())
+    if not source:
+        return ""
+
+    ratio_pattern = re.compile(
+        r"(?<![\d/])(\d{1,3}(?:[.,]\d+)?)\s*/\s*(\d{1,3}(?:[.,]\d+)?)(?!\s*/)"
+    )
+
+    def _ratio_repl(match: re.Match) -> str:
+        num_token = match.group(1)
+        den_token = match.group(2)
+        spoken_num = _number_for_speech_pt(num_token)
+        spoken_den = _number_for_speech_pt(den_token)
+        return f"{spoken_num} por {spoken_den}"
+
+    return ratio_pattern.sub(_ratio_repl, source)
+
+
+def _apply_tts_speech_fixes(plan: VideoPlan) -> VideoPlan:
+    scenes = []
+    for raw_scene in (plan.scenes or []):
+        if not isinstance(raw_scene, dict):
+            continue
+        scene = dict(raw_scene)
+        scene["text"] = _normalize_numeric_ratio_for_tts(str(scene.get("text", "") or ""))
+        scenes.append(scene)
+
+    narration = _normalize_numeric_ratio_for_tts(
+        " ".join(str(s.get("text", "") or "") for s in scenes).strip() or plan.narration
+    )
+    return VideoPlan(
+        scenes=scenes,
+        narration=narration,
+        character_name=plan.character_name,
+        engine_used=plan.engine_used,
+    )
+
+
 def _load_font(size: int):
     candidates = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -409,6 +495,7 @@ def build_video_plan_from_analysis(analysis) -> VideoPlan:
         plan = _local_video_plan(payload)
     plan = _enforce_video_duration(plan, payload)
     plan = _ensure_plan_has_conclusion(plan, payload)
+    plan = _apply_tts_speech_fixes(plan)
     return plan
 
 
@@ -505,7 +592,7 @@ def _stylize_stage_cinematic_text(script_text: str) -> str:
     Ajusta ritmo da locução para apresentação curta: frases curtas e pausas naturais.
     Não altera semântica principal, apenas a musicalidade.
     """
-    text = " ".join((script_text or "").strip().split())
+    text = _normalize_numeric_ratio_for_tts(script_text or "")
     if not text:
         return ""
     sentence_chunks = [s.strip() for s in re.split(r"(?<=[\.\!\?])\s+", text) if s.strip()]
