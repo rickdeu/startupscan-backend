@@ -47,6 +47,7 @@ from startupscan_api.services.pitch_builder import (
 )
 from startupscan_api.services.pitch_video import (
     build_did_presenter_source_urls,
+    detect_presenter_gender,
     generate_explainer_video,
 )
 
@@ -245,6 +246,7 @@ def _run_explainer_video_job(
     presenter_path: str | None = None,
     presenter_url: str | None = None,
     presenter_source_urls: list[str] | None = None,
+    presenter_gender_choice: str = "auto",
     generation_mode: str = "auto",
 ):
     temp_output = None
@@ -306,6 +308,7 @@ def _run_explainer_video_job(
             presenter_image_path=presenter_path,
             presenter_image_url=presenter_url,
             presenter_source_urls=presenter_source_urls or [],
+            presenter_gender_override=presenter_gender_choice,
             generation_mode=generation_mode,
             progress_callback=_video_progress_callback,
         )
@@ -326,6 +329,7 @@ def _run_explainer_video_job(
         metadata["explainer_video_job_id"] = job_id
         metadata["explainer_video_job_status"] = "COMPLETED"
         metadata["explainer_video_mode"] = generation_mode
+        metadata["explainer_video_gender_choice"] = presenter_gender_choice
         metadata.pop("explainer_video_job_error", None)
         analysis.metadata = metadata
         analysis.save(update_fields=["explainer_video_file", "metadata", "updated_at"])
@@ -354,6 +358,7 @@ def _run_explainer_video_job(
             metadata["explainer_video_job_id"] = job_id
             metadata["explainer_video_job_status"] = "FAILED"
             metadata["explainer_video_mode"] = generation_mode
+            metadata["explainer_video_gender_choice"] = presenter_gender_choice
             metadata["explainer_video_job_error"] = error_detail
             explainer_video_meta = metadata.get("explainer_video")
             if not isinstance(explainer_video_meta, dict):
@@ -388,6 +393,7 @@ def _run_explainer_video_job(
             local_error=local_error,
             analysis_id=analysis_id,
             generation_mode=generation_mode,
+            presenter_gender_choice=presenter_gender_choice,
         )
     finally:
         if temp_output:
@@ -404,6 +410,7 @@ def _start_explainer_video_job(
     presenter_path: str | None = None,
     presenter_url: str | None = None,
     presenter_source_urls: list[str] | None = None,
+    presenter_gender_choice: str = "auto",
     generation_mode: str = "auto",
 ) -> str:
     job_id = str(uuid.uuid4())
@@ -415,6 +422,7 @@ def _start_explainer_video_job(
         message="Job de vídeo criado, aguardando execução",
         analysis_id=analysis.id,
         generation_mode=generation_mode,
+        presenter_gender_choice=presenter_gender_choice,
     )
     thread = threading.Thread(
         target=_run_explainer_video_job,
@@ -424,6 +432,7 @@ def _start_explainer_video_job(
             "presenter_path": presenter_path,
             "presenter_url": presenter_url,
             "presenter_source_urls": presenter_source_urls or [],
+            "presenter_gender_choice": presenter_gender_choice,
             "generation_mode": generation_mode,
         },
         daemon=True,
@@ -1511,6 +1520,11 @@ class PitchResultsView(View):
         selected_video_mode = str((analysis.metadata or {}).get("explainer_video_mode", "auto") or "auto").strip().lower()
         if selected_video_mode not in {"auto", "did_only", "local_only"}:
             selected_video_mode = "auto"
+        selected_presenter_gender_choice = str(
+            (analysis.metadata or {}).get("explainer_video_gender_choice", "auto") or "auto"
+        ).strip().lower()
+        if selected_presenter_gender_choice not in {"auto", "male", "female"}:
+            selected_presenter_gender_choice = "auto"
         design_template_choices = get_pitch_design_template_choices()
         selected_pitch_design_mode, selected_pitch_design_template = _resolve_pitch_design_selection(
             request,
@@ -1534,6 +1548,7 @@ class PitchResultsView(View):
             'active_video_job_id': active_video_job_id,
             'active_video_job': active_video_job or {},
             'selected_video_mode': selected_video_mode,
+            'selected_presenter_gender_choice': selected_presenter_gender_choice,
             'pitch_design_mode_choices': get_pitch_design_mode_choices(),
             'pitch_design_template_choices': design_template_choices,
             'selected_pitch_design_mode': selected_pitch_design_mode,
@@ -1709,6 +1724,9 @@ class PitchExplainerVideoGenerateView(View):
             allowed_modes = {"auto", "did_only", "local_only"}
             if video_mode not in allowed_modes:
                 video_mode = "auto"
+            presenter_gender_choice = (request.POST.get("presenter_gender_choice", "auto") or "auto").strip().lower()
+            if presenter_gender_choice not in {"auto", "male", "female"}:
+                presenter_gender_choice = "auto"
 
             existing_job_id = str((analysis.metadata or {}).get("explainer_video_job_id", "") or "").strip()
             if existing_job_id:
@@ -1772,6 +1790,7 @@ class PitchExplainerVideoGenerateView(View):
                 presenter_path=presenter_path,
                 presenter_url=presenter_url,
                 presenter_source_urls=presenter_source_urls,
+                presenter_gender_choice=presenter_gender_choice,
                 generation_mode=video_mode,
             )
             metadata["explainer_video_job_id"] = job_id
@@ -1779,6 +1798,7 @@ class PitchExplainerVideoGenerateView(View):
             metadata["explainer_video_source_images"] = len(presenter_source_urls or [])
             metadata["explainer_video_real_image_only"] = bool(video_mode == "did_only")
             metadata["explainer_video_mode"] = video_mode
+            metadata["explainer_video_gender_choice"] = presenter_gender_choice
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
             messages.success(request, "Geração de vídeo iniciada. Acompanhe o progresso nesta página.")
@@ -1791,6 +1811,61 @@ class PitchExplainerVideoGenerateView(View):
             )
 
         return redirect("pitch_results", analysis_id=analysis.id)
+
+
+class PitchPresenterGenderDetectView(View):
+    """Detecta gênero provável da imagem do apresentador para confirmação no frontend."""
+
+    def post(self, request, analysis_id):
+        analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
+        if analysis.user and request.user.is_authenticated and analysis.user_id != request.user.id:
+            return JsonResponse({"ok": False, "error": "Acesso negado."}, status=403)
+
+        presenter_image = request.FILES.get("presenter_image")
+        if not presenter_image:
+            return JsonResponse({"ok": False, "error": "Envie uma imagem para detectar o gênero."}, status=400)
+
+        suffix = Path(getattr(presenter_image, "name", "") or "").suffix or ".jpg"
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+                for chunk in presenter_image.chunks():
+                    tmp_file.write(chunk)
+                tmp_path = tmp_file.name
+
+            detected = detect_presenter_gender(tmp_path)
+            gender = str(detected.get("gender", "unknown") or "unknown").lower()
+            if gender not in {"male", "female", "unknown"}:
+                gender = "unknown"
+
+            labels = {
+                "male": "Homem",
+                "female": "Mulher",
+                "unknown": "Não identificado",
+            }
+            confidence = detected.get("confidence")
+            confidence_pct = round(float(confidence) * 100.0, 1) if confidence is not None else None
+
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "detected_gender": gender,
+                    "detected_gender_label": labels[gender],
+                    "confidence": confidence,
+                    "confidence_pct": confidence_pct,
+                    "method": detected.get("method", "unknown"),
+                },
+                status=200,
+            )
+        except Exception as exc:
+            logger.error("Falha ao detectar gênero do apresentador: %s", str(exc), exc_info=True)
+            return JsonResponse({"ok": False, "error": _safe_exception_message(exc)}, status=500)
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
 
 
 class PitchExplainerVideoProgressView(View):
