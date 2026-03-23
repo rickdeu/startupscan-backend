@@ -10,6 +10,24 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 
+PITCH_DESIGN_MODE_AUTO = "auto_context"
+PITCH_DESIGN_MODE_MANUAL = "manual_premium"
+
+PITCH_DESIGN_MODE_CHOICES = [
+    (PITCH_DESIGN_MODE_AUTO, "Design automático por contexto (atual)"),
+    (PITCH_DESIGN_MODE_MANUAL, "Design premium manual (template escolhido pelo usuário)"),
+]
+
+PITCH_MANUAL_TEMPLATE_CHOICES = [
+    ("orbit", "Orbit Premium"),
+    ("grid", "Grid Executive"),
+    ("wave", "Wave Smooth"),
+    ("diagonal", "Diagonal Corporate"),
+    ("aurora", "Aurora Glass"),
+    ("ribbon", "Ribbon Stage"),
+]
+
+
 def _build_pitch_uniqueness_key(idea_data: dict) -> str:
     raw = json.dumps(
         {
@@ -211,6 +229,27 @@ def _truncate_text(text: str, max_chars: int = 340) -> str:
     return (cut or text[:max_chars]).rstrip() + "..."
 
 
+def get_pitch_design_mode_choices() -> list[tuple[str, str]]:
+    return list(PITCH_DESIGN_MODE_CHOICES)
+
+
+def get_pitch_design_template_choices() -> list[tuple[str, str]]:
+    return list(PITCH_MANUAL_TEMPLATE_CHOICES)
+
+
+def normalize_pitch_design_options(design_mode: str | None, manual_template: str | None) -> tuple[str, str]:
+    mode = _safe_str(design_mode, PITCH_DESIGN_MODE_AUTO).lower()
+    valid_modes = {choice[0] for choice in PITCH_DESIGN_MODE_CHOICES}
+    if mode not in valid_modes:
+        mode = PITCH_DESIGN_MODE_AUTO
+
+    template = _safe_str(manual_template, PITCH_MANUAL_TEMPLATE_CHOICES[0][0]).lower()
+    valid_templates = {choice[0] for choice in PITCH_MANUAL_TEMPLATE_CHOICES}
+    if template not in valid_templates:
+        template = PITCH_MANUAL_TEMPLATE_CHOICES[0][0]
+    return mode, template
+
+
 def _hsv_color(hue_deg: float, saturation: float, value: float) -> colors.Color:
     h = (float(hue_deg) % 360.0) / 360.0
     s = max(0.0, min(1.0, float(saturation)))
@@ -280,7 +319,13 @@ def _context_display_name(context_name: str) -> str:
     return labels.get(context_name, "BusinessTech")
 
 
-def _build_pitch_design_profile(pitch_payload: dict) -> dict:
+def _build_pitch_design_profile(
+    pitch_payload: dict,
+    *,
+    design_mode: str = PITCH_DESIGN_MODE_AUTO,
+    manual_template: str | None = None,
+) -> dict:
+    mode, normalized_template = normalize_pitch_design_options(design_mode, manual_template)
     context = _infer_pitch_context(pitch_payload)
     raw_signature = _safe_str(pitch_payload.get("narrative_uniqueness_key"), "")
     if not raw_signature:
@@ -300,14 +345,14 @@ def _build_pitch_design_profile(pitch_payload: dict) -> dict:
         "geral": 231,
     }
     template_by_context = {
-        "fintech": ["grid", "orbit", "diagonal"],
-        "saude": ["wave", "orbit", "grid"],
-        "educacao": ["diagonal", "grid", "wave"],
-        "energia": ["wave", "diagonal", "orbit"],
-        "logistica": ["grid", "diagonal", "orbit"],
-        "agro": ["wave", "grid", "orbit"],
-        "retail": ["orbit", "diagonal", "grid"],
-        "geral": ["orbit", "grid", "wave", "diagonal"],
+        "fintech": ["grid", "orbit", "diagonal", "ribbon"],
+        "saude": ["wave", "aurora", "orbit", "grid"],
+        "educacao": ["diagonal", "grid", "wave", "ribbon"],
+        "energia": ["wave", "diagonal", "aurora", "orbit"],
+        "logistica": ["grid", "diagonal", "ribbon", "orbit"],
+        "agro": ["wave", "grid", "aurora", "orbit"],
+        "retail": ["orbit", "diagonal", "grid", "ribbon"],
+        "geral": ["orbit", "grid", "wave", "diagonal", "aurora", "ribbon"],
     }
     layout_options = ["focus", "split", "timeline"]
 
@@ -315,11 +360,15 @@ def _build_pitch_design_profile(pitch_payload: dict) -> dict:
     accent_hue = (base_hue + 28 + (seed % 17)) % 360.0
     band_hue = (base_hue + 10 + (seed % 9)) % 360.0
     template_list = template_by_context.get(context, template_by_context["geral"])
-    template_name = template_list[seed % len(template_list)]
+    template_name = normalized_template if mode == PITCH_DESIGN_MODE_MANUAL else template_list[seed % len(template_list)]
+    if mode == PITCH_DESIGN_MODE_MANUAL:
+        context_label = f"{_context_display_name(context)} · Premium Manual"
+    else:
+        context_label = _context_display_name(context)
 
     return {
         "context": context,
-        "context_label": _context_display_name(context),
+        "context_label": context_label,
         "seed": seed,
         "base_hue": base_hue,
         "accent_hue": accent_hue,
@@ -327,6 +376,8 @@ def _build_pitch_design_profile(pitch_payload: dict) -> dict:
         "template_name": template_name,
         "layout_seed": seed % len(layout_options),
         "layout_options": layout_options,
+        "design_mode": mode,
+        "manual_template": normalized_template,
     }
 
 
@@ -409,6 +460,30 @@ def _draw_background(
         for idx in range(7):
             pdf.roundRect(0, idx * 74, width + 120, 26, 7, stroke=0, fill=1)
         pdf.restoreState()
+    elif template == "aurora":
+        pdf.setFillColor(_mix_colors(palette["shape1"], colors.white, 0.08))
+        for idx in range(6):
+            radius = 300 - (idx * 28)
+            cx = (width * 0.1) + idx * 90 + (seed_shift * 0.4)
+            cy = height - 40 - (idx * 18)
+            pdf.circle(cx, cy, radius, stroke=0, fill=1)
+        pdf.setFillColor(_mix_colors(palette["shape2"], colors.white, 0.1))
+        for idx in range(5):
+            radius = 260 - (idx * 24)
+            cx = width - 40 - idx * 84
+            cy = 30 + idx * 22
+            pdf.circle(cx, cy, radius, stroke=0, fill=1)
+    elif template == "ribbon":
+        pdf.setFillColor(palette["shape1"])
+        for idx in range(10):
+            y = 20 + (idx * 64)
+            wobble = (seed_shift * 0.6) + (idx % 3) * 8
+            pdf.roundRect(-40 + wobble, y, width + 80, 24, 10, stroke=0, fill=1)
+        pdf.setFillColor(palette["shape2"])
+        for idx in range(8):
+            y = 46 + (idx * 72)
+            wobble = (seed_shift * 0.5) - (idx % 4) * 9
+            pdf.roundRect(-60 + wobble, y, width + 120, 16, 8, stroke=0, fill=1)
     else:
         pdf.setFillColor(palette["shape1"])
         pdf.circle(width * 0.92, height * 0.82, 90 + (design_seed % 22), stroke=0, fill=1)
@@ -737,7 +812,13 @@ def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
     return slides
 
 
-def export_pitch_pdf(pitch_payload: dict, output_path: str):
+def export_pitch_pdf(
+    pitch_payload: dict,
+    output_path: str,
+    *,
+    design_mode: str = PITCH_DESIGN_MODE_AUTO,
+    manual_template: str | None = None,
+):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     slides = _build_pitch_slides(pitch_payload)
     page_size = landscape(A4)
@@ -746,7 +827,12 @@ def export_pitch_pdf(pitch_payload: dict, output_path: str):
     pdf = canvas.Canvas(output_path, pagesize=page_size)
     engine_used = _safe_str(pitch_payload.get("engine_used"), "local")
     uniqueness_key = _safe_str(pitch_payload.get("narrative_uniqueness_key"), "")
-    design_profile = _build_pitch_design_profile(pitch_payload)
+    selected_design_mode, selected_manual_template = normalize_pitch_design_options(design_mode, manual_template)
+    design_profile = _build_pitch_design_profile(
+        pitch_payload,
+        design_mode=selected_design_mode,
+        manual_template=selected_manual_template,
+    )
     total_pages = len(slides)
 
     for idx, slide in enumerate(slides, start=1):

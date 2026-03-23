@@ -37,7 +37,14 @@ from startupscan_api.services.model_registry import (
 )
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
-from startupscan_api.services.pitch_builder import generate_pitch_from_idea, export_pitch_pdf
+from startupscan_api.services.pitch_builder import (
+    PITCH_DESIGN_MODE_AUTO,
+    export_pitch_pdf,
+    generate_pitch_from_idea,
+    get_pitch_design_mode_choices,
+    get_pitch_design_template_choices,
+    normalize_pitch_design_options,
+)
 from startupscan_api.services.pitch_video import (
     build_did_presenter_source_urls,
     generate_explainer_video,
@@ -126,6 +133,12 @@ def _safe_slug_model_name(raw_name):
     if not cleaned.endswith(".pkl"):
         cleaned = f"{cleaned}.pkl"
     return cleaned
+
+
+def _resolve_pitch_design_selection(request, *, default_mode: str | None = None, default_template: str | None = None):
+    mode = (request.GET.get("design_mode", "") or "").strip().lower() or (default_mode or PITCH_DESIGN_MODE_AUTO)
+    template = (request.GET.get("design_template", "") or "").strip().lower() or (default_template or "")
+    return normalize_pitch_design_options(mode, template)
 
 
 def _read_json_file(path):
@@ -1058,9 +1071,19 @@ class IdeaPitchDetailView(View):
         if not self._can_access(request, submission):
             return redirect("dashboard")
 
+        design_template_choices = get_pitch_design_template_choices()
+        selected_design_mode, selected_design_template = _resolve_pitch_design_selection(
+            request,
+            default_mode=PITCH_DESIGN_MODE_AUTO,
+            default_template=(design_template_choices[0][0] if design_template_choices else "orbit"),
+        )
         context = {
             "submission": submission,
             "generated_pitch": submission.generated_pitch if submission.status == "generated" else {},
+            "pitch_design_mode_choices": get_pitch_design_mode_choices(),
+            "pitch_design_template_choices": design_template_choices,
+            "selected_pitch_design_mode": selected_design_mode,
+            "selected_pitch_design_template": selected_design_template,
         }
         return render(request, "analyzer/idea_pitch_detail.html", context)
 
@@ -1139,7 +1162,17 @@ class IdeaPitchPDFView(View):
             target_dir,
             f"pitch_{safe_name}_{submission.id}.pdf",
         )
-        export_pitch_pdf(submission.generated_pitch, output_path)
+        design_mode, design_template = _resolve_pitch_design_selection(
+            request,
+            default_mode=PITCH_DESIGN_MODE_AUTO,
+            default_template="orbit",
+        )
+        export_pitch_pdf(
+            submission.generated_pitch,
+            output_path,
+            design_mode=design_mode,
+            manual_template=design_template,
+        )
 
         return FileResponse(
             open(output_path, "rb"),
@@ -1472,9 +1505,18 @@ class PitchResultsView(View):
     """Página de resultados da análise"""
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        last_pitch_meta = (analysis.metadata or {}).get("last_generated_pitch_payload", {})
+        if not isinstance(last_pitch_meta, dict):
+            last_pitch_meta = {}
         selected_video_mode = str((analysis.metadata or {}).get("explainer_video_mode", "auto") or "auto").strip().lower()
         if selected_video_mode not in {"auto", "did_only", "local_only"}:
             selected_video_mode = "auto"
+        design_template_choices = get_pitch_design_template_choices()
+        selected_pitch_design_mode, selected_pitch_design_template = _resolve_pitch_design_selection(
+            request,
+            default_mode=str(last_pitch_meta.get("design_mode", PITCH_DESIGN_MODE_AUTO)),
+            default_template=str(last_pitch_meta.get("design_template", design_template_choices[0][0] if design_template_choices else "orbit")),
+        )
         active_video_job_id = (request.GET.get("video_job_id", "") or "").strip()
         if not active_video_job_id:
             active_video_job_id = str((analysis.metadata or {}).get("explainer_video_job_id", "") or "").strip()
@@ -1492,6 +1534,10 @@ class PitchResultsView(View):
             'active_video_job_id': active_video_job_id,
             'active_video_job': active_video_job or {},
             'selected_video_mode': selected_video_mode,
+            'pitch_design_mode_choices': get_pitch_design_mode_choices(),
+            'pitch_design_template_choices': design_template_choices,
+            'selected_pitch_design_mode': selected_pitch_design_mode,
+            'selected_pitch_design_template': selected_pitch_design_template,
         })
 
 
@@ -1598,6 +1644,11 @@ class PitchInvestorPDFView(View):
             model_source = (request.GET.get("model_source", "") or "").strip().lower()
             if model_source not in {"local", "gpt"}:
                 model_source = "gpt" if os.getenv("OPENAI_API_KEY") else "local"
+            design_mode, design_template = _resolve_pitch_design_selection(
+                request,
+                default_mode=PITCH_DESIGN_MODE_AUTO,
+                default_template="orbit",
+            )
 
             pitch_payload = generate_pitch_from_idea(payload, model_source=model_source)
 
@@ -1614,7 +1665,12 @@ class PitchInvestorPDFView(View):
             safe_name = "".join(ch if ch.isalnum() else "_" for ch in startup_name).strip("_").lower()
             safe_name = safe_name or "startup"
             output_path = os.path.join(pitch_dir, f"pitch_resultado_{safe_name}_{analysis.id}.pdf")
-            export_pitch_pdf(pitch_payload, output_path)
+            export_pitch_pdf(
+                pitch_payload,
+                output_path,
+                design_mode=design_mode,
+                manual_template=design_template,
+            )
 
             metadata = analysis.metadata or {}
             metadata["last_generated_pitch_payload"] = {
@@ -1622,6 +1678,8 @@ class PitchInvestorPDFView(View):
                 "engine_used": pitch_payload.get("engine_used", model_source),
                 "slide_count": len((pitch_payload.get("pitch_deck") or [])),
                 "narrative_uniqueness_key": pitch_payload.get("narrative_uniqueness_key", ""),
+                "design_mode": design_mode,
+                "design_template": design_template,
             }
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])

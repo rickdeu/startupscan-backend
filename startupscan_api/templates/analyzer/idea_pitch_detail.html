@@ -85,9 +85,29 @@
             <i class="fas fa-arrow-left me-1"></i>Nova ideia
         </a>
         {% if submission.status == "generated" %}
-        <a href="{% url 'idea_pitch_pdf' submission.id %}" class="btn btn-outline-primary">
-            <i class="fas fa-file-pdf me-1"></i>Baixar PDF Completo
-        </a>
+        <form method="get" action="{% url 'idea_pitch_pdf' submission.id %}" class="row g-2 align-items-end ms-0 me-0 w-100 mt-1">
+            <div class="col-md-5">
+                <label class="form-label text-muted mb-1">Modo de design</label>
+                <select class="form-select form-select-sm" name="design_mode" id="ideaPitchDesignMode">
+                    {% for value, label in pitch_design_mode_choices %}
+                    <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted mb-1">Template premium manual</label>
+                <select class="form-select form-select-sm" name="design_template" id="ideaPitchDesignTemplate">
+                    {% for value, label in pitch_design_template_choices %}
+                    <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-grid">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-file-pdf me-1"></i>Baixar PDF Completo
+                </button>
+            </div>
+        </form>
         {% endif %}
     </div>
 </div>
@@ -160,4 +180,22 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+    (function () {
+        const modeSelect = document.getElementById("ideaPitchDesignMode");
+        const templateSelect = document.getElementById("ideaPitchDesignTemplate");
+        if (!modeSelect || !templateSelect) return;
+
+        function syncTemplateState() {
+            const manual = (modeSelect.value || "") === "manual_premium";
+            templateSelect.disabled = !manual;
+            if (!manual) templateSelect.classList.add("opacity-75");
+            else templateSelect.classList.remove("opacity-75");
+        }
+
+        modeSelect.addEventListener("change", syncTemplateState);
+        syncTemplateState();
+    })();
+</script>
 {% endblock %}
