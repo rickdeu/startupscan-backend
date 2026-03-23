@@ -100,6 +100,113 @@
                     </div>
                 </div>
                 {% endif %}
+
+                {% if can_send_interest_on_pitch %}
+                <div class="mt-4 p-3 border rounded">
+                    <h5 class="mb-2"><i class="fas fa-handshake me-2"></i>Interesse neste pitch</h5>
+                    {% if my_interest %}
+                    <div class="small mb-2">
+                        <strong>Seu interesse:</strong>
+                        <span class="badge bg-info">{{ my_interest.get_status_display }}</span>
+                    </div>
+                    <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
+                        {% csrf_token %}
+                        <label class="form-label">Atualizar mensagem ao empreendedor</label>
+                        <textarea
+                            class="form-control form-control-sm mb-2"
+                            name="investor_message"
+                            rows="2"
+                            placeholder="Contexto de interesse, ticket, timing..."
+                        >{{ my_interest.investor_message }}</textarea>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-sm btn-success" type="submit">
+                                <i class="fas fa-paper-plane me-1"></i>Atualizar interesse
+                            </button>
+                        </div>
+                    </form>
+                    <form method="post" action="{% url 'connection_interest_update' my_interest.id %}" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="withdraw">
+                        <button class="btn btn-sm btn-outline-danger" type="submit">
+                            <i class="fas fa-ban me-1"></i>Retirar interesse
+                        </button>
+                    </form>
+                    {% else %}
+                    <p class="small text-muted mb-2">Ao enviar interesse, o empreendedor recebe este lead diretamente no pitch.</p>
+                    <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
+                        {% csrf_token %}
+                        <label class="form-label">Mensagem ao empreendedor (opcional)</label>
+                        <textarea
+                            class="form-control form-control-sm mb-2"
+                            name="investor_message"
+                            rows="2"
+                            placeholder="Ex.: interesse em ronda seed, ticket e próximos passos."
+                        ></textarea>
+                        <button class="btn btn-sm btn-success" type="submit">
+                            <i class="fas fa-handshake me-1"></i>Demonstrar interesse neste pitch
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if can_view_received_interests %}
+                <div class="mt-4 p-3 border rounded">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Investidores interessados neste pitch</h5>
+                        <span class="badge bg-primary">{{ received_interests|length }}</span>
+                    </div>
+                    {% if received_interests %}
+                    <div class="d-flex flex-column gap-2">
+                        {% for interest in received_interests %}
+                        <div class="border rounded p-2 bg-black bg-opacity-25">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div>
+                                    <strong>
+                                        {% if interest.investor %}
+                                            {{ interest.investor.first_name|default:interest.investor.username }}
+                                        {% else %}
+                                            Investidor não identificado
+                                        {% endif %}
+                                    </strong>
+                                    <span class="small text-muted ms-2">{{ interest.created_at|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <span class="badge bg-info">{{ interest.get_status_display }}</span>
+                            </div>
+                            {% if interest.investor_message %}
+                            <div class="small mt-2"><strong>Mensagem:</strong> {{ interest.investor_message }}</div>
+                            {% endif %}
+                            {% if interest.entrepreneur_reply %}
+                            <div class="small mt-1"><strong>Sua resposta:</strong> {{ interest.entrepreneur_reply }}</div>
+                            {% endif %}
+                            {% if user_role == 'empreendedor' or user_role == 'analista' or user_role == 'admin' %}
+                            <form method="post" action="{% url 'connection_interest_update' interest.id %}" class="mt-2">
+                                {% csrf_token %}
+                                <div class="row g-2">
+                                    <div class="col-md-7">
+                                        <textarea
+                                            class="form-control form-control-sm"
+                                            name="entrepreneur_reply"
+                                            rows="2"
+                                            placeholder="Resposta ao investidor (opcional)"
+                                        ></textarea>
+                                    </div>
+                                    <div class="col-md-5 d-flex flex-wrap gap-1 align-items-start">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit" name="action" value="reviewing">Em análise</button>
+                                        <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">Conectar</button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">Recusar</button>
+                                    </div>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="small text-muted mb-0">Ainda não há interesses registados para este pitch.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="col-lg-4">

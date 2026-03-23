@@ -1741,6 +1741,32 @@ class PitchResultsView(RoleRequiredMixin, View):
     allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        user_role = get_user_role(request.user)
+        interests_qs = InvestorConnectionInterest.objects.filter(analysis=analysis).select_related(
+            "investor",
+            "entrepreneur",
+        )
+
+        # Interesse do utilizador atual (quando ele é investidor/analista/admin).
+        my_interest = None
+        if request.user.is_authenticated:
+            my_interest = interests_qs.filter(investor=request.user).first()
+
+        can_send_interest_on_pitch = (
+            request.user.is_authenticated
+            and user_role in {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+            and bool(analysis.user_id)
+            and analysis.user_id != request.user.id
+        )
+        can_view_received_interests = (
+            request.user.is_authenticated
+            and (
+                user_role in {ROLE_ADMIN, ROLE_ANALISTA}
+                or (user_role == ROLE_EMPREENDEDOR and analysis.user_id == request.user.id)
+            )
+        )
+        received_interests = list(interests_qs.order_by("-updated_at")) if can_view_received_interests else []
+
         last_pitch_meta = (analysis.metadata or {}).get("last_generated_pitch_payload", {})
         if not isinstance(last_pitch_meta, dict):
             last_pitch_meta = {}
@@ -1772,6 +1798,11 @@ class PitchResultsView(RoleRequiredMixin, View):
                 active_video_job = state
         return render(request, 'analyzer/result.html', {
             'analysis': analysis,
+            'user_role': user_role,
+            'my_interest': my_interest,
+            'can_send_interest_on_pitch': can_send_interest_on_pitch,
+            'can_view_received_interests': can_view_received_interests,
+            'received_interests': received_interests,
             'active_video_job_id': active_video_job_id,
             'active_video_job': active_video_job or {},
             'selected_video_mode': selected_video_mode,
