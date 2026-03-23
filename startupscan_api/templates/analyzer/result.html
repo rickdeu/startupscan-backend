@@ -118,6 +118,7 @@
                             data-progress-url-template="{{ video_progress_url_template }}"
                             data-analysis-id="{{ analysis.id }}"
                             data-status="{{ active_video_job.status }}"
+                            data-phase="{{ active_video_job.phase|default:'fila' }}"
                         >
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>Status da geração:</strong>
@@ -126,13 +127,17 @@
                             <div class="progress mb-2" style="height: 8px;">
                                 <div
                                     id="videoJobProgressBar"
-                                    class="progress-bar {% if active_video_job.status == 'FAILED' %}bg-danger{% elif active_video_job.status == 'COMPLETED' %}bg-success{% else %}bg-info{% endif %}"
+                                    class="progress-bar {% if active_video_job.status == 'FAILED' %}bg-danger{% elif active_video_job.status == 'COMPLETED' %}bg-success{% else %}bg-info progress-bar-striped progress-bar-animated{% endif %}"
                                     role="progressbar"
                                     style="width: {{ active_video_job.progress|default:0 }}%;"
                                     aria-valuemin="0"
                                     aria-valuemax="100"
                                     aria-valuenow="{{ active_video_job.progress|default:0 }}"
                                 ></div>
+                            </div>
+                            <div class="small mb-1">
+                                <strong>Fase:</strong>
+                                <span id="videoJobPhaseText">{{ active_video_job.phase|default:"fila" }}</span>
                             </div>
                             <div class="small">
                                 <span id="videoJobMessage">{{ active_video_job.message|default:"Aguardando atualização..." }}</span>
@@ -299,35 +304,102 @@
         const progressUrl = template.replace("__JOB_ID__", jobId);
         const bar = document.getElementById("videoJobProgressBar");
         const statusText = document.getElementById("videoJobStatusText");
+        const phaseText = document.getElementById("videoJobPhaseText");
         const messageEl = document.getElementById("videoJobMessage");
         const pctEl = document.getElementById("videoJobProgressPct");
 
+        let serverProgress = Math.max(0, Math.min(100, parseInt(bar?.getAttribute("aria-valuenow") || "0", 10)));
+        let visualProgress = serverProgress;
+        let targetProgress = serverProgress;
+        let currentStatus = initialStatus || "RUNNING";
+        let currentPhase = (card.getAttribute("data-phase") || "fila").toLowerCase();
+
+        function phaseLabel(phase) {
+            const p = String(phase || "").toLowerCase();
+            if (p === "fila") return "Fila";
+            if (p === "inicializacao") return "Inicialização";
+            if (p === "preparacao") return "Preparação";
+            if (p === "renderizacao") return "Renderização";
+            if (p === "persistencia") return "Persistência";
+            if (p === "concluido") return "Concluído";
+            if (p === "falha") return "Falha";
+            return p || "Processando";
+        }
+
+        function phaseCap(status, phase) {
+            if (status === "COMPLETED" || status === "FAILED") return 100;
+            const p = String(phase || "").toLowerCase();
+            if (p === "fila") return 12;
+            if (p === "inicializacao") return 22;
+            if (p === "preparacao") return 36;
+            if (p === "renderizacao") return 74;
+            if (p === "persistencia") return 94;
+            return 88;
+        }
+
+        function applyVisualProgress(value) {
+            const bounded = Math.max(0, Math.min(100, value));
+            const rounded = Math.round(bounded);
+            if (pctEl) pctEl.textContent = rounded + "%";
+            if (bar) {
+                bar.style.width = bounded.toFixed(2) + "%";
+                bar.setAttribute("aria-valuenow", String(rounded));
+            }
+        }
+
         function updateState(state) {
-            const status = String(state.status || "RUNNING").toUpperCase();
-            const progress = Math.max(0, Math.min(100, parseInt(state.progress || 0, 10)));
+            currentStatus = String(state.status || "RUNNING").toUpperCase();
+            currentPhase = String(state.phase || currentPhase || "renderizacao").toLowerCase();
+            serverProgress = Math.max(0, Math.min(100, parseInt(state.progress || 0, 10)));
             const message = state.message || "Processando...";
 
-            if (statusText) statusText.textContent = status;
+            if (statusText) statusText.textContent = currentStatus;
+            if (phaseText) phaseText.textContent = phaseLabel(currentPhase);
             if (messageEl) messageEl.textContent = message;
-            if (pctEl) pctEl.textContent = progress + "%";
+            targetProgress = Math.max(targetProgress, serverProgress);
+            if (currentStatus === "COMPLETED" || currentStatus === "FAILED") {
+                targetProgress = serverProgress;
+            }
+
             if (bar) {
-                bar.style.width = progress + "%";
-                bar.setAttribute("aria-valuenow", String(progress));
-                bar.classList.remove("bg-info", "bg-success", "bg-danger");
-                bar.classList.add(status === "FAILED" ? "bg-danger" : status === "COMPLETED" ? "bg-success" : "bg-info");
+                bar.classList.remove("bg-info", "bg-success", "bg-danger", "progress-bar-striped", "progress-bar-animated");
+                if (currentStatus === "FAILED") bar.classList.add("bg-danger");
+                else if (currentStatus === "COMPLETED") bar.classList.add("bg-success");
+                else bar.classList.add("bg-info", "progress-bar-striped", "progress-bar-animated");
             }
             card.classList.remove("alert-info", "alert-success", "alert-danger");
-            card.classList.add(status === "FAILED" ? "alert-danger" : status === "COMPLETED" ? "alert-success" : "alert-info");
+            card.classList.add(currentStatus === "FAILED" ? "alert-danger" : currentStatus === "COMPLETED" ? "alert-success" : "alert-info");
 
-            if (status === "COMPLETED") {
+            if (currentStatus === "COMPLETED") {
                 setTimeout(function () { window.location.reload(); }, 1200);
                 return true;
             }
-            if (status === "FAILED") {
+            if (currentStatus === "FAILED") {
                 return true;
             }
             return false;
         }
+
+        const smoothTimer = setInterval(function () {
+            if (currentStatus !== "COMPLETED" && currentStatus !== "FAILED") {
+                const cap = phaseCap(currentStatus, currentPhase);
+                if (targetProgress < cap) {
+                    targetProgress = Math.min(cap, targetProgress + 0.22);
+                }
+            }
+
+            if (visualProgress < targetProgress) {
+                const gap = targetProgress - visualProgress;
+                const step = gap > 18 ? 1.35 : gap > 9 ? 0.85 : gap > 3 ? 0.45 : 0.2;
+                visualProgress = Math.min(targetProgress, visualProgress + step);
+                applyVisualProgress(visualProgress);
+                return;
+            }
+            if (visualProgress > targetProgress) {
+                visualProgress = targetProgress;
+                applyVisualProgress(visualProgress);
+            }
+        }, 140);
 
         let stopped = false;
         const poll = function () {
@@ -341,6 +413,7 @@
                     const done = updateState(state || {});
                     if (done) {
                         stopped = true;
+                        clearInterval(smoothTimer);
                         return;
                     }
                     setTimeout(poll, 2000);
@@ -351,6 +424,8 @@
                 });
         };
 
+        applyVisualProgress(visualProgress);
+        if (phaseText) phaseText.textContent = phaseLabel(currentPhase);
         setTimeout(poll, 1000);
     })();
 </script>
