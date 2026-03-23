@@ -47,8 +47,12 @@ try:
     import mediapipe as mp
     from deepface import DeepFace
     import moviepy.editor as mp_editor
-except ImportError:
-    logging.warning("Pacotes de vídeo não instalados. Use: pip install opencv-python mediapipe deepface moviepy")
+except Exception as exc:
+    logging.warning(
+        "Pacotes de vídeo indisponíveis/incompatíveis no runtime (%s). "
+        "Use: pip install opencv-python mediapipe deepface moviepy tf-keras",
+        str(exc),
+    )
 
 # NLP
 try:
