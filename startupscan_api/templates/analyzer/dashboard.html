@@ -1,67 +1,120 @@
 {% extends "analyzer/base.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="jumbotron text-center">
-        <h1 class="display-4">Startup Pitch Analyzer</h1>
-        <p class="lead">Analise seu pitch de startup com nosso sistema multimodal avançado</p>
-        <hr class="my-4">
-        <p>Obtenha insights valiosos sobre seu pitch com nossa análise de texto, áudio, vídeo e dados financeiros sobre a tua <b> startup</b>. </p>
-        <a class="btn btn-primary btn-lg" href="{% url 'pitch_form' %}" role="button">Analisar Novo Pitch</a>
-    </div>
-
-    {% if user.is_authenticated %}
-
-
-    {% if recent_analyses %}
-    <div class="card mt-4">
-        <div class="card-header">
-            <h3>Análises Recentes</h3>
+<div class="hero-panel p-4 p-lg-5 mb-4">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h1 class="display-6 fw-bold mb-2">Centro Inteligente de Avaliação de Startups</h1>
+            <p class="lead mb-3">
+                Analise pitches, compare desempenho dos modelos e apresente oportunidades de investimento com um dashboard pronto para investidores.
+            </p>
+            <a class="btn btn-light btn-lg me-2" href="{% url 'pitch_form' %}">
+                <i class="fas fa-rocket me-2"></i>Nova Análise
+            </a>
+            <a class="btn btn-outline-light btn-lg" href="{% url 'investor_dashboard' %}">
+                <i class="fas fa-chart-line me-2"></i>Visão do Investidor
+            </a>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Data</th>
-                            <th>Score</th>
-                            <th>Receita</th>
-                            <th>Crescimento</th>
-                            <th>Margem</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for analysis in recent_analyses %}
-                        <tr>
-                            <td>{{ analysis.id }}</td>
-                            <td>{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
-                            <td>
-                                <span class="badge badge-{% if analysis.success_score >= 7.5 %}success{% elif analysis.success_score >= 5 %}warning{% else %}danger{% endif %}">
-                                    {{ analysis.success_score|floatformat:1 }}
-                                </span>
-                            </td>
-                            <td>AOA {{ analysis.revenue|floatformat:2 }}</td>
-                            <td>{{ analysis.growth_rate|floatformat:2 }}%</td>
-                            <td>{{ analysis.profit_margin|floatformat:2 }}%</td>
-                            <td>
-                                <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-info">Ver</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-lg-4 mt-4 mt-lg-0">
+            <div class="glass-card p-3">
+                <h6 class="text-uppercase text-muted mb-3">Modelo ativo</h6>
+                {% if active_model %}
+                <h5 class="mb-1">{{ active_model.display_name }}</h5>
+                <p class="mb-1 small text-muted">{{ active_model.name }}</p>
+                <p class="mb-0 small">
+                    Consistência:
+                    <strong>{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</strong>
+                </p>
+                {% else %}
+                <p class="mb-0">Sem modelo ativo detectado.</p>
+                {% endif %}
             </div>
         </div>
     </div>
-    {% endif %}
-
-    {% else %}
-  <p>Por favor, <a href="{% url 'login' %}">faça login</a> para ver seu dashboard.</p>
-    {% endif %}
-
-
-
 </div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-label">Análises no sistema</span>
+            <h3>{{ global_stats.total|default:0 }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-label">Score médio</span>
+            <h3>{{ global_stats.avg_score|default:0|floatformat:2 }}/10</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-label">Melhor score</span>
+            <h3>{{ global_stats.best|default:0|floatformat:1 }}/10</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-label">Modelos disponíveis</span>
+            <h3>{{ models_count }}</h3>
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Análises recentes</h4>
+        <a href="{% url 'model_management' %}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-sliders me-1"></i>Gerenciar Modelos
+        </a>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_analyses %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Data</th>
+                        <th>Score</th>
+                        <th>Receita</th>
+                        <th>Crescimento</th>
+                        <th>Margem</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for analysis in recent_analyses %}
+                    <tr>
+                        <td>#{{ analysis.id }}</td>
+                        <td>{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <span class="badge rounded-pill bg-{% if analysis.success_score >= 7.5 %}success{% elif analysis.success_score >= 5 %}warning{% else %}danger{% endif %}">
+                                {{ analysis.success_score|floatformat:1 }}
+                            </span>
+                        </td>
+                        <td>AOA {{ analysis.revenue|floatformat:2 }}</td>
+                        <td>{{ analysis.growth_rate|floatformat:2 }}%</td>
+                        <td>{{ analysis.profit_margin|floatformat:2 }}%</td>
+                        <td>
+                            <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-primary">
+                                Ver análise
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">Nenhuma análise encontrada até agora.</div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card p-4 text-center">
+    <p class="mb-2">Faça login para acompanhar análises, modelos e oportunidades.</p>
+    <a href="{% url 'login' %}" class="btn btn-primary">Entrar</a>
+</div>
+{% endif %}
 {% endblock %}

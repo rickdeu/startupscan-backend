@@ -1,165 +1,108 @@
 {% extends "analyzer/base.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="card">
-        <div class="card-header bg-success text-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">Resultados da Análise #{{ analysis.id }}</h2>
-                <span class="badge badge-light badge-pill" style="font-size: 1.2rem;">
-                    Score: {{ analysis.success_score|floatformat:1 }}
-                </span>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-8">
-                    <h4>Relatório de Análise</h4>
-                    <div class="report-container p-3 bg-light rounded">
-                        {% if analysis.report.summary %}
-                        <div class="alert alert-{% if analysis.success_score >= 7.5 %}success{% elif analysis.success_score >= 5 %}warning{% else %}danger{% endif %}">
-                            <h5 class="alert-heading">Resumo Executivo</h5>
-                            <p>{{ analysis.report.summary }}</p>
-                        </div>
-                        {% endif %}
-                        
-                        {% if analysis.report.strengths %}
-                        <div class="card mb-3 border-success">
-                            <div class="card-header bg-success text-white">
-                                Pontos Fortes
-                            </div>
-                            <div class="card-body">
-                                <ul class="mb-0">
-                                    {% for strength in analysis.report.strengths %}
-                                    <li>{{ strength }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if analysis.report.weaknesses %}
-                        <div class="card mb-3 border-danger">
-                            <div class="card-header bg-danger text-white">
-                                Áreas para Melhoria
-                            </div>
-                            <div class="card-body">
-                                <ul class="mb-0">
-                                    {% for weakness in analysis.report.weaknesses %}
-                                    <li>{{ weakness }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if analysis.report and analysis.report.recommendations %}
-                        <div class="card border-primary mt-4">
-                            <div class="card-header bg-primary text-white">
-                                <i class="fas fa-lightbulb me-2"></i> Recomendações
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted mb-2"> <!-- <strong>Status:</strong> -->{{ analysis.report.status }}</p>
-                                <hr>
-                                <ul class="mb-0 ps-3">
-                                    {% for recommendation in analysis.report.recommendations %}
-                                        <li>{{ recommendation }}</li>
-                                    {% empty %}
-                                        <li>Nenhuma recomendação disponível.</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                    {% endif %}
-                    
+<div class="card">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">Análise #{{ analysis.id }}</h3>
+        <span class="badge rounded-pill bg-light text-dark px-3 py-2">Score {{ analysis.success_score|floatformat:1 }}/10</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <h5 class="mb-3">Resumo executivo</h5>
+                <div class="p-3 rounded border bg-light">
+                    {{ analysis.report.summary|default:"Relatório indisponível." }}
+                </div>
 
+                {% if analysis.report.strengths %}
+                <div class="mt-4">
+                    <h6>Pontos fortes</h6>
+                    <ul class="list-group">
+                        {% for strength in analysis.report.strengths %}
+                        <li class="list-group-item">{{ strength }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
 
+                {% if analysis.report.weaknesses %}
+                <div class="mt-4">
+                    <h6>Riscos e lacunas</h6>
+                    <ul class="list-group">
+                        {% for weakness in analysis.report.weaknesses %}
+                        <li class="list-group-item">{{ weakness }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
 
+                {% if analysis.report.recommendations %}
+                <div class="mt-4">
+                    <h6>Plano de ação recomendado</h6>
+                    <ol class="list-group list-group-numbered">
+                        {% for recommendation in analysis.report.recommendations %}
+                        <li class="list-group-item">{{ recommendation }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                {% endif %}
+
+                {% if analysis.report.investor_pitch %}
+                <div class="mt-4 p-3 border rounded investor-thesis">
+                    <h5 class="mb-2"><i class="fas fa-hand-holding-dollar me-2"></i>Tese para investidores</h5>
+                    <p class="mb-2"><strong>Tese:</strong> {{ analysis.report.investor_pitch.investment_thesis }}</p>
+                    <p class="mb-2"><strong>Prontidão:</strong> {{ analysis.report.investor_pitch.funding_readiness }}</p>
+                    <p class="mb-3"><strong>Ticket sugerido:</strong> {{ analysis.report.investor_pitch.suggested_ticket }}</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Uso de capital</h6>
+                            <ul>
+                                {% for item in analysis.report.investor_pitch.capital_use_plan %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Mitigação de risco</h6>
+                            <ul>
+                                {% for item in analysis.report.investor_pitch.risk_mitigation %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="col-md-4">
-                    <div class="card mb-4">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0">Dados Financeiros</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="financial-metrics">
-                                <div class="metric mb-3">
-                                    <h6>Receita Anual</h6>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" role="progressbar" 
-                                             style="width: {% widthratio analysis.revenue 1000000 100 %}%">
-                                            AOA {{ analysis.revenue|floatformat:2 }}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="metric mb-3">
-                                    <h6>Taxa de Crescimento</h6>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-info" role="progressbar" 
-                                             style="width: {{ analysis.growth_rate }}%">
-                                            {{ analysis.growth_rate|floatformat:2 }}%
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="metric">
-                                    <h6>Margem de Lucro</h6>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-warning" role="progressbar" 
-                                             style="width: {{ analysis.profit_margin }}%">
-                                            {{ analysis.profit_margin|floatformat:2 }}%
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card mb-3">
+                    <div class="card-header">Indicadores financeiros</div>
+                    <div class="card-body">
+                        <p><strong>Receita:</strong> AOA {{ analysis.revenue|floatformat:2 }}</p>
+                        <p><strong>Crescimento:</strong> {{ analysis.growth_rate|floatformat:2 }}%</p>
+                        <p class="mb-0"><strong>Margem:</strong> {{ analysis.profit_margin|floatformat:2 }}%</p>
                     </div>
-                    
-                    {% if analysis.audio_file or analysis.video_file %}
-                    <div class="card">
-                        <div class="card-header bg-secondary text-white">
-                            <h5 class="mb-0">Mídias do Pitch</h5>
-                        </div>
-                        <div class="card-body">
-                            {% if analysis.audio_file %}
-                            <div class="mb-3">
-                                <h6>Áudio</h6>
-                                <audio controls class="w-100">
-                                    <source src="{{ analysis.audio_file.url }}" type="audio/mpeg">
-                                    Seu navegador não suporta o elemento de áudio.
-                                </audio>
-                            </div>
-                            {% endif %}
-                            
-                            {% if analysis.video_file %}
-                            <div>
-                                <h6>Vídeo</h6>
-                                <video controls class="w-100">
-                                    <source src="{{ analysis.video_file.url }}" type="video/mp4">
-                                    Seu navegador não suporta o elemento de vídeo.
-                                </video>
-                            </div>
-                            {% endif %}
-                        </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Informações da execução</div>
+                    <div class="card-body">
+                        <p><strong>Data:</strong> {{ analysis.created_at|date:"d/m/Y H:i" }}</p>
+                        <p><strong>Status:</strong> {{ analysis.report.status|default:"N/A" }}</p>
+                        <p class="mb-0"><strong>Motor:</strong> {{ analysis.metadata.analysis_engine_used|default:"local" }}</p>
                     </div>
-                    {% endif %}
                 </div>
             </div>
-            
-            <div class="mt-4 text-center">
-                <a href="{% url 'pitch_form' %}" class="btn btn-primary">
-                    <i class="fas fa-plus mr-2"></i> Nova Análise
-                </a>
-                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                    <i class="fas fa-home mr-2"></i> Voltar ao Dashboard
-                </a>
-            </div>
         </div>
-        <div class="card-footer text-muted">
-            Análise realizada em {{ analysis.created_at|date:"d/m/Y H:i" }}
+
+        <div class="mt-4 text-center">
+            <a href="{% url 'pitch_form' %}" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-1"></i>Nova Análise
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-home me-1"></i>Voltar ao Painel
+            </a>
         </div>
     </div>
 </div>
