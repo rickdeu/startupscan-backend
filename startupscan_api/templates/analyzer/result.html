@@ -113,7 +113,7 @@
                         {% if active_video_job and active_video_job.status %}
                         <div
                             id="videoGenerationStatusCard"
-                            class="alert {% if active_video_job.status == 'FAILED' %}alert-danger{% elif active_video_job.status == 'COMPLETED' %}alert-success{% else %}alert-info{% endif %} mb-3"
+                            class="border rounded p-3 mb-3 bg-transparent {% if active_video_job.status == 'FAILED' %}border-danger{% elif active_video_job.status == 'COMPLETED' %}border-success{% else %}border-info{% endif %}"
                             data-job-id="{{ active_video_job_id }}"
                             data-progress-url-template="{{ video_progress_url_template }}"
                             data-analysis-id="{{ analysis.id }}"
@@ -374,11 +374,17 @@
                 else if (currentStatus === "COMPLETED") bar.classList.add("bg-success");
                 else bar.classList.add("bg-info", "progress-bar-striped", "progress-bar-animated");
             }
-            card.classList.remove("alert-info", "alert-success", "alert-danger");
-            card.classList.add(currentStatus === "FAILED" ? "alert-danger" : currentStatus === "COMPLETED" ? "alert-success" : "alert-info");
+            card.classList.remove("border-info", "border-success", "border-danger");
+            card.classList.add(currentStatus === "FAILED" ? "border-danger" : currentStatus === "COMPLETED" ? "border-success" : "border-info");
 
             if (currentStatus === "COMPLETED") {
-                setTimeout(function () { window.location.reload(); }, 1200);
+                // Remove imediatamente o bloco de status ao concluir.
+                card.style.display = "none";
+                setTimeout(function () {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete("video_job_id");
+                    window.location.href = url.toString();
+                }, 120);
                 return true;
             }
             if (currentStatus === "FAILED") {

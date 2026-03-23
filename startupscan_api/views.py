@@ -1388,7 +1388,11 @@ class PitchResultsView(View):
         active_video_job = None
         if active_video_job_id:
             state = cache.get(_video_generation_cache_key(active_video_job_id))
-            if state and int(state.get("analysis_id") or 0) == int(analysis.id):
+            if (
+                state
+                and int(state.get("analysis_id") or 0) == int(analysis.id)
+                and str(state.get("status", "")).upper() in {"PENDING", "RUNNING"}
+            ):
                 active_video_job = state
         return render(request, 'analyzer/result.html', {
             'analysis': analysis,
