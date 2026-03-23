@@ -109,6 +109,13 @@
                         <span class="badge bg-primary">{{ analysis.startup_name|default:"Startup" }}</span>
                     </div>
                     <div class="card-body">
+                        {% if analysis.presenter_face_image_file %}
+                        <div class="mb-2">
+                            <div class="small text-muted mb-1">Rosto do apresentador</div>
+                            <img src="{{ analysis.presenter_face_image_file.url }}" alt="Rosto do apresentador"
+                                 class="img-fluid rounded border" style="max-height: 180px; object-fit: cover;">
+                        </div>
+                        {% endif %}
                         {% if analysis.explainer_video_file %}
                         <video controls class="w-100 mb-2" style="max-height: 220px;">
                             <source src="{{ analysis.explainer_video_file.url }}" type="video/mp4">
@@ -120,8 +127,13 @@
                         {% else %}
                         <p class="mb-2">Ainda não foi gerado vídeo explicativo para esta análise.</p>
                         {% endif %}
-                        <form method="post" action="{% url 'pitch_explainer_video_generate' analysis.id %}">
+                        <form method="post" enctype="multipart/form-data" action="{% url 'pitch_explainer_video_generate' analysis.id %}">
                             {% csrf_token %}
+                            <label class="form-label mt-2">Imagem real do apresentador (rosto)</label>
+                            <input type="file" class="form-control form-control-sm mb-2" name="presenter_image" accept="image/*">
+                            <small class="text-muted d-block mb-2">
+                                A IA usa esta imagem como rosto da pessoa que fala no vídeo, com voz em português (preferência de sotaque angolano).
+                            </small>
                             <button class="btn btn-sm btn-primary w-100" type="submit">
                                 <i class="fas fa-video me-1"></i>{% if analysis.explainer_video_file %}Regenerar{% else %}Gerar{% endif %} vídeo explicativo
                             </button>
@@ -129,7 +141,8 @@
                         {% if analysis.metadata.explainer_video.engine_used %}
                         <small class="d-block mt-2 text-muted">
                             Motor criativo: {{ analysis.metadata.explainer_video.engine_used }} |
-                            Personagem: {{ analysis.metadata.explainer_video.character_name|default:analysis.startup_name }}
+                            Personagem: {{ analysis.metadata.explainer_video.character_name|default:analysis.startup_name }} |
+                            Voz: {{ analysis.metadata.explainer_video.voice_engine|default:"auto" }}
                         </small>
                         {% endif %}
                     </div>
