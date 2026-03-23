@@ -232,6 +232,7 @@ def _run_explainer_video_job(
     presenter_path: str | None = None,
     presenter_url: str | None = None,
     presenter_source_urls: list[str] | None = None,
+    generation_mode: str = "auto",
 ):
     temp_output = None
     try:
@@ -243,6 +244,7 @@ def _run_explainer_video_job(
             phase="inicializacao",
             message="Inicializando geração do vídeo explicativo",
             analysis_id=analysis_id,
+            generation_mode=generation_mode,
         )
 
         analysis = PitchAnalysis.objects.get(id=analysis_id)
@@ -291,6 +293,7 @@ def _run_explainer_video_job(
             presenter_image_path=presenter_path,
             presenter_image_url=presenter_url,
             presenter_source_urls=presenter_source_urls or [],
+            generation_mode=generation_mode,
             progress_callback=_video_progress_callback,
         )
 
@@ -309,6 +312,7 @@ def _run_explainer_video_job(
         metadata["explainer_video"] = video_meta
         metadata["explainer_video_job_id"] = job_id
         metadata["explainer_video_job_status"] = "COMPLETED"
+        metadata["explainer_video_mode"] = generation_mode
         metadata.pop("explainer_video_job_error", None)
         analysis.metadata = metadata
         analysis.save(update_fields=["explainer_video_file", "metadata", "updated_at"])
@@ -322,6 +326,7 @@ def _run_explainer_video_job(
             result={
                 "analysis_id": analysis_id,
                 "video_url": analysis.explainer_video_file.url if analysis.explainer_video_file else "",
+                "generation_mode": generation_mode,
             },
         )
     except Exception as exc:
@@ -335,6 +340,7 @@ def _run_explainer_video_job(
             metadata = analysis.metadata or {}
             metadata["explainer_video_job_id"] = job_id
             metadata["explainer_video_job_status"] = "FAILED"
+            metadata["explainer_video_mode"] = generation_mode
             metadata["explainer_video_job_error"] = error_detail
             explainer_video_meta = metadata.get("explainer_video")
             if not isinstance(explainer_video_meta, dict):
@@ -368,6 +374,7 @@ def _run_explainer_video_job(
             did_error=did_error,
             local_error=local_error,
             analysis_id=analysis_id,
+            generation_mode=generation_mode,
         )
     finally:
         if temp_output:
@@ -384,6 +391,7 @@ def _start_explainer_video_job(
     presenter_path: str | None = None,
     presenter_url: str | None = None,
     presenter_source_urls: list[str] | None = None,
+    generation_mode: str = "auto",
 ) -> str:
     job_id = str(uuid.uuid4())
     _write_video_generation_state(
@@ -393,6 +401,7 @@ def _start_explainer_video_job(
         phase="fila",
         message="Job de vídeo criado, aguardando execução",
         analysis_id=analysis.id,
+        generation_mode=generation_mode,
     )
     thread = threading.Thread(
         target=_run_explainer_video_job,
@@ -402,6 +411,7 @@ def _start_explainer_video_job(
             "presenter_path": presenter_path,
             "presenter_url": presenter_url,
             "presenter_source_urls": presenter_source_urls or [],
+            "generation_mode": generation_mode,
         },
         daemon=True,
     )
@@ -1462,6 +1472,9 @@ class PitchResultsView(View):
     """Página de resultados da análise"""
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        selected_video_mode = str((analysis.metadata or {}).get("explainer_video_mode", "auto") or "auto").strip().lower()
+        if selected_video_mode not in {"auto", "did_only", "local_only"}:
+            selected_video_mode = "auto"
         active_video_job_id = (request.GET.get("video_job_id", "") or "").strip()
         if not active_video_job_id:
             active_video_job_id = str((analysis.metadata or {}).get("explainer_video_job_id", "") or "").strip()
@@ -1478,6 +1491,7 @@ class PitchResultsView(View):
             'analysis': analysis,
             'active_video_job_id': active_video_job_id,
             'active_video_job': active_video_job or {},
+            'selected_video_mode': selected_video_mode,
         })
 
 
@@ -1633,6 +1647,11 @@ class PitchExplainerVideoGenerateView(View):
             return redirect("dashboard")
 
         try:
+            video_mode = (request.POST.get("video_mode", "auto") or "auto").strip().lower()
+            allowed_modes = {"auto", "did_only", "local_only"}
+            if video_mode not in allowed_modes:
+                video_mode = "auto"
+
             existing_job_id = str((analysis.metadata or {}).get("explainer_video_job_id", "") or "").strip()
             if existing_job_id:
                 existing_state = cache.get(_video_generation_cache_key(existing_job_id))
@@ -1670,16 +1689,25 @@ class PitchExplainerVideoGenerateView(View):
                     startup_name=analysis.startup_name or "Startup",
                 )
 
+            if video_mode == "did_only" and not presenter_url:
+                messages.error(
+                    request,
+                    "No modo D-ID, envie uma imagem real do apresentador antes de gerar o vídeo.",
+                )
+                return redirect("pitch_results", analysis_id=analysis.id)
+
             metadata = analysis.metadata or {}
             job_id = _start_explainer_video_job(
                 analysis=analysis,
                 presenter_path=presenter_path,
                 presenter_url=presenter_url,
                 presenter_source_urls=presenter_source_urls,
+                generation_mode=video_mode,
             )
             metadata["explainer_video_job_id"] = job_id
             metadata["explainer_video_job_status"] = "PENDING"
             metadata["explainer_video_source_images"] = len(presenter_source_urls or [])
+            metadata["explainer_video_mode"] = video_mode
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
             messages.success(request, "Geração de vídeo iniciada. Acompanhe o progresso nesta página.")
