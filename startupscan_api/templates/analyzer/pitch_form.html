@@ -9,6 +9,16 @@
         <h2 class="mb-0">Submeter Pitch Multimodal</h2>
     </div>
     <div class="card-body">
+        {% if general_errors %}
+        <div class="alert alert-danger mb-3">
+            <div class="fw-semibold mb-1">Não foi possível validar a startup:</div>
+            <ul class="mb-0">
+                {% for err in general_errors %}
+                <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
 
@@ -16,19 +26,22 @@
             <div class="row g-3">
                 <div class="col-md-5">
                     <label class="form-label" for="startup_name">Nome da Startup</label>
-                    <input class="form-control" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}">
+                    <input class="form-control {% if errors.startup_name %}is-invalid{% endif %}" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}">
+                    {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="industry">Sector</label>
-                    <select class="form-select" id="industry" name="industry">
+                    <select class="form-select {% if errors.industry %}is-invalid{% endif %}" id="industry" name="industry">
                         {% for value, label in industries %}
                         <option value="{{ value }}" {% if form_data.industry|default:'tech' == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
+                    {% if errors.industry %}<div class="invalid-feedback">{{ errors.industry }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="contact_email">E-mail de contacto</label>
-                    <input class="form-control" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}">
+                    <input class="form-control {% if errors.contact_email %}is-invalid{% endif %}" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}">
+                    {% if errors.contact_email %}<div class="invalid-feedback">{{ errors.contact_email }}</div>{% endif %}
                 </div>
             </div>
 
@@ -55,7 +68,7 @@
 
             <div class="row g-3 mt-2">
                 <div class="col-lg-6">
-                    <div class="border rounded p-3">
+                    <div class="border rounded p-3 {% if errors.audio_file %}border-danger{% endif %}">
                         <label class="form-label" for="audio">Áudio (upload ou gravação)</label>
                         <input class="form-control mb-2 {% if errors.audio_file %}is-invalid{% endif %}" type="file" id="audio" name="audio" accept="audio/*">
                         <div class="d-flex gap-2 mb-2">
@@ -67,7 +80,7 @@
                     </div>
                 </div>
                 <div class="col-lg-6">
-                    <div class="border rounded p-3">
+                    <div class="border rounded p-3 {% if errors.video_file %}border-danger{% endif %}">
                         <label class="form-label" for="video">Vídeo (upload ou gravação)</label>
                         <input class="form-control mb-2 {% if errors.video_file %}is-invalid{% endif %}" type="file" id="video" name="video" accept="video/*">
                         <div class="d-flex gap-2 mb-2">
@@ -103,10 +116,11 @@
             <div class="row g-3 mt-2">
                 <div class="col-md-6">
                     <label class="form-label" for="model_source">Motor de análise</label>
-                    <select class="form-select" id="model_source" name="model_source">
+                    <select class="form-select {% if errors.model_source %}is-invalid{% endif %}" id="model_source" name="model_source">
                         <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>Modelo treinado localmente</option>
                         <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>Modelo GPT (fallback automático)</option>
                     </select>
+                    {% if errors.model_source %}<div class="invalid-feedback">{{ errors.model_source }}</div>{% endif %}
                 </div>
                 <div class="col-md-6 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary btn-lg w-100">
@@ -178,5 +192,13 @@ async function setupRecorder(config) {
 
 setupRecorder({ kind: "audio", startBtnId: "startAudioBtn", stopBtnId: "stopAudioBtn", inputId: "audio", previewId: "audioPreview" });
 setupRecorder({ kind: "video", startBtnId: "startVideoBtn", stopBtnId: "stopVideoBtn", inputId: "video", previewId: "videoPreview" });
+
+(function () {
+    const firstInvalid = document.querySelector(".is-invalid");
+    if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+        try { firstInvalid.focus(); } catch (_) {}
+    }
+})();
 </script>
 {% endblock %}
