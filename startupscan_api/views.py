@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import tempfile
+import threading
+import uuid
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -22,7 +24,7 @@ from startupscan_api.services.model_training import (
     predict_pitch_score,
     train_model_task,
 )
-from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
+from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict, train_and_evaluate
 from startupscan_api.util.file_management import TempFileManager
 from startupscan_api.services.model_registry import (
     get_active_model_name,
@@ -38,10 +40,11 @@ from startupscan_api.services.pitch_builder import generate_pitch_from_idea, exp
 import joblib
 from celery.result import AsyncResult
 from django.core.management import call_command
+from django.core.cache import cache
 from django.db.models import Avg, Count, Max
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
-from django.http import FileResponse
+from django.http import FileResponse, JsonResponse
 
 from .utils import (
     prepare_features,
@@ -120,6 +123,137 @@ def _run_training_for_model(model_name, dataset_source="default"):
 
     call_command("train_model", *cmd_args)
     return model_path
+
+
+MODEL_TRAINING_CACHE_PREFIX = "model_training_job"
+MODEL_TRAINING_TTL_SECONDS = 60 * 60 * 24
+
+
+def _model_training_cache_key(job_id: str) -> str:
+    return f"{MODEL_TRAINING_CACHE_PREFIX}:{job_id}"
+
+
+def _write_model_training_state(job_id: str, **updates):
+    key = _model_training_cache_key(job_id)
+    state = cache.get(key) or {
+        "job_id": job_id,
+        "status": "PENDING",
+        "progress": 0,
+        "message": "Aguardando início do treino",
+    }
+    state.update(updates)
+    state["updated_at"] = timezone.now().isoformat()
+    cache.set(key, state, MODEL_TRAINING_TTL_SECONDS)
+    return state
+
+
+def _normalize_model_name(raw_model_name: str, action: str) -> str:
+    raw_model_name = (raw_model_name or "").strip()
+    if action == "train_new":
+        return _safe_slug_model_name(raw_model_name)
+    if raw_model_name.endswith(".pkl"):
+        return raw_model_name
+    return _safe_slug_model_name(raw_model_name)
+
+
+def _run_model_training_job(job_id: str, action: str, model_name: str = "", dataset_source: str = "default"):
+    try:
+        _write_model_training_state(job_id, status="RUNNING", progress=5, message="Inicializando job de treino")
+
+        if action == "fetch_external":
+            _write_model_training_state(job_id, progress=15, message="Importando dataset externo")
+            call_command("fetch_external_dataset", "--combine-with-default", "--output-prefix", "enhanced")
+            _write_model_training_state(
+                job_id,
+                status="COMPLETED",
+                progress=100,
+                message="Dataset externo importado com sucesso",
+                result={"action": "fetch_external"},
+            )
+            return
+
+        normalized_model_name = _normalize_model_name(model_name, action)
+        model_path = get_model_path(normalized_model_name)
+        _write_model_training_state(job_id, progress=12, message=f"Preparando treino para {normalized_model_name}")
+
+        if dataset_source == "enhanced":
+            pitches_path = Path(settings.DATA_DIR) / "pitches_dataset_enhanced.csv"
+            financials_path = Path(settings.DATA_DIR) / "financials_dataset_enhanced.csv"
+            if not pitches_path.exists() or not financials_path.exists():
+                _write_model_training_state(job_id, progress=18, message="Dataset enhanced não encontrado; usando padrão")
+                pitches_path = Path(settings.DATA_DIR) / "pitches_dataset.csv"
+                financials_path = Path(settings.DATA_DIR) / "financials_dataset.csv"
+        else:
+            pitches_path = Path(settings.DATA_DIR) / "pitches_dataset.csv"
+            financials_path = Path(settings.DATA_DIR) / "financials_dataset.csv"
+
+        _write_model_training_state(job_id, progress=20, message="Carregando datasets para treino")
+        pitches_df = pd.read_csv(pitches_path)
+        financial_df = pd.read_csv(financials_path)
+
+        def _progress_callback(progress_pct, message):
+            bounded = max(20, min(95, int(progress_pct)))
+            _write_model_training_state(job_id, status="RUNNING", progress=bounded, message=message)
+
+        _write_model_training_state(job_id, progress=25, message="Treinamento iniciado")
+        model_bundle, metrics = train_and_evaluate(
+            pitches_df,
+            financial_df,
+            progress_callback=_progress_callback,
+        )
+
+        _write_model_training_state(job_id, progress=96, message="Salvando modelo e métricas")
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        joblib.dump(model_bundle, model_path)
+        _write_json_file(get_metrics_path(normalized_model_name), metrics)
+
+        if action == "train_new":
+            set_active_model(normalized_model_name)
+
+        _write_model_training_state(
+            job_id,
+            status="COMPLETED",
+            progress=100,
+            message=f"Treino concluído para {normalized_model_name}",
+            result={
+                "model_name": normalized_model_name,
+                "metrics": metrics,
+                "action": action,
+            },
+        )
+    except Exception as exc:
+        _write_model_training_state(
+            job_id,
+            status="FAILED",
+            progress=100,
+            message=f"Falha no treino: {str(exc)}",
+            error=str(exc),
+        )
+
+
+def _start_model_training_job(action: str, model_name: str = "", dataset_source: str = "default") -> str:
+    job_id = str(uuid.uuid4())
+    _write_model_training_state(
+        job_id,
+        status="PENDING",
+        progress=0,
+        message="Job criado, aguardando execução",
+        action=action,
+        model_name=model_name,
+        dataset_source=dataset_source,
+    )
+    thread = threading.Thread(
+        target=_run_model_training_job,
+        kwargs={
+            "job_id": job_id,
+            "action": action,
+            "model_name": model_name,
+            "dataset_source": dataset_source,
+        },
+        daemon=True,
+    )
+    thread.start()
+    return job_id
 
 
 class StartupPitchAnalyzer(APIView):
@@ -1079,6 +1213,8 @@ class ModelManagementView(LoginRequiredMixin, View):
 
     def get(self, request):
         models = _list_available_models()
+        active_job_id = request.GET.get("job_id", "").strip()
+        active_job = cache.get(_model_training_cache_key(active_job_id)) if active_job_id else None
         context = {
             "models": models,
             "active_model": get_active_model_name(),
@@ -1086,6 +1222,8 @@ class ModelManagementView(LoginRequiredMixin, View):
                 (Path(settings.DATA_DIR) / "pitches_dataset_enhanced.csv").exists()
                 and (Path(settings.DATA_DIR) / "financials_dataset_enhanced.csv").exists()
             ),
+            "active_job_id": active_job_id,
+            "active_job": active_job or {},
         }
         return render(request, "analyzer/model_management.html", context)
 
@@ -1094,23 +1232,36 @@ class ModelManagementView(LoginRequiredMixin, View):
 
         try:
             if action == "fetch_external":
-                call_command("fetch_external_dataset", "--combine-with-default", "--output-prefix", "enhanced")
-                messages.success(request, "Dataset externo importado e combinado com sucesso.")
+                job_id = _start_model_training_job(action="fetch_external")
+                messages.success(request, "Importação de dataset iniciada. Acompanhe o progresso em tempo real.")
+                return redirect(f"{request.path}?job_id={job_id}")
 
             elif action == "train_new":
-                model_name = _safe_slug_model_name(request.POST.get("model_name"))
+                model_name_raw = request.POST.get("model_name", "").strip()
+                if not model_name_raw:
+                    raise ValueError("Nome do modelo é obrigatório para novo treino.")
                 dataset_source = request.POST.get("dataset_source", "default")
-                _run_training_for_model(model_name, dataset_source=dataset_source)
-                set_active_model(model_name)
-                messages.success(request, f"Novo modelo treinado e ativado: {model_name}")
+                normalized_name = _safe_slug_model_name(model_name_raw)
+                job_id = _start_model_training_job(
+                    action="train_new",
+                    model_name=model_name_raw,
+                    dataset_source=dataset_source,
+                )
+                messages.success(request, f"Treino do novo modelo iniciado: {normalized_name}")
+                return redirect(f"{request.path}?job_id={job_id}")
 
             elif action == "retrain":
                 model_name = request.POST.get("model_name", "")
                 dataset_source = request.POST.get("dataset_source", "default")
                 if not model_name:
                     raise ValueError("Modelo não informado para retreino.")
-                _run_training_for_model(model_name, dataset_source=dataset_source)
-                messages.success(request, f"Modelo retreinado com sucesso: {model_name}")
+                job_id = _start_model_training_job(
+                    action="retrain",
+                    model_name=model_name,
+                    dataset_source=dataset_source,
+                )
+                messages.success(request, f"Retreino iniciado para: {model_name}")
+                return redirect(f"{request.path}?job_id={job_id}")
 
             elif action == "set_active":
                 model_name = request.POST.get("model_name", "")
@@ -1170,6 +1321,16 @@ class ModelManagementView(LoginRequiredMixin, View):
             messages.error(request, f"Falha ao executar ação: {str(exc)}")
 
         return redirect("model_management")
+
+
+class ModelTrainingProgressView(LoginRequiredMixin, View):
+    """Endpoint de progresso em tempo real para jobs de treino de modelo."""
+
+    def get(self, request, job_id):
+        state = cache.get(_model_training_cache_key(job_id))
+        if not state:
+            return JsonResponse({"error": "Job não encontrado"}, status=404)
+        return JsonResponse(state, status=200)
 
 
 class InvestorDashboardView(View):

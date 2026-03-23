@@ -12,6 +12,29 @@
     <span class="badge rounded-pill bg-primary">Ativo: {{ active_model }}</span>
 </div>
 
+<div id="modelTrainingProgressCard"
+     class="card mb-4 {% if not active_job_id %}d-none{% endif %}"
+     data-job-id="{{ active_job_id }}"
+     data-status-url-template="{% url 'model_training_progress' 'JOB_ID' %}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-spinner fa-spin me-2"></i>Progresso de Treinamento</span>
+        <span id="trainingStatusBadge" class="badge bg-info">{{ active_job.status|default:"PENDING" }}</span>
+    </div>
+    <div class="card-body">
+        <div class="progress mb-2" role="progressbar" aria-label="Training progress" aria-valuemin="0" aria-valuemax="100">
+            <div id="trainingProgressBar"
+                 class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="width: {{ active_job.progress|default:0 }}%">
+                {{ active_job.progress|default:0 }}%
+            </div>
+        </div>
+        <p id="trainingProgressMessage" class="mb-1">{{ active_job.message|default:"Aguardando início..." }}</p>
+        <small id="trainingProgressMeta" class="text-muted">
+            Job: <code>{{ active_job_id|default:"-" }}</code>
+        </small>
+    </div>
+</div>
+
 <div class="row g-4 mb-4">
     <div class="col-lg-6">
         <div class="card h-100">
@@ -129,4 +152,69 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function () {
+        const card = document.getElementById("modelTrainingProgressCard");
+        if (!card || card.classList.contains("d-none")) return;
+
+        const jobId = card.dataset.jobId;
+        const templateUrl = card.dataset.statusUrlTemplate || "";
+        if (!jobId || !templateUrl.includes("JOB_ID")) return;
+
+        const statusUrl = templateUrl.replace("JOB_ID", encodeURIComponent(jobId));
+        const bar = document.getElementById("trainingProgressBar");
+        const msg = document.getElementById("trainingProgressMessage");
+        const badge = document.getElementById("trainingStatusBadge");
+        const meta = document.getElementById("trainingProgressMeta");
+        const refreshBase = "{% url 'model_management' %}";
+        let polling = null;
+
+        function clampProgress(v) {
+            const n = Number(v || 0);
+            return Math.max(0, Math.min(100, Math.round(n)));
+        }
+
+        function setBadge(status) {
+            badge.className = "badge";
+            if (status === "COMPLETED") badge.classList.add("bg-success");
+            else if (status === "FAILED") badge.classList.add("bg-danger");
+            else if (status === "RUNNING") badge.classList.add("bg-primary");
+            else badge.classList.add("bg-info");
+            badge.textContent = status || "PENDING";
+        }
+
+        async function tick() {
+            try {
+                const resp = await fetch(statusUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+                if (!resp.ok) throw new Error("status_unavailable");
+                const data = await resp.json();
+                const progress = clampProgress(data.progress);
+
+                bar.style.width = `${progress}%`;
+                bar.textContent = `${progress}%`;
+                msg.textContent = data.message || "Processando...";
+                setBadge(data.status || "RUNNING");
+                meta.textContent = `Job: ${jobId} | Atualizado: ${data.updated_at || "-"}`;
+
+                if (data.status === "COMPLETED" || data.status === "FAILED") {
+                    clearInterval(polling);
+                    bar.classList.remove("progress-bar-animated");
+                    if (data.status === "COMPLETED") {
+                        setTimeout(() => { window.location.href = refreshBase; }, 1200);
+                    }
+                }
+            } catch (_) {
+                clearInterval(polling);
+                setBadge("UNAVAILABLE");
+                msg.textContent = "Não foi possível obter progresso em tempo real.";
+            }
+        }
+
+        tick();
+        polling = setInterval(tick, 1500);
+    })();
+</script>
 {% endblock %}
