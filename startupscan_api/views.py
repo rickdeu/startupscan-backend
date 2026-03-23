@@ -45,11 +45,6 @@ from startupscan_api.services.pitch_builder import (
     get_pitch_design_template_choices,
     normalize_pitch_design_options,
 )
-from startupscan_api.services.pitch_video import (
-    build_did_presenter_source_urls,
-    detect_presenter_gender,
-    generate_explainer_video,
-)
 
 import joblib
 try:
@@ -98,6 +93,24 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 INTEREST_STATUS_LABELS = dict(InvestorConnectionInterest.STATUS_CHOICES)
+
+
+def _build_did_presenter_sources_lazy(*args, **kwargs):
+    from startupscan_api.services.pitch_video import build_did_presenter_source_urls
+
+    return build_did_presenter_source_urls(*args, **kwargs)
+
+
+def _detect_presenter_gender_lazy(*args, **kwargs):
+    from startupscan_api.services.pitch_video import detect_presenter_gender
+
+    return detect_presenter_gender(*args, **kwargs)
+
+
+def _generate_explainer_video_lazy(*args, **kwargs):
+    from startupscan_api.services.pitch_video import generate_explainer_video
+
+    return generate_explainer_video(*args, **kwargs)
 
 
 def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:
@@ -372,7 +385,7 @@ def _run_explainer_video_job(
                 message=message or "Processando vídeo...",
             )
 
-        video_meta = generate_explainer_video(
+        video_meta = _generate_explainer_video_lazy(
             analysis,
             temp_output,
             presenter_image_path=presenter_path,
@@ -2057,7 +2070,7 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
                     # Modo D-ID estrito: usa a imagem real original enviada (sem cenário/palco gerado pelo sistema).
                     presenter_source_urls = [presenter_url]
                 else:
-                    presenter_source_urls = build_did_presenter_source_urls(
+                    presenter_source_urls = _build_did_presenter_sources_lazy(
                         presenter_image_path=presenter_path,
                         presenter_image_url=presenter_url,
                         startup_name=analysis.startup_name or "Startup",
@@ -2131,7 +2144,7 @@ class PitchPresenterGenderDetectView(RoleRequiredMixin, View):
                     tmp_file.write(chunk)
                 tmp_path = tmp_file.name
 
-            detected = detect_presenter_gender(tmp_path)
+            detected = _detect_presenter_gender_lazy(tmp_path)
             gender = str(detected.get("gender", "unknown") or "unknown").lower()
             if gender not in {"male", "female", "unknown"}:
                 gender = "unknown"
