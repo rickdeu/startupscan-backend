@@ -1162,6 +1162,47 @@ def build_did_presenter_source_urls(
         return []
 
 
+def build_did_real_image_only_source_url(
+    presenter_image_path: str | None,
+    presenter_image_url: str | None,
+) -> str | None:
+    """
+    Gera uma fonte visual "real-only" para o D-ID:
+    - sem cenário artificial;
+    - sem palco ou composição extra;
+    - apenas recorte real do apresentador para priorizar lip-sync.
+    """
+    if not presenter_image_path or not presenter_image_url:
+        return None
+    if not os.path.exists(presenter_image_path):
+        return None
+
+    try:
+        presenter_image = _prepare_presenter_image(presenter_image_path)
+        if presenter_image is None:
+            return presenter_image_url
+
+        face_patch = _extract_face_patch(presenter_image)
+        source_dir = os.path.dirname(presenter_image_path)
+        base_name = Path(presenter_image_path).stem
+        file_name = f"{base_name}_did_real_only.png"
+        file_path = os.path.join(source_dir, file_name)
+        url_base = presenter_image_url.rsplit("/", 1)[0]
+
+        # Sem fundo/cenário: usa somente imagem real enquadrada.
+        if face_patch is not None:
+            source_img = ImageOps.fit(face_patch, (1024, 1024), method=Image.Resampling.LANCZOS)
+        else:
+            source_img = ImageOps.fit(presenter_image, (1024, 1024), method=Image.Resampling.LANCZOS)
+        source_img = source_img.filter(ImageFilter.SMOOTH_MORE)
+
+        os.makedirs(source_dir, exist_ok=True)
+        source_img.save(file_path, format="PNG", optimize=True)
+        return f"{url_base}/{file_name}"
+    except Exception:
+        return presenter_image_url
+
+
 def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):
     """Cria efeito de plateia grande ao fundo para cenário de palestra."""
     base_y = height - 24
