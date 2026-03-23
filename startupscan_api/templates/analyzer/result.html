@@ -301,12 +301,37 @@
             <a href="{% url 'pitch_report_pdf' analysis.id %}" class="btn btn-outline-primary me-2">
                 <i class="fas fa-file-pdf me-1"></i>Baixar Relatório PDF
             </a>
-            <a href="{% url 'pitch_investor_pdf' analysis.id %}" class="btn btn-outline-success me-2">
-                <i class="fas fa-file-powerpoint me-1"></i>Gerar Pitch PDF (Slides)
-            </a>
             <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
                 <i class="fas fa-home me-1"></i>Voltar ao Painel
             </a>
+        </div>
+        <div class="card mt-3">
+            <div class="card-header">Pitch PDF (Slides) com Design</div>
+            <div class="card-body">
+                <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label mb-1">Modo de design</label>
+                        <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
+                            {% for value, label in pitch_design_mode_choices %}
+                            <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Template premium manual</label>
+                        <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate">
+                            {% for value, label in pitch_design_template_choices %}
+                            <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button type="submit" class="btn btn-outline-success">
+                            <i class="fas fa-file-powerpoint me-1"></i>Gerar Pitch PDF
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -457,6 +482,25 @@
         applyVisualProgress(visualProgress);
         if (phaseText) phaseText.textContent = phaseLabel(currentPhase);
         setTimeout(poll, 1000);
+    })();
+
+    (function () {
+        const modeSelect = document.getElementById("resultPitchDesignMode");
+        const templateSelect = document.getElementById("resultPitchDesignTemplate");
+        if (!modeSelect || !templateSelect) return;
+
+        function syncTemplateState() {
+            const manual = (modeSelect.value || "") === "manual_premium";
+            templateSelect.disabled = !manual;
+            if (!manual) {
+                templateSelect.classList.add("opacity-75");
+            } else {
+                templateSelect.classList.remove("opacity-75");
+            }
+        }
+
+        modeSelect.addEventListener("change", syncTemplateState);
+        syncTemplateState();
     })();
 </script>
 {% endblock %}
