@@ -289,7 +289,7 @@
                                 <option value="auto" {% if selected_video_mode == 'auto' %}selected{% endif %}>D-ID + fallback local (recomendado)</option>
                                 <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>Apenas D-ID (imagem real a falar, sem fundo/cenário)</option>
                                 <option value="local_only" {% if selected_video_mode == 'local_only' %}selected{% endif %}>Apenas geração local</option>
-                                <option value="canva_capcut" {% if selected_video_mode == 'canva_capcut' %}selected{% endif %}>Canva + CapCut (guia manual passo a passo)</option>
+                                <option value="canva_capcut" {% if selected_video_mode == 'canva_capcut' %}selected{% endif %}>Canva + CapCut Auto (roteiro + vídeo)</option>
                             </select>
                             <label class="form-label mt-2">Imagem real do apresentador (rosto)</label>
                             <input id="presenterImageInput" type="file" class="form-control form-control-sm mb-2" name="presenter_image" accept="image/*">
@@ -340,7 +340,7 @@
                         </small>
                         {% endif %}
                         {% endif %}
-                        {% if analysis.metadata.explainer_video.mode == 'canva_capcut' %}
+                        {% if analysis.metadata.explainer_video.mode == 'canva_capcut' and analysis.metadata.explainer_video.generation_mode == 'canva_capcut' and not analysis.explainer_video_file %}
                         <div class="border rounded p-2 mt-3">
                             <div class="fw-semibold mb-2">{{ analysis.metadata.explainer_video.title|default:"Guia Canva + CapCut" }}</div>
                             <div class="small mb-2">
