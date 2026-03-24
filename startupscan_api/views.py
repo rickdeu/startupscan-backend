@@ -327,80 +327,6 @@ def _write_video_generation_state(job_id: str, **updates):
     return state
 
 
-def _build_canva_capcut_guide_from_analysis(analysis: PitchAnalysis) -> dict:
-    startup_name = (analysis.startup_name or f"Startup #{analysis.id}").strip()
-    report = analysis.report if isinstance(analysis.report, dict) else {}
-    summary = str(report.get("summary", "") or "").strip()
-    score = float(analysis.success_score or 0)
-    growth = float(analysis.growth_rate or 0)
-    margin = float(analysis.profit_margin or 0)
-    sector = analysis.get_industry_display() if hasattr(analysis, "get_industry_display") else str(analysis.industry or "Negócios")
-
-    base_message = (
-        f"Se você continuar desistindo, nunca vai saber até onde poderia chegar. "
-        f"{startup_name} já demonstrou potencial real com score {score:.1f}/10. "
-        f"Comece hoje, mesmo com medo."
-    )
-    if summary:
-        closing = (
-            f"{summary.split('.')[0].strip()}. "
-            f"Com crescimento de {growth:.1f}% e margem de {margin:.1f}%, esta ideia pode inspirar mais pessoas."
-        )
-    else:
-        closing = (
-            f"No setor de {sector}, {startup_name} mostra oportunidade concreta de evolução e impacto positivo."
-        )
-
-    script_text = f"{base_message} {closing}".strip()
-    return {
-        "mode": "canva_capcut",
-        "title": f"Guia prático Canva + CapCut para {startup_name}",
-        "steps": [
-            {
-                "title": "1. Criar o personagem (Canva)",
-                "details": [
-                    "Baixar e abrir o app Canva.",
-                    "Pesquisar por 'Avatar' ou 'Personagem'.",
-                    "Escolher um modelo cartoon.",
-                    "Personalizar rosto, roupa, cores e estilo para combinar com a startup.",
-                    "Exportar como imagem PNG (ou vídeo curto se preferir).",
-                ],
-            },
-            {
-                "title": "2. Gerar a voz (narração automática)",
-                "details": [
-                    "Usar ElevenLabs ou o gerador de voz do CapCut.",
-                    "Colar o roteiro pronto (abaixo).",
-                    "Escolher voz masculina ou feminina.",
-                    "Gerar e baixar o áudio final.",
-                ],
-            },
-            {
-                "title": "3. Animar e editar (CapCut)",
-                "details": [
-                    "Criar novo projeto no CapCut.",
-                    "Importar personagem e áudio.",
-                    "Aplicar opção 'Animar' para movimento natural.",
-                    "Ativar 'Auto captions' para legendas automáticas.",
-                    "Adicionar zoom e movimento suave para deixar mais dinâmico.",
-                ],
-            },
-            {
-                "title": "4. Fazer o personagem falar (opcional viral)",
-                "details": [
-                    "No CapCut usar 'Talking Photo' / 'Animate', ou usar Viggle AI.",
-                    "Sincronizar boca com o áudio gerado.",
-                    "Exportar em 1080p para melhor resultado em redes sociais.",
-                ],
-            },
-        ],
-        "apps": ["Canva", "CapCut", "ElevenLabs", "Viggle AI (opcional)"],
-        "script_theme": "Motivacao",
-        "script_text": script_text,
-        "script_example": "Se você continuar desistindo, nunca vai saber até onde poderia chegar. Comece hoje, mesmo com medo.",
-    }
-
-
 def _run_explainer_video_job(
     job_id: str,
     analysis_id: int,
@@ -424,30 +350,14 @@ def _run_explainer_video_job(
         )
 
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        canva_context_meta = {}
         if generation_mode == "canva_capcut":
-            guide_meta = _build_canva_capcut_guide_from_analysis(analysis)
-            metadata = analysis.metadata or {}
-            metadata["explainer_video"] = guide_meta
-            metadata["explainer_video_job_id"] = job_id
-            metadata["explainer_video_job_status"] = "COMPLETED"
-            metadata["explainer_video_mode"] = generation_mode
-            metadata["explainer_video_gender_choice"] = presenter_gender_choice
-            metadata.pop("explainer_video_job_error", None)
-            analysis.metadata = metadata
-            analysis.save(update_fields=["metadata", "updated_at"])
-            _write_video_generation_state(
-                job_id,
-                status="COMPLETED",
-                progress=100,
-                phase="concluido",
-                message="Guia Canva + CapCut gerado com sucesso",
-                result={
-                    "analysis_id": analysis_id,
-                    "generation_mode": generation_mode,
-                    "guide_title": guide_meta.get("title", ""),
-                },
-            )
-            return
+            try:
+                from startupscan_api.services.pitch_video import _canva_capcut_context_for_meta
+
+                canva_context_meta = _canva_capcut_context_for_meta(analysis)
+            except Exception:
+                canva_context_meta = {}
 
         media_root = settings.MEDIA_ROOT
         try:
@@ -511,6 +421,9 @@ def _run_explainer_video_job(
 
         metadata = analysis.metadata or {}
         metadata["explainer_video"] = video_meta
+        if generation_mode == "canva_capcut" and canva_context_meta:
+            if isinstance(metadata.get("explainer_video"), dict):
+                metadata["explainer_video"].update(canva_context_meta)
         metadata["explainer_video_job_id"] = job_id
         metadata["explainer_video_job_status"] = "COMPLETED"
         metadata["explainer_video_mode"] = generation_mode
@@ -2190,11 +2103,6 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
                     "No modo D-ID, a imagem precisa de URL pública HTTPS. Abra o sistema pelo link externo e tente novamente.",
                 )
                 return redirect("pitch_results", analysis_id=analysis.id)
-
-            if video_mode == "canva_capcut":
-                presenter_path = None
-                presenter_url = None
-                presenter_source_urls = []
 
             metadata = analysis.metadata or {}
             job_id = _start_explainer_video_job(
