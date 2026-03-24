@@ -1,25 +1,25 @@
 {% extends "analyzer/base.html" %}
 
-{% block topbar_title %}Resultado da Análise{% endblock %}
-{% block topbar_subtitle %}Diagnóstico automático com score, categorias e recomendações{% endblock %}
+{% block topbar_title %}{{ ui_text.result_topbar_title }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.result_topbar_subtitle }}{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-        <h3 class="mb-0">Análise #{{ analysis.id }}</h3>
-        <span class="badge rounded-pill bg-light text-dark px-3 py-2">Score {{ analysis.success_score|floatformat:1 }}/10</span>
+        <h3 class="mb-0">{{ ui_text.result_analysis_label }} #{{ analysis.id }}</h3>
+        <span class="badge rounded-pill bg-light text-dark px-3 py-2">{{ ui_text.score|default:"Score" }} {{ analysis.success_score|floatformat:1 }}/10</span>
     </div>
     <div class="card-body">
         <div class="row g-4">
             <div class="col-lg-8">
-                <h5 class="mb-3">Resumo executivo</h5>
+                <h5 class="mb-3">{{ ui_text.executive_summary|default:"Resumo executivo" }}</h5>
                 <div class="p-3 rounded border bg-light">
-                    {{ analysis.report.summary|default:"Relatório indisponível." }}
+                    {{ analysis.report.summary|default:ui_text.report_unavailable|default:"Relatorio indisponivel." }}
                 </div>
 
                 {% if analysis.report.strengths %}
                 <div class="mt-4">
-                    <h6>Pontos fortes</h6>
+                    <h6>{{ ui_text.strengths|default:"Pontos fortes" }}</h6>
                     <ul class="list-group">
                         {% for strength in analysis.report.strengths %}
                         <li class="list-group-item">{{ strength }}</li>
@@ -30,13 +30,13 @@
 
                 {% if analysis.report.category_scores %}
                 <div class="mt-4">
-                    <h6>Pontuação por categoria (0-10)</h6>
+                    <h6>{{ ui_text.category_score_0_10 }}</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-striped">
                             <thead>
                                 <tr>
-                                    <th>Categoria</th>
-                                    <th>Nota</th>
+                                    <th>{{ ui_text.category }}</th>
+                                    <th>{{ ui_text.score_note }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -54,7 +54,7 @@
 
                 {% if analysis.report.weaknesses %}
                 <div class="mt-4">
-                    <h6>Riscos e lacunas</h6>
+                    <h6>{{ ui_text.risks_and_gaps|default:"Riscos e lacunas" }}</h6>
                     <ul class="list-group">
                         {% for weakness in analysis.report.weaknesses %}
                         <li class="list-group-item">{{ weakness }}</li>
@@ -65,7 +65,7 @@
 
                 {% if analysis.report.recommendations %}
                 <div class="mt-4">
-                    <h6>Plano de ação recomendado</h6>
+                    <h6>{{ ui_text.recommended_action_plan|default:"Plano de acao recomendado" }}</h6>
                     <ol class="list-group list-group-numbered">
                         {% for recommendation in analysis.report.recommendations %}
                         <li class="list-group-item">{{ recommendation }}</li>
@@ -76,13 +76,13 @@
 
                 {% if analysis.report.investor_pitch %}
                 <div class="mt-4 p-3 border rounded investor-thesis">
-                    <h5 class="mb-2"><i class="fas fa-hand-holding-dollar me-2"></i>Tese para investidores</h5>
-                    <p class="mb-2"><strong>Tese:</strong> {{ analysis.report.investor_pitch.investment_thesis }}</p>
-                    <p class="mb-2"><strong>Prontidão:</strong> {{ analysis.report.investor_pitch.funding_readiness }}</p>
-                    <p class="mb-3"><strong>Ticket sugerido:</strong> {{ analysis.report.investor_pitch.suggested_ticket }}</p>
+                    <h5 class="mb-2"><i class="fas fa-hand-holding-dollar me-2"></i>{{ ui_text.investor_thesis_title }}</h5>
+                    <p class="mb-2"><strong>{{ ui_text.thesis_label }}:</strong> {{ analysis.report.investor_pitch.investment_thesis }}</p>
+                    <p class="mb-2"><strong>{{ ui_text.readiness_label }}:</strong> {{ analysis.report.investor_pitch.funding_readiness }}</p>
+                    <p class="mb-3"><strong>{{ ui_text.suggested_ticket }}:</strong> {{ analysis.report.investor_pitch.suggested_ticket }}</p>
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Uso de capital</h6>
+                            <h6>{{ ui_text.capital_use }}</h6>
                             <ul>
                                 {% for item in analysis.report.investor_pitch.capital_use_plan %}
                                 <li>{{ item }}</li>
@@ -90,7 +90,7 @@
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6>Mitigação de risco</h6>
+                            <h6>{{ ui_text.risk_mitigation }}</h6>
                             <ul>
                                 {% for item in analysis.report.investor_pitch.risk_mitigation %}
                                 <li>{{ item }}</li>
@@ -103,24 +103,24 @@
 
                 {% if can_send_interest_on_pitch %}
                 <div class="mt-4 p-3 border rounded">
-                    <h5 class="mb-2"><i class="fas fa-handshake me-2"></i>Interesse neste pitch</h5>
+                    <h5 class="mb-2"><i class="fas fa-handshake me-2"></i>{{ ui_text.interest_in_this_pitch }}</h5>
                     {% if my_interest %}
                     <div class="small mb-2">
-                        <strong>Seu interesse:</strong>
+                        <strong>{{ ui_text.your_interest }}:</strong>
                         <span class="badge bg-info">{{ my_interest.get_status_display }}</span>
                     </div>
                     <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
                         {% csrf_token %}
-                        <label class="form-label">Atualizar mensagem ao empreendedor</label>
+                        <label class="form-label">{{ ui_text.update_message_to_entrepreneur }}</label>
                         <textarea
                             class="form-control form-control-sm mb-2"
                             name="investor_message"
                             rows="2"
-                            placeholder="Contexto de interesse, ticket, timing..."
+                            placeholder="{{ ui_text.interest_context_placeholder|default:'Contexto de interesse, ticket, timing...' }}"
                         >{{ my_interest.investor_message }}</textarea>
                         <div class="d-flex gap-2 flex-wrap">
                             <button class="btn btn-sm btn-success" type="submit">
-                                <i class="fas fa-paper-plane me-1"></i>Atualizar interesse
+                                <i class="fas fa-paper-plane me-1"></i>{{ ui_text.update_interest }}
                             </button>
                         </div>
                     </form>
@@ -128,22 +128,22 @@
                         {% csrf_token %}
                         <input type="hidden" name="action" value="withdraw">
                         <button class="btn btn-sm btn-outline-danger" type="submit">
-                            <i class="fas fa-ban me-1"></i>Retirar interesse
+                            <i class="fas fa-ban me-1"></i>{{ ui_text.withdraw_interest }}
                         </button>
                     </form>
                     {% else %}
-                    <p class="small text-muted mb-2">Ao enviar interesse, o empreendedor recebe este lead diretamente no pitch.</p>
+                    <p class="small text-muted mb-2">{{ ui_text.interest_lead_direct_note }}</p>
                     <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
                         {% csrf_token %}
-                        <label class="form-label">Mensagem ao empreendedor (opcional)</label>
+                        <label class="form-label">{{ ui_text.message_to_entrepreneur_optional }}</label>
                         <textarea
                             class="form-control form-control-sm mb-2"
                             name="investor_message"
                             rows="2"
-                            placeholder="Ex.: interesse em ronda seed, ticket e próximos passos."
+                            placeholder="{{ ui_text.interest_message_example_placeholder }}"
                         ></textarea>
                         <button class="btn btn-sm btn-success" type="submit">
-                            <i class="fas fa-handshake me-1"></i>Demonstrar interesse neste pitch
+                            <i class="fas fa-handshake me-1"></i>{{ ui_text.show_interest_this_pitch }}
                         </button>
                     </form>
                     {% endif %}
@@ -153,7 +153,7 @@
                 {% if can_view_received_interests %}
                 <div class="mt-4 p-3 border rounded">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Investidores interessados neste pitch</h5>
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>{{ ui_text.investors_interested_in_pitch }}</h5>
                         <span class="badge bg-primary">{{ received_interests|length }}</span>
                     </div>
                     {% if received_interests %}
@@ -166,7 +166,7 @@
                                         {% if interest.investor %}
                                             {{ interest.investor.first_name|default:interest.investor.username }}
                                         {% else %}
-                                            Investidor não identificado
+                                            {{ ui_text.investor_not_identified }}
                                         {% endif %}
                                     </strong>
                                     <span class="small text-muted ms-2">{{ interest.created_at|date:"d/m/Y H:i" }}</span>
@@ -174,10 +174,10 @@
                                 <span class="badge bg-info">{{ interest.get_status_display }}</span>
                             </div>
                             {% if interest.investor_message %}
-                            <div class="small mt-2"><strong>Mensagem:</strong> {{ interest.investor_message }}</div>
+                            <div class="small mt-2"><strong>{{ ui_text.message_label }}:</strong> {{ interest.investor_message }}</div>
                             {% endif %}
                             {% if interest.entrepreneur_reply %}
-                            <div class="small mt-1"><strong>Sua resposta:</strong> {{ interest.entrepreneur_reply }}</div>
+                            <div class="small mt-1"><strong>{{ ui_text.your_reply }}:</strong> {{ interest.entrepreneur_reply }}</div>
                             {% endif %}
                             {% if user_role == 'empreendedor' or user_role == 'analista' or user_role == 'admin' %}
                             <form method="post" action="{% url 'connection_interest_update' interest.id %}" class="mt-2">
@@ -188,13 +188,13 @@
                                             class="form-control form-control-sm"
                                             name="entrepreneur_reply"
                                             rows="2"
-                                            placeholder="Resposta ao investidor (opcional)"
+                                            placeholder="{{ ui_text.reply_to_investor_optional }}"
                                         ></textarea>
                                     </div>
                                     <div class="col-md-5 d-flex flex-wrap gap-1 align-items-start">
-                                        <button class="btn btn-sm btn-outline-primary" type="submit" name="action" value="reviewing">Em análise</button>
-                                        <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">Conectar</button>
-                                        <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">Recusar</button>
+                                        <button class="btn btn-sm btn-outline-primary" type="submit" name="action" value="reviewing">{{ ui_text.mark_reviewing }}</button>
+                                        <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">{{ ui_text.start_connection }}</button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">{{ ui_text.reject }}</button>
                                     </div>
                                 </div>
                             </form>
@@ -203,7 +203,7 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="small text-muted mb-0">Ainda não há interesses registados para este pitch.</p>
+                    <p class="small text-muted mb-0">{{ ui_text.no_interest_registered_pitch }}</p>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -212,8 +212,8 @@
             <div class="col-lg-4">
                 <div class="card mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Vídeo IA de Potencial</span>
-                        <span class="badge bg-primary">{{ analysis.startup_name|default:"Startup" }}</span>
+                        <span>{{ ui_text.ai_potential_video|default:"Video IA de Potencial" }}</span>
+                        <span class="badge bg-primary">{{ analysis.startup_name|default:ui_text.startup_label|default:"Startup" }}</span>
                     </div>
                     <div class="card-body">
                         {% url 'pitch_explainer_video_progress' analysis.id '__JOB_ID__' as video_progress_url_template %}
@@ -228,7 +228,7 @@
                             data-phase="{{ active_video_job.phase|default:'fila' }}"
                         >
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <strong>Status da geração:</strong>
+                                <strong>{{ ui_text.generation_status|default:"Status da geracao" }}:</strong>
                                 <span id="videoJobStatusText">{{ active_video_job.status }}</span>
                             </div>
                             <div class="progress mb-2" style="height: 8px;">
@@ -243,28 +243,28 @@
                                 ></div>
                             </div>
                             <div class="small mb-1">
-                                <strong>Fase:</strong>
+                                <strong>{{ ui_text.phase|default:"Fase" }}:</strong>
                                 <span id="videoJobPhaseText">{{ active_video_job.phase|default:"fila" }}</span>
                             </div>
                             <div class="small">
-                                <span id="videoJobMessage">{{ active_video_job.message|default:"Aguardando atualização..." }}</span>
+                                <span id="videoJobMessage">{{ active_video_job.message|default:ui_text.waiting_for_update|default:"Aguardando atualizacao..." }}</span>
                                 <span id="videoJobProgressPct" class="float-end">{{ active_video_job.progress|default:0 }}%</span>
                             </div>
                         </div>
                         {% endif %}
                         {% if analysis.metadata.explainer_video_job_status == 'FAILED' and analysis.metadata.explainer_video_job_error %}
                         <div class="alert alert-danger small mb-3">
-                            <div class="fw-semibold mb-1">Falha na geração do vídeo</div>
+                            <div class="fw-semibold mb-1">{{ ui_text.video_generation_failed|default:"Falha na geracao do video" }}</div>
                             <div>{{ analysis.metadata.explainer_video_job_error }}</div>
                             {% if analysis.metadata.explainer_video.did_error %}
                             <div class="mt-2">
-                                <strong>Erro no cenário realista (D-ID):</strong>
+                                <strong>{{ ui_text.error_realistic_did|default:"Erro no cenario realista (D-ID)" }}:</strong>
                                 <span>{{ analysis.metadata.explainer_video.did_error }}</span>
                             </div>
                             {% endif %}
                             {% if analysis.metadata.explainer_video.local_error %}
                             <div class="mt-1">
-                                <strong>Erro no cenário local:</strong>
+                                <strong>{{ ui_text.error_local_scenario|default:"Erro no cenario local" }}:</strong>
                                 <span>{{ analysis.metadata.explainer_video.local_error }}</span>
                             </div>
                             {% endif %}
@@ -274,138 +274,168 @@
                         {% if analysis.explainer_video_file %}
                         <video controls class="w-100 mb-2" style="max-height: 220px;">
                             <source src="{{ analysis.explainer_video_file.url }}" type="video/mp4">
-                            Seu navegador não suporta reprodução de vídeo.
+                            {{ ui_text.browser_no_video_support|default:"Seu navegador nao suporta reproducao de video." }}
                         </video>
                         <a href="{{ analysis.explainer_video_file.url }}" class="btn btn-sm btn-outline-primary mb-2" target="_blank" rel="noopener">
-                            <i class="fas fa-download me-1"></i>Baixar Vídeo IA
+                            <i class="fas fa-download me-1"></i>{{ ui_text.download_ai_video|default:"Baixar Video IA" }}
                         </a>
                         {% else %}
-                        <p class="mb-2">Ainda não foi gerado vídeo explicativo para esta análise.</p>
+                        <p class="mb-2">{{ ui_text.no_explainer_video_yet|default:"Ainda nao foi gerado video explicativo para esta analise." }}</p>
                         {% endif %}
                         <form id="videoExplainerForm" method="post" enctype="multipart/form-data" action="{% url 'pitch_explainer_video_generate' analysis.id %}">
                             {% csrf_token %}
-                            <label class="form-label mt-2">Modo de geração do vídeo</label>
+                            <label class="form-label mt-2">{{ ui_text.video_generation_mode|default:"Modo de geracao do video" }}</label>
                             <select class="form-select form-select-sm mb-2" name="video_mode">
-                                <option value="auto" {% if selected_video_mode == 'auto' %}selected{% endif %}>D-ID + fallback local (recomendado)</option>
-                                <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>Apenas D-ID (imagem real a falar, sem fundo/cenário)</option>
-                                <option value="local_only" {% if selected_video_mode == 'local_only' %}selected{% endif %}>Apenas geração local</option>
+                                <option value="auto" {% if selected_video_mode == 'auto' %}selected{% endif %}>{{ ui_text.video_mode_auto|default:"D-ID + fallback local (recomendado)" }}</option>
+                                <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>{{ ui_text.video_mode_did_only|default:"Apenas D-ID (imagem real a falar, sem fundo/cenario)" }}</option>
+                                <option value="local_only" {% if selected_video_mode == 'local_only' %}selected{% endif %}>{{ ui_text.video_mode_local_only|default:"Apenas geracao local" }}</option>
+                                <option value="canva_capcut" {% if selected_video_mode == 'canva_capcut' %}selected{% endif %}>{{ ui_text.video_mode_canva_capcut|default:"Canva + CapCut Auto (roteiro + video)" }}</option>
                             </select>
-                            <label class="form-label mt-2">Imagem real do apresentador (rosto)</label>
+                            <label class="form-label mt-2">{{ ui_text.presenter_real_image_face|default:"Imagem real do apresentador (rosto)" }}</label>
                             <input id="presenterImageInput" type="file" class="form-control form-control-sm mb-2" name="presenter_image" accept="image/*">
                             <div id="presenterGenderDetectBox" class="border rounded p-2 mb-2 d-none">
-                                <div class="small fw-semibold mb-1">Detecção automática de gênero</div>
-                                <div id="presenterGenderDetectText" class="small text-muted">Aguardando imagem para detectar...</div>
+                                <div class="small fw-semibold mb-1">{{ ui_text.auto_gender_detection|default:"Deteccao automatica de genero" }}</div>
+                                <div id="presenterGenderDetectText" class="small text-muted">{{ ui_text.waiting_image_detection|default:"Aguardando imagem para detectar..." }}</div>
                             </div>
-                            <label class="form-label mt-1">Confirmação de gênero para voz</label>
+                            <label class="form-label mt-1">{{ ui_text.gender_confirmation_for_voice|default:"Confirmacao de genero para voz" }}</label>
                             <select id="presenterGenderChoice" class="form-select form-select-sm mb-2" name="presenter_gender_choice">
-                                <option value="auto" {% if selected_presenter_gender_choice == 'auto' %}selected{% endif %}>Auto (usar detecção)</option>
-                                <option value="male" {% if selected_presenter_gender_choice == 'male' %}selected{% endif %}>Homem</option>
-                                <option value="female" {% if selected_presenter_gender_choice == 'female' %}selected{% endif %}>Mulher</option>
+                                <option value="auto" {% if selected_presenter_gender_choice == 'auto' %}selected{% endif %}>{{ ui_text.auto_use_detection|default:"Auto (usar deteccao)" }}</option>
+                                <option value="male" {% if selected_presenter_gender_choice == 'male' %}selected{% endif %}>{{ ui_text.male|default:"Homem" }}</option>
+                                <option value="female" {% if selected_presenter_gender_choice == 'female' %}selected{% endif %}>{{ ui_text.female|default:"Mulher" }}</option>
                             </select>
                             <small class="text-muted d-block mb-2">
-                                A IA usa esta imagem internamente para gerar o vídeo; o rosto não é exibido na interface.
-                                No modo did_only, o sistema usa somente a imagem real a falar (sem fundo/cenário artificial).
+                                {{ ui_text.presenter_image_internal_use_note|default:"A IA usa esta imagem internamente para gerar o video; o rosto nao e exibido na interface." }}
+                                {{ ui_text.did_only_no_background_note|default:"No modo did_only, o sistema usa somente a imagem real a falar (sem fundo/cenario artificial)." }}
                             </small>
                             <small class="text-muted d-block mb-2">
-                                Duração padrão do vídeo: mínimo 1 minuto e máximo 3 minutos, sempre com conclusão no final.
+                                {{ ui_text.video_duration_standard_note|default:"Duracao padrao do video: minimo 1 minuto e maximo 3 minutos, sempre com conclusao no final." }}
+                            </small>
+                            <small class="text-muted d-block mb-2">
+                                {{ ui_text.canva_capcut_manual_guide_note|default:"No modo Canva + CapCut, o sistema gera um roteiro guiado para producao manual (sem renderizar video no servidor)." }}
                             </small>
                             <button
                                 class="btn btn-sm btn-primary w-100"
                                 type="submit"
                                 {% if active_video_job.status == 'RUNNING' or active_video_job.status == 'PENDING' %}disabled{% endif %}
                             >
-                                <i class="fas fa-video me-1"></i>{% if analysis.explainer_video_file %}Regenerar{% else %}Gerar{% endif %} vídeo explicativo
+                                <i class="fas fa-video me-1"></i>{% if analysis.explainer_video_file %}{{ ui_text.regenerate|default:"Regenerar" }}{% else %}{{ ui_text.generate|default:"Gerar" }}{% endif %} {{ ui_text.explainer_video|default:"video explicativo" }}
                             </button>
                         </form>
                         {% if analysis.metadata.explainer_video.engine_used %}
                         <small class="d-block mt-2 text-muted">
-                            Motor criativo: {{ analysis.metadata.explainer_video.engine_used }} |
-                            Personagem: {{ analysis.metadata.explainer_video.character_name|default:analysis.startup_name }} |
-                            Voz: {{ analysis.metadata.explainer_video.voice_engine|default:"auto" }}
+                            {{ ui_text.creative_engine|default:"Motor criativo" }}: {{ analysis.metadata.explainer_video.engine_used }} |
+                            {{ ui_text.character|default:"Personagem" }}: {{ analysis.metadata.explainer_video.character_name|default:analysis.startup_name }} |
+                            {{ ui_text.voice|default:"Voz" }}: {{ analysis.metadata.explainer_video.voice_engine|default:"auto" }}
                         </small>
                         {% if analysis.metadata.explainer_video.generation_mode %}
                         <small class="d-block mt-1 text-muted">
-                            Modo selecionado: {{ analysis.metadata.explainer_video.generation_mode }}
+                            {{ ui_text.selected_mode|default:"Modo selecionado" }}: {{ analysis.metadata.explainer_video.generation_mode }}
                         </small>
                         {% endif %}
                         {% if analysis.metadata.explainer_video.realistic_style_mode %}
                         <small class="d-block mt-1 text-muted">
-                            Estilo premium: {{ analysis.metadata.explainer_video.realistic_style_mode }} |
-                            Segmentos: {{ analysis.metadata.explainer_video.realistic_segment_count|default:"1" }} |
-                            Fontes visuais: {{ analysis.metadata.explainer_video.realistic_source_count|default:analysis.metadata.explainer_video_source_images|default:"1" }}
+                            {{ ui_text.premium_style|default:"Estilo premium" }}: {{ analysis.metadata.explainer_video.realistic_style_mode }} |
+                            {{ ui_text.segments|default:"Segmentos" }}: {{ analysis.metadata.explainer_video.realistic_segment_count|default:"1" }} |
+                            {{ ui_text.visual_sources|default:"Fontes visuais" }}: {{ analysis.metadata.explainer_video.realistic_source_count|default:analysis.metadata.explainer_video_source_images|default:"1" }}
                         </small>
                         {% endif %}
+                        {% endif %}
+                        {% if analysis.metadata.explainer_video.mode == 'canva_capcut' and analysis.metadata.explainer_video.generation_mode == 'canva_capcut' and not analysis.explainer_video_file %}
+                        <div class="border rounded p-2 mt-3">
+                            <div class="fw-semibold mb-2">{{ analysis.metadata.explainer_video.title|default:ui_text.canva_capcut_guide_title|default:"Guia Canva + CapCut" }}</div>
+                            <div class="small mb-2">
+                                <strong>{{ ui_text.theme|default:"Tema" }}:</strong> {{ analysis.metadata.explainer_video.script_theme|default:"Motivacao" }}
+                            </div>
+                            {% for step in analysis.metadata.explainer_video.steps %}
+                            <div class="mb-2">
+                                <div class="small fw-semibold">{{ step.title }}</div>
+                                <ul class="small mb-1">
+                                    {% for item in step.details %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                            <div class="small mt-2">
+                                <strong>{{ ui_text.suggested_script_contextual|default:"Roteiro sugerido (contextual)" }}:</strong>
+                                <div>{{ analysis.metadata.explainer_video.script_text }}</div>
+                            </div>
+                            <div class="small mt-2">
+                                <strong>{{ ui_text.quick_example_copy_use|default:"Exemplo rapido (copia e usa)" }}:</strong>
+                                <div>{{ analysis.metadata.explainer_video.script_example }}</div>
+                            </div>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header">Anexos</div>
+                    <div class="card-header">{{ ui_text.attachments|default:"Anexos" }}</div>
                     <div class="card-body">
-                        <div class="small text-muted mb-1">Áudio</div>
+                        <div class="small text-muted mb-1">{{ ui_text.audio_label|default:"Audio" }}</div>
                         {% if analysis.audio_file %}
                         <div class="mb-3">
                             <audio controls class="w-100">
                                 <source src="{{ analysis.audio_file.url }}">
-                                Seu navegador não suporta reprodução de áudio.
+                                {{ ui_text.browser_no_audio_support|default:"Seu navegador nao suporta reproducao de audio." }}
                             </audio>
                             <a href="{{ analysis.audio_file.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank" rel="noopener">
-                                <i class="fas fa-download me-1"></i>Baixar Áudio
+                                <i class="fas fa-download me-1"></i>{{ ui_text.download_audio|default:"Baixar Audio" }}
                             </a>
                         </div>
                         {% elif analysis.metadata.sources.has_audio %}
-                        <p class="mb-3"><strong>Áudio:</strong> submetido (ficheiro não disponível para download).</p>
+                        <p class="mb-3"><strong>{{ ui_text.audio_label|default:"Audio" }}:</strong> {{ ui_text.submitted_file_unavailable|default:"submetido (ficheiro nao disponivel para download)." }}</p>
                         {% else %}
-                        <p class="mb-3 text-muted">Sem áudio anexado.</p>
+                        <p class="mb-3 text-muted">{{ ui_text.no_audio_attached|default:"Sem audio anexado." }}</p>
                         {% endif %}
 
-                        <div class="small text-muted mb-1">Vídeo</div>
+                        <div class="small text-muted mb-1">{{ ui_text.video_label|default:"Video" }}</div>
                         {% if analysis.video_file %}
                         <div class="mb-3">
                             <video controls class="w-100" style="max-height: 180px;">
                                 <source src="{{ analysis.video_file.url }}">
-                                Seu navegador não suporta reprodução de vídeo.
+                                {{ ui_text.browser_no_video_support|default:"Seu navegador nao suporta reproducao de video." }}
                             </video>
                             <a href="{{ analysis.video_file.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank" rel="noopener">
-                                <i class="fas fa-download me-1"></i>Baixar Vídeo
+                                <i class="fas fa-download me-1"></i>{{ ui_text.download_video|default:"Baixar Video" }}
                             </a>
                         </div>
                         {% elif analysis.metadata.sources.has_video %}
-                        <p class="mb-3"><strong>Vídeo:</strong> submetido (ficheiro não disponível para download).</p>
+                        <p class="mb-3"><strong>{{ ui_text.video_label|default:"Video" }}:</strong> {{ ui_text.submitted_file_unavailable|default:"submetido (ficheiro nao disponivel para download)." }}</p>
                         {% else %}
-                        <p class="mb-3 text-muted">Sem vídeo anexado.</p>
+                        <p class="mb-3 text-muted">{{ ui_text.no_video_attached|default:"Sem video anexado." }}</p>
                         {% endif %}
 
                         <div>
-                            <div class="small text-muted mb-1">Ficheiro submetido</div>
+                            <div class="small text-muted mb-1">{{ ui_text.submitted_file|default:"Ficheiro submetido" }}</div>
                             {% if analysis.document_file %}
                             <a href="{{ analysis.document_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
-                                <i class="fas fa-file-arrow-down me-1"></i>Baixar Ficheiro
+                                <i class="fas fa-file-arrow-down me-1"></i>{{ ui_text.download_file|default:"Baixar Ficheiro" }}
                             </a>
                             {% elif analysis.metadata.sources.text_file_name %}
-                            <p class="mb-0">{{ analysis.metadata.sources.text_file_name }} (nome registado)</p>
+                            <p class="mb-0">{{ analysis.metadata.sources.text_file_name }} ({{ ui_text.registered_name|default:"nome registado" }})</p>
                             {% else %}
-                            <p class="mb-0 text-muted">Sem ficheiro de documento anexado.</p>
+                            <p class="mb-0 text-muted">{{ ui_text.no_document_file_attached|default:"Sem ficheiro de documento anexado." }}</p>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header">Indicadores financeiros</div>
+                    <div class="card-header">{{ ui_text.financial_indicators|default:"Indicadores financeiros" }}</div>
                     <div class="card-body">
-                        <p><strong>Receita:</strong> AOA {{ analysis.revenue|floatformat:2 }}</p>
-                        <p><strong>Crescimento:</strong> {{ analysis.growth_rate|floatformat:2 }}%</p>
-                        <p class="mb-0"><strong>Margem:</strong> {{ analysis.profit_margin|floatformat:2 }}%</p>
+                        <p><strong>{{ ui_text.revenue|default:"Receita" }}:</strong> AOA {{ analysis.revenue|floatformat:2 }}</p>
+                        <p><strong>{{ ui_text.growth|default:"Crescimento" }}:</strong> {{ analysis.growth_rate|floatformat:2 }}%</p>
+                        <p class="mb-0"><strong>{{ ui_text.margin|default:"Margem" }}:</strong> {{ analysis.profit_margin|floatformat:2 }}%</p>
                     </div>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">Informações da execução</div>
+                    <div class="card-header">{{ ui_text.execution_information|default:"Informacoes da execucao" }}</div>
                     <div class="card-body">
-                        <p><strong>Data:</strong> {{ analysis.created_at|date:"d/m/Y H:i" }}</p>
-                        <p><strong>Status:</strong> {{ analysis.report.status|default:"N/A" }}</p>
-                        <p class="mb-0"><strong>Motor:</strong> {{ analysis.metadata.analysis_engine_used|default:"local" }}</p>
+                        <p><strong>{{ ui_text.date|default:"Data" }}:</strong> {{ analysis.created_at|date:"d/m/Y H:i" }}</p>
+                        <p><strong>{{ ui_text.status|default:"Status" }}:</strong> {{ analysis.report.status|default:"N/A" }}</p>
+                        <p class="mb-0"><strong>{{ ui_text.engine|default:"Motor" }}:</strong> {{ analysis.metadata.analysis_engine_used|default:"local" }}</p>
                     </div>
                 </div>
             </div>
@@ -413,21 +443,21 @@
 
         <div class="mt-4 text-center">
             <a href="{% url 'pitch_form' %}" class="btn btn-primary me-2">
-                <i class="fas fa-plus me-1"></i>Nova Análise
+                <i class="fas fa-plus me-1"></i>{{ ui_text.new_analysis|default:"Nova Analise" }}
             </a>
             <a href="{% url 'pitch_report_pdf' analysis.id %}" class="btn btn-outline-primary me-2">
-                <i class="fas fa-file-pdf me-1"></i>Baixar Relatório PDF
+                <i class="fas fa-file-pdf me-1"></i>{{ ui_text.download_report_pdf|default:"Baixar Relatorio PDF" }}
             </a>
             <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-home me-1"></i>Voltar ao Painel
+                <i class="fas fa-home me-1"></i>{{ ui_text.back_to_dashboard|default:"Voltar ao Painel" }}
             </a>
         </div>
         <div class="card mt-3">
-            <div class="card-header">Pitch PDF (Slides) com Design</div>
+            <div class="card-header">{{ ui_text.pitch_pdf_slides_with_design|default:"Pitch PDF (Slides) com Design" }}</div>
             <div class="card-body">
                 <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end">
                     <div class="col-md-5">
-                        <label class="form-label mb-1">Modo de design</label>
+                        <label class="form-label mb-1">{{ ui_text.design_mode|default:"Modo de design" }}</label>
                         <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
                             {% for value, label in pitch_design_mode_choices %}
                             <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
@@ -435,7 +465,7 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label mb-1">Template premium manual</label>
+                        <label class="form-label mb-1">{{ ui_text.premium_manual_template|default:"Template premium manual" }}</label>
                         <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate">
                             {% for value, label in pitch_design_template_choices %}
                             <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
@@ -444,7 +474,7 @@
                     </div>
                     <div class="col-md-3 d-grid">
                         <button type="submit" class="btn btn-outline-success">
-                            <i class="fas fa-file-powerpoint me-1"></i>Gerar Pitch PDF
+                            <i class="fas fa-file-powerpoint me-1"></i>{{ ui_text.generate_pitch_pdf|default:"Gerar Pitch PDF" }}
                         </button>
                     </div>
                 </form>
@@ -482,14 +512,14 @@
 
         function phaseLabel(phase) {
             const p = String(phase || "").toLowerCase();
-            if (p === "fila") return "Fila";
-            if (p === "inicializacao") return "Inicialização";
-            if (p === "preparacao") return "Preparação";
-            if (p === "renderizacao") return "Renderização";
-            if (p === "persistencia") return "Persistência";
-            if (p === "concluido") return "Concluído";
-            if (p === "falha") return "Falha";
-            return p || "Processando";
+            if (p === "fila") return "{{ ui_text.phase_queue|default:"Fila"|escapejs }}";
+            if (p === "inicializacao") return "{{ ui_text.phase_initialization|default:"Inicializacao"|escapejs }}";
+            if (p === "preparacao") return "{{ ui_text.phase_preparation|default:"Preparacao"|escapejs }}";
+            if (p === "renderizacao") return "{{ ui_text.phase_rendering|default:"Renderizacao"|escapejs }}";
+            if (p === "persistencia") return "{{ ui_text.phase_persistence|default:"Persistencia"|escapejs }}";
+            if (p === "concluido") return "{{ ui_text.phase_completed|default:"Concluido"|escapejs }}";
+            if (p === "falha") return "{{ ui_text.phase_failed|default:"Falha"|escapejs }}";
+            return p || "{{ ui_text.phase_processing|default:"Processando"|escapejs }}";
         }
 
         function phaseCap(status, phase) {
@@ -517,7 +547,7 @@
             currentStatus = String(state.status || "RUNNING").toUpperCase();
             currentPhase = String(state.phase || currentPhase || "renderizacao").toLowerCase();
             serverProgress = Math.max(0, Math.min(100, parseInt(state.progress || 0, 10)));
-            const message = state.message || "Processando...";
+            const message = state.message || "{{ ui_text.phase_processing|default:"Processando"|escapejs }}...";
 
             if (statusText) statusText.textContent = currentStatus;
             if (phaseText) phaseText.textContent = phaseLabel(currentPhase);
@@ -578,7 +608,7 @@
             if (stopped) return;
             fetch(progressUrl, { credentials: "same-origin" })
                 .then(function (resp) {
-                    if (!resp.ok) throw new Error("Falha ao consultar progresso");
+                    if (!resp.ok) throw new Error("{{ ui_text.failed_check_progress|default:"Falha ao consultar progresso"|escapejs }}");
                     return resp.json();
                 })
                 .then(function (state) {
@@ -591,7 +621,7 @@
                     setTimeout(poll, 2000);
                 })
                 .catch(function () {
-                    if (messageEl) messageEl.textContent = "Aguardando conexão para atualizar o progresso...";
+                    if (messageEl) messageEl.textContent = "{{ ui_text.waiting_connection_update_progress|default:"Aguardando conexao para atualizar o progresso..."|escapejs }}";
                     setTimeout(poll, 3000);
                 });
         };
@@ -651,7 +681,7 @@
                 return;
             }
 
-            showDetectMessage("A detetar gênero da imagem...", false);
+            showDetectMessage("{{ ui_text.detecting_image_gender|default:"A detetar genero da imagem..."|escapejs }}", false);
             const formData = new FormData();
             formData.append("presenter_image", file);
 
@@ -668,21 +698,21 @@
                 })
                 .then(function (result) {
                     if (!result.ok || !result.data.ok) {
-                        throw new Error(result.data.error || "Não foi possível detectar o gênero.");
+                        throw new Error(result.data.error || "{{ ui_text.unable_detect_gender|default:"Nao foi possivel detectar o genero."|escapejs }}");
                     }
                     const detected = result.data.detected_gender || "unknown";
-                    const label = result.data.detected_gender_label || "Não identificado";
+                    const label = result.data.detected_gender_label || "{{ ui_text.not_identified|default:"Nao identificado"|escapejs }}";
                     const confidence = result.data.confidence_pct;
                     const method = result.data.method || "unknown";
-                    const confidenceText = confidence !== null && confidence !== undefined ? ` (confiança ${confidence}%)` : "";
-                    showDetectMessage(`Detetado: ${label}${confidenceText}. Método: ${method}. Confirme ou corrija no campo abaixo.`, false);
+                    const confidenceText = confidence !== null && confidence !== undefined ? ` ({{ ui_text.confidence|default:"confianca"|escapejs }} ${confidence}%)` : "";
+                    showDetectMessage(`{{ ui_text.detected|default:"Detetado"|escapejs }}: ${label}${confidenceText}. {{ ui_text.method|default:"Metodo"|escapejs }}: ${method}. {{ ui_text.confirm_or_correct_below|default:"Confirme ou corrija no campo abaixo."|escapejs }}`, false);
 
                     if ((!userChangedChoice || genderChoice.value === "auto") && (detected === "male" || detected === "female")) {
                         genderChoice.value = detected;
                     }
                 })
                 .catch(function (error) {
-                    showDetectMessage(error.message || "Falha ao detetar gênero da imagem.", true);
+                    showDetectMessage(error.message || "{{ ui_text.failed_detect_image_gender|default:"Falha ao detetar genero da imagem."|escapejs }}", true);
                 });
         });
     })();

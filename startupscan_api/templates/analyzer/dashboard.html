@@ -1,35 +1,35 @@
 {% extends "analyzer/base.html" %}
 
-{% block topbar_title %}Dashboard Operacional{% endblock %}
-{% block topbar_subtitle %}Monitorização de análises, performance e benchmark setorial{% endblock %}
+{% block topbar_title %}{{ ui_text.dashboard_topbar_title|default:"Dashboard Operacional" }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.dashboard_topbar_subtitle|default:"Monitorizacao de analises, performance e benchmark setorial" }}{% endblock %}
 
 {% block content %}
 <div class="hero-panel p-4 p-lg-5 mb-4">
     <div class="row align-items-center">
         <div class="col-lg-8">
-            <h1 class="display-6 fw-bold mb-2">Centro Inteligente de Avaliação de Startups</h1>
+            <h1 class="display-6 fw-bold mb-2">{{ ui_text.dashboard_hero_title|default:"Centro Inteligente de Avaliacao de Startups" }}</h1>
             <p class="lead mb-3">
-                Analise pitches, compare desempenho dos modelos e apresente oportunidades de investimento com um dashboard pronto para investidores.
+                {{ ui_text.dashboard_hero_subtitle|default:"Analise pitches, compare desempenho dos modelos e apresente oportunidades de investimento com um dashboard pronto para investidores." }}
             </p>
             <a class="btn btn-light btn-lg me-2" href="{% url 'pitch_form' %}">
-                <i class="fas fa-rocket me-2"></i>Nova Análise
+                <i class="fas fa-rocket me-2"></i>{{ ui_text.new_analysis|default:"Nova Analise" }}
             </a>
             <a class="btn btn-outline-light btn-lg" href="{% url 'investor_dashboard' %}">
-                <i class="fas fa-chart-line me-2"></i>Visão do Investidor
+                <i class="fas fa-chart-line me-2"></i>{{ ui_text.investor_view|default:"Visao do Investidor" }}
             </a>
         </div>
         <div class="col-lg-4 mt-4 mt-lg-0">
             <div class="glass-card p-3">
-                <h6 class="text-uppercase text-muted mb-3">Modelo ativo</h6>
+                <h6 class="text-uppercase text-muted mb-3">{{ ui_text.active_model|default:"Modelo ativo" }}</h6>
                 {% if active_model %}
                 <h5 class="mb-1">{{ active_model.display_name }}</h5>
                 <p class="mb-1 small text-muted">{{ active_model.name }}</p>
                 <p class="mb-0 small">
-                    Consistência:
+                    {{ ui_text.consistency|default:"Consistencia" }}:
                     <strong>{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</strong>
                 </p>
                 {% else %}
-                <p class="mb-0">Sem modelo ativo detectado.</p>
+                <p class="mb-0">{{ ui_text.no_active_model_detected|default:"Sem modelo ativo detectado." }}</p>
                 {% endif %}
             </div>
         </div>
@@ -40,33 +40,33 @@
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label">Score mínimo</label>
+                <label class="form-label">{{ ui_text.min_score|default:"Score minimo" }}</label>
                 <input type="number" class="form-control" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Score máximo</label>
+                <label class="form-label">{{ ui_text.max_score|default:"Score maximo" }}</label>
                 <input type="number" class="form-control" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}">
             </div>
             <div class="col-md-2">
-                <label class="form-label">Janela de tempo</label>
+                <label class="form-label">{{ ui_text.time_window|default:"Janela de tempo" }}</label>
                 <select class="form-select" name="days">
-                    <option value="30" {% if filter_days == 30 %}selected{% endif %}>Últimos 30 dias</option>
-                    <option value="90" {% if filter_days == 90 %}selected{% endif %}>Últimos 90 dias</option>
-                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>Últimos 180 dias</option>
-                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>Últimos 12 meses</option>
-                    <option value="0" {% if filter_days == 0 %}selected{% endif %}>Todo o período</option>
+                    <option value="30" {% if filter_days == 30 %}selected{% endif %}>{{ ui_text.last_30_days|default:"Ultimos 30 dias" }}</option>
+                    <option value="90" {% if filter_days == 90 %}selected{% endif %}>{{ ui_text.last_90_days|default:"Ultimos 90 dias" }}</option>
+                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>{{ ui_text.last_180_days|default:"Ultimos 180 dias" }}</option>
+                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>{{ ui_text.last_12_months|default:"Ultimos 12 meses" }}</option>
+                    <option value="0" {% if filter_days == 0 %}selected{% endif %}>{{ ui_text.all_period|default:"Todo o periodo" }}</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label">Motor</label>
+                <label class="form-label">{{ ui_text.engine|default:"Motor" }}</label>
                 <select class="form-select" name="engine">
-                    <option value="all" {% if filter_engine == "all" %}selected{% endif %}>Todos</option>
+                    <option value="all" {% if filter_engine == "all" %}selected{% endif %}>{{ ui_text.all|default:"Todos" }}</option>
                     <option value="local" {% if filter_engine == "local" %}selected{% endif %}>Local</option>
                     <option value="gpt" {% if filter_engine == "gpt" %}selected{% endif %}>GPT</option>
                 </select>
             </div>
             <div class="col-md-2 d-grid">
-                <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i>Aplicar filtros</button>
+                <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i>{{ ui_text.apply_filters|default:"Aplicar filtros" }}</button>
             </div>
         </form>
     </div>
@@ -75,25 +75,25 @@
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="kpi-card">
-            <span class="kpi-label">Análises no sistema</span>
+            <span class="kpi-label">{{ ui_text.analyses_in_system|default:"Analises no sistema" }}</span>
             <h3>{{ global_stats.total|default:0 }}</h3>
         </div>
     </div>
     <div class="col-md-3">
         <div class="kpi-card">
-            <span class="kpi-label">Score médio</span>
+            <span class="kpi-label">{{ ui_text.average_score|default:"Score medio" }}</span>
             <h3>{{ global_stats.avg_score|default:0|floatformat:2 }}/10</h3>
         </div>
     </div>
     <div class="col-md-3">
         <div class="kpi-card">
-            <span class="kpi-label">Melhor score</span>
+            <span class="kpi-label">{{ ui_text.best_score|default:"Melhor score" }}</span>
             <h3>{{ global_stats.best|default:0|floatformat:1 }}/10</h3>
         </div>
     </div>
     <div class="col-md-3">
         <div class="kpi-card">
-            <span class="kpi-label">Modelos disponíveis</span>
+            <span class="kpi-label">{{ ui_text.available_models|default:"Modelos disponiveis" }}</span>
             <h3>{{ models_count }}</h3>
         </div>
     </div>
@@ -103,8 +103,8 @@
     <div class="col-lg-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Comparação por Sector</h5>
-                <div class="small text-muted">média de score por sector</div>
+                <h5 class="mb-0">{{ ui_text.comparison_by_sector|default:"Comparacao por Sector" }}</h5>
+                <div class="small text-muted">{{ ui_text.average_score_by_sector|default:"media de score por sector" }}</div>
             </div>
             <div class="card-body">
                 <canvas id="sectorComparisonChart" height="95"></canvas>
@@ -114,15 +114,15 @@
     <div class="col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">Seu Benchmark</h5>
+                <h5 class="mb-0">{{ ui_text.your_benchmark|default:"Seu Benchmark" }}</h5>
             </div>
             <div class="card-body">
                 {% if user_sector_comparison %}
-                <p class="mb-2"><strong>Sector:</strong> {{ user_sector_comparison.industry_label }}</p>
-                <p class="mb-2"><strong>Seu último score:</strong> {{ user_sector_comparison.latest_score }}/10</p>
-                <p class="mb-0"><strong>Média do sector:</strong> {{ user_sector_comparison.sector_avg }}/10</p>
+                <p class="mb-2"><strong>{{ ui_text.sector|default:"Sector" }}:</strong> {{ user_sector_comparison.industry_label }}</p>
+                <p class="mb-2"><strong>{{ ui_text.your_last_score|default:"Seu ultimo score" }}:</strong> {{ user_sector_comparison.latest_score }}/10</p>
+                <p class="mb-0"><strong>{{ ui_text.sector_average|default:"Media do sector" }}:</strong> {{ user_sector_comparison.sector_avg }}/10</p>
                 {% else %}
-                <p class="text-muted mb-0">Sem dados suficientes para benchmark sectorial.</p>
+                <p class="text-muted mb-0">{{ ui_text.no_benchmark_data|default:"Sem dados suficientes para benchmark sectorial." }}</p>
                 {% endif %}
             </div>
         </div>
@@ -133,8 +133,8 @@
     <div class="col-lg-8">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Evolução de Score das Startups</h5>
-                <span class="small text-muted">últimas análises</span>
+                <h5 class="mb-0">{{ ui_text.startup_score_evolution|default:"Evolucao de Score das Startups" }}</h5>
+                <span class="small text-muted">{{ ui_text.latest_analyses|default:"ultimas analises" }}</span>
             </div>
             <div class="card-body">
                 <canvas id="scoreTrendChart" height="110"></canvas>
@@ -144,7 +144,7 @@
     <div class="col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">Distribuição de Potencial</h5>
+                <h5 class="mb-0">{{ ui_text.potential_distribution|default:"Distribuicao de Potencial" }}</h5>
             </div>
             <div class="card-body">
                 <canvas id="distributionChart" height="110"></canvas>
@@ -157,8 +157,8 @@
     <div class="col-lg-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Tração Financeira (Receita vs Crescimento)</h5>
-                <div class="small text-muted">ajuda a priorizar deals com melhor momentum</div>
+                <h5 class="mb-0">{{ ui_text.financial_traction|default:"Tracao Financeira (Receita vs Crescimento)" }}</h5>
+                <div class="small text-muted">{{ ui_text.financial_traction_hint|default:"ajuda a priorizar deals com melhor momentum" }}</div>
             </div>
             <div class="card-body">
                 <canvas id="financialMomentumChart" height="95"></canvas>
@@ -170,9 +170,9 @@
 {% if user.is_authenticated %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">Análises recentes</h4>
+        <h4 class="mb-0">{{ ui_text.recent_analyses|default:"Analises recentes" }}</h4>
         <a href="{% url 'model_management' %}" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-sliders me-1"></i>Gerenciar Modelos
+            <i class="fas fa-sliders me-1"></i>{{ ui_text.manage_models|default:"Gerenciar Modelos" }}
         </a>
     </div>
     <div class="card-body p-0">
@@ -182,12 +182,12 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Data</th>
+                        <th>{{ ui_text.date|default:"Data" }}</th>
                         <th>Score</th>
-                        <th>Receita</th>
-                        <th>Crescimento</th>
-                        <th>Margem</th>
-                        <th>Ações</th>
+                        <th>{{ ui_text.revenue|default:"Receita" }}</th>
+                        <th>{{ ui_text.growth|default:"Crescimento" }}</th>
+                        <th>{{ ui_text.margin|default:"Margem" }}</th>
+                        <th>{{ ui_text.actions|default:"Acoes" }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -205,7 +205,7 @@
                         <td>{{ analysis.profit_margin|floatformat:2 }}%</td>
                         <td>
                             <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-primary">
-                                Ver análise
+                                {{ ui_text.view_analysis|default:"Ver analise" }}
                             </a>
                         </td>
                     </tr>
@@ -214,14 +214,14 @@
             </table>
         </div>
         {% else %}
-        <div class="p-4 text-center text-muted">Nenhuma análise encontrada até agora.</div>
+        <div class="p-4 text-center text-muted">{{ ui_text.no_analyses_yet|default:"Nenhuma analise encontrada ate agora." }}</div>
         {% endif %}
     </div>
 </div>
 {% else %}
 <div class="card p-4 text-center">
-    <p class="mb-2">Faça login para acompanhar análises, modelos e oportunidades.</p>
-    <a href="{% url 'login' %}" class="btn btn-primary">Entrar</a>
+    <p class="mb-2">{{ ui_text.login_to_track|default:"Faca login para acompanhar analises, modelos e oportunidades." }}</p>
+    <a href="{% url 'login' %}" class="btn btn-primary">{{ ui_text.login|default:"Entrar" }}</a>
 </div>
 {% endif %}
 {% endblock %}
@@ -247,7 +247,7 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: "Score",
+                    label: "{{ ui_text.score|default:'Score' }}",
                     data: scores,
                     borderColor: "#2563eb",
                     backgroundColor: "rgba(37,99,235,0.16)",
@@ -280,7 +280,7 @@
         new Chart(distributionCtx, {
             type: "doughnut",
             data: {
-                labels: ["Baixo (<5)", "Médio (5-7.4)", "Alto (>=7.5)"],
+                labels: ["{{ ui_text.low_label|default:'Baixo (<5)' }}", "{{ ui_text.medium_label|default:'Medio (5-7.4)' }}", "{{ ui_text.high_label|default:'Alto (>=7.5)' }}"],
                 datasets: [{
                     data: distribution,
                     backgroundColor: ["#ef4444", "#f59e0b", "#10b981"],
@@ -302,7 +302,7 @@
                 datasets: [
                     {
                         type: "bar",
-                        label: "Receita (AOA)",
+                        label: "{{ ui_text.revenue_aoa|default:'Receita (AOA)' }}",
                         data: revenues,
                         yAxisID: "yRevenue",
                         backgroundColor: "rgba(16,185,129,0.45)",
@@ -311,7 +311,7 @@
                     },
                     {
                         type: "line",
-                        label: "Crescimento (%)",
+                        label: "{{ ui_text.growth_percent|default:'Crescimento (%)' }}",
                         data: growth,
                         yAxisID: "yGrowth",
                         borderColor: "#7c3aed",
@@ -348,7 +348,7 @@
             data: {
                 labels: sectorLabels,
                 datasets: [{
-                    label: "Média de score por sector",
+                    label: "{{ ui_text.average_score_by_sector|default:'media de score por sector' }}",
                     data: sectorAvg,
                     backgroundColor: "rgba(14,165,233,0.45)",
                     borderColor: "#0284c7",

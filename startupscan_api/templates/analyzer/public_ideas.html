@@ -1,8 +1,8 @@
 {% extends "analyzer/base.html" %}
 
-{% block title %}Ideias da Plataforma{% endblock %}
-{% block topbar_title %}Ideias da Plataforma{% endblock %}
-{% block topbar_subtitle %}Explore, avalie, comente e ajude no ranking das ideias{% endblock %}
+{% block title %}{{ ui_text.public_ideas_title }}{% endblock %}
+{% block topbar_title %}{{ ui_text.public_ideas_title }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.public_ideas_subtitle }}{% endblock %}
 
 {% block content %}
 <div class="row g-3 mb-3">
@@ -11,19 +11,19 @@
             <div class="card-body">
                 <form method="get" class="row g-2 align-items-end">
                     <div class="col-md-9">
-                        <label for="id_q" class="form-label mb-1">Pesquisar ideias</label>
+                        <label for="id_q" class="form-label mb-1">{{ ui_text.search_ideas }}</label>
                         <input
                             type="text"
                             class="form-control"
                             id="id_q"
                             name="q"
                             value="{{ search_query }}"
-                            placeholder="Ex.: fintech, saúde, educação..."
+                            placeholder="{{ ui_text.search_ideas_placeholder }}"
                         >
                     </div>
                     <div class="col-md-3 d-grid">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i>Pesquisar
+                            <i class="fas fa-search me-1"></i>{{ ui_text.search }}
                         </button>
                     </div>
                 </form>
@@ -33,9 +33,9 @@
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm bg-dark-subtle h-100">
             <div class="card-body d-flex flex-column justify-content-center">
-                <div class="small text-muted text-uppercase mb-1">Total de ideias visíveis</div>
+                <div class="small text-muted text-uppercase mb-1">{{ ui_text.total_visible_ideas }}</div>
                 <div class="display-6 fw-bold mb-0">{{ total_ideas }}</div>
-                <div class="small text-muted">Ranking atualizado com estrelas, apoios e atividade.</div>
+                <div class="small text-muted">{{ ui_text.ranking_updated }}</div>
             </div>
         </div>
     </div>
@@ -65,28 +65,28 @@
                 <div class="row g-2 small mb-3">
                     <div class="col-md-4">
                         <div class="p-2 rounded bg-black bg-opacity-25">
-                            <strong>{{ idea.feedback_count|default:0 }}</strong> avaliações
+                            <strong>{{ idea.feedback_count|default:0 }}</strong> {{ ui_text.ratings }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="p-2 rounded bg-black bg-opacity-25">
-                            <strong>{{ idea.endorsement_count|default:0 }}</strong> apoios públicos
+                            <strong>{{ idea.endorsement_count|default:0 }}</strong> {{ ui_text.public_endorsements }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="p-2 rounded bg-black bg-opacity-25">
-                            <strong>{{ idea.comments_count|default:0 }}</strong> comentários
+                            <strong>{{ idea.comments_count|default:0 }}</strong> {{ ui_text.comments }}
                         </div>
                     </div>
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-comments me-1"></i>Ver detalhes, comentar e avaliar
+                        <i class="fas fa-comments me-1"></i>{{ ui_text.view_details_comment_rate }}
                     </a>
                     {% if idea.my_feedback %}
                     <span class="badge text-bg-success align-self-center">
-                        Já avaliou: {{ idea.my_feedback.stars }} estrelas{% if idea.my_feedback.endorsed %} + apoio{% endif %}
+                        {{ ui_text.already_rated }}: {{ idea.my_feedback.stars }} {{ ui_text.stars_label }}{% if idea.my_feedback.endorsed %} + {{ ui_text.support_label }}{% endif %}
                     </span>
                     {% endif %}
                 </div>
@@ -97,8 +97,8 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-dark-subtle">
             <div class="card-body">
-                <h5 class="mb-1">Nenhuma ideia encontrada</h5>
-                <p class="mb-0 text-white-50">Ajuste os filtros de pesquisa para ver as ideias disponíveis na plataforma.</p>
+                <h5 class="mb-1">{{ ui_text.no_ideas_found }}</h5>
+                <p class="mb-0 text-white-50">{{ ui_text.adjust_filters_for_ideas }}</p>
             </div>
         </div>
     </div>
