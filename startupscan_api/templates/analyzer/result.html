@@ -289,6 +289,7 @@
                                 <option value="auto" {% if selected_video_mode == 'auto' %}selected{% endif %}>D-ID + fallback local (recomendado)</option>
                                 <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>Apenas D-ID (imagem real a falar, sem fundo/cenário)</option>
                                 <option value="local_only" {% if selected_video_mode == 'local_only' %}selected{% endif %}>Apenas geração local</option>
+                                <option value="canva_capcut" {% if selected_video_mode == 'canva_capcut' %}selected{% endif %}>Canva + CapCut (guia manual passo a passo)</option>
                             </select>
                             <label class="form-label mt-2">Imagem real do apresentador (rosto)</label>
                             <input id="presenterImageInput" type="file" class="form-control form-control-sm mb-2" name="presenter_image" accept="image/*">
@@ -308,6 +309,9 @@
                             </small>
                             <small class="text-muted d-block mb-2">
                                 Duração padrão do vídeo: mínimo 1 minuto e máximo 3 minutos, sempre com conclusão no final.
+                            </small>
+                            <small class="text-muted d-block mb-2">
+                                No modo Canva + CapCut, o sistema gera um roteiro guiado para produção manual (sem renderizar vídeo no servidor).
                             </small>
                             <button
                                 class="btn btn-sm btn-primary w-100"
@@ -335,6 +339,32 @@
                             Fontes visuais: {{ analysis.metadata.explainer_video.realistic_source_count|default:analysis.metadata.explainer_video_source_images|default:"1" }}
                         </small>
                         {% endif %}
+                        {% endif %}
+                        {% if analysis.metadata.explainer_video.mode == 'canva_capcut' %}
+                        <div class="border rounded p-2 mt-3">
+                            <div class="fw-semibold mb-2">{{ analysis.metadata.explainer_video.title|default:"Guia Canva + CapCut" }}</div>
+                            <div class="small mb-2">
+                                <strong>Tema:</strong> {{ analysis.metadata.explainer_video.script_theme|default:"Motivacao" }}
+                            </div>
+                            {% for step in analysis.metadata.explainer_video.steps %}
+                            <div class="mb-2">
+                                <div class="small fw-semibold">{{ step.title }}</div>
+                                <ul class="small mb-1">
+                                    {% for item in step.details %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                            <div class="small mt-2">
+                                <strong>Roteiro sugerido (contextual):</strong>
+                                <div>{{ analysis.metadata.explainer_video.script_text }}</div>
+                            </div>
+                            <div class="small mt-2">
+                                <strong>Exemplo rápido (copia e usa):</strong>
+                                <div>{{ analysis.metadata.explainer_video.script_example }}</div>
+                            </div>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
