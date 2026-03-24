@@ -140,6 +140,44 @@ def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:
     return normalized
 
 
+def _inject_i18n_labels(context: dict, request) -> dict:
+    """Injeta labels traduzidas para templates que ainda possuem muito conteúdo textual."""
+    context = dict(context or {})
+    ui_text = context.get("ui_text")
+    if not isinstance(ui_text, dict):
+        ui_text = build_ui_text(getattr(request, "ui_language", None))
+        context["ui_text"] = ui_text
+
+    # Labels de períodos usados em múltiplos dashboards.
+    context["ui_days_labels"] = {
+        "30": ui_text.get("days_last_30", "Últimos 30 dias"),
+        "90": ui_text.get("days_last_90", "Últimos 90 dias"),
+        "180": ui_text.get("days_last_180", "Últimos 180 dias"),
+        "365": ui_text.get("days_last_12m", "Últimos 12 meses"),
+        "0": ui_text.get("days_all_period", "Todo o período"),
+    }
+
+    # Labels comuns para status de execução/progresso.
+    context["ui_phase_labels"] = {
+        "queue": ui_text.get("phase_queue", "Fila"),
+        "initialization": ui_text.get("phase_initialization", "Inicialização"),
+        "preparation": ui_text.get("phase_preparation", "Preparação"),
+        "rendering": ui_text.get("phase_rendering", "Renderização"),
+        "persistence": ui_text.get("phase_persistence", "Persistência"),
+        "completed": ui_text.get("phase_completed", "Concluído"),
+        "failed": ui_text.get("phase_failed", "Falha"),
+        "processing": ui_text.get("phase_processing", "Processando"),
+    }
+    context["ui_status_labels"] = {
+        "running": ui_text.get("status_running", "RUNNING"),
+        "pending": ui_text.get("status_pending", "PENDING"),
+        "completed": ui_text.get("status_completed", "COMPLETED"),
+        "failed": ui_text.get("status_failed", "FAILED"),
+        "unavailable": ui_text.get("status_unavailable", "UNAVAILABLE"),
+    }
+    return context
+
+
 def _redirect_for_role(request, *, fallback_role: str | None = None):
     target_role = fallback_role or get_user_role(request.user)
     return redirect(role_home_url_name(target_role))

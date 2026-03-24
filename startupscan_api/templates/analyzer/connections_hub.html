@@ -1,30 +1,30 @@
 {% extends "analyzer/base.html" %}
 
-{% block topbar_title %}Fluxo de Conexões{% endblock %}
-{% block topbar_subtitle %}Interesses de investidores e ligação com empreendedores{% endblock %}
+{% block topbar_title %}{{ ui_text.connections_hub_title }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.connections_hub_subtitle }}{% endblock %}
 
 {% block content %}
 <div class="hero-panel p-4 mb-4">
-    <h2 class="mb-2">Conexões entre Investidores e Empreendedores</h2>
-    <p class="mb-0">Acompanhe interesses enviados, respostas e estado das conexões.</p>
+    <h2 class="mb-2">{{ ui_text.connections_hub_heading }}</h2>
+    <p class="mb-0">{{ ui_text.connections_hub_desc }}</p>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="kpi-card">
-            <span class="kpi-label">Interesses enviados</span>
+            <span class="kpi-label">{{ ui_text.connections_sent }}</span>
             <h3>{{ kpi_sent }}</h3>
         </div>
     </div>
     <div class="col-md-4">
         <div class="kpi-card">
-            <span class="kpi-label">Interesses recebidos</span>
+            <span class="kpi-label">{{ ui_text.connections_received }}</span>
             <h3>{{ kpi_received }}</h3>
         </div>
     </div>
     <div class="col-md-4">
         <div class="kpi-card">
-            <span class="kpi-label">Conexões iniciadas</span>
+            <span class="kpi-label">{{ ui_text.connections_started }}</span>
             <h3>{{ kpi_connected }}</h3>
         </div>
     </div>
@@ -32,7 +32,7 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Interesses que enviei</h5>
+        <h5 class="mb-0">{{ ui_text.connections_i_sent }}</h5>
     </div>
     <div class="card-body">
         {% if sent_interests %}
@@ -45,24 +45,24 @@
                         <span class="badge bg-info">{{ interest.get_status_display }}</span>
                     </div>
                     <p class="small text-muted mb-2">
-                        Empreendedor:
+                        {{ ui_text.entrepreneur_label }}:
                         {{ interest.entrepreneur.first_name|default:interest.entrepreneur.username|default:"Não associado" }}
                     </p>
                     {% if interest.investor_message %}
-                    <p class="mb-2"><strong>Minha mensagem:</strong> {{ interest.investor_message }}</p>
+                    <p class="mb-2"><strong>{{ ui_text.connections_my_message }}:</strong> {{ interest.investor_message }}</p>
                     {% endif %}
                     {% if interest.entrepreneur_reply %}
-                    <p class="mb-2"><strong>Resposta:</strong> {{ interest.entrepreneur_reply }}</p>
+                    <p class="mb-2"><strong>{{ ui_text.connections_reply }}:</strong> {{ interest.entrepreneur_reply }}</p>
                     {% endif %}
                     <div class="small text-muted mb-2">
-                        Atualizado em {{ interest.updated_at|date:"d/m/Y H:i" }}
+                        {{ ui_text.updated_at_label }} {{ interest.updated_at|date:"d/m/Y H:i" }}
                     </div>
                     {% if interest.status == 'pending' or interest.status == 'reviewing' %}
                     <form method="post" action="{% url 'connection_interest_update' interest.id %}">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="withdraw">
                         <button class="btn btn-sm btn-outline-danger" type="submit">
-                            Retirar interesse
+                            {{ ui_text.withdraw_interest }}
                         </button>
                     </form>
                     {% endif %}
@@ -71,14 +71,14 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-muted mb-0">Ainda não existem interesses enviados.</p>
+        <p class="text-muted mb-0">{{ ui_text.connections_none_sent }}</p>
         {% endif %}
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0">Interesses recebidos</h5>
+        <h5 class="mb-0">{{ ui_text.connections_i_received }}</h5>
     </div>
     <div class="card-body">
         {% if received_interests %}
@@ -91,27 +91,27 @@
                         <span class="badge bg-secondary">{{ interest.get_status_display }}</span>
                     </div>
                     <p class="small text-muted mb-2">
-                        Investidor:
+                        {{ ui_text.investor_label }}:
                         {{ interest.investor.first_name|default:interest.investor.username }}
                     </p>
                     {% if interest.investor_message %}
-                    <p class="mb-2"><strong>Mensagem do investidor:</strong> {{ interest.investor_message }}</p>
+                    <p class="mb-2"><strong>{{ ui_text.connections_investor_message }}:</strong> {{ interest.investor_message }}</p>
                     {% endif %}
                     {% if interest.entrepreneur_reply %}
-                    <p class="mb-2"><strong>Última resposta:</strong> {{ interest.entrepreneur_reply }}</p>
+                    <p class="mb-2"><strong>{{ ui_text.connections_last_reply }}:</strong> {{ interest.entrepreneur_reply }}</p>
                     {% endif %}
                     <div class="small text-muted mb-2">
-                        Atualizado em {{ interest.updated_at|date:"d/m/Y H:i" }}
+                        {{ ui_text.updated_at_label }} {{ interest.updated_at|date:"d/m/Y H:i" }}
                     </div>
                     <form method="post" action="{% url 'connection_interest_update' interest.id %}">
                         {% csrf_token %}
                         <div class="mb-2">
-                            <textarea class="form-control form-control-sm" name="entrepreneur_reply" rows="2" placeholder="Resposta opcional ao investidor"></textarea>
+                            <textarea class="form-control form-control-sm" name="entrepreneur_reply" rows="2" placeholder="{{ ui_text.connections_optional_reply_placeholder }}"></textarea>
                         </div>
                         <div class="d-flex flex-wrap gap-2">
-                            <button class="btn btn-sm btn-outline-warning" type="submit" name="action" value="reviewing">Marcar em análise</button>
-                            <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">Iniciar conexão</button>
-                            <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">Recusar</button>
+                            <button class="btn btn-sm btn-outline-warning" type="submit" name="action" value="reviewing">{{ ui_text.mark_reviewing }}</button>
+                            <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">{{ ui_text.start_connection }}</button>
+                            <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">{{ ui_text.reject }}</button>
                         </div>
                     </form>
                 </div>
@@ -119,7 +119,7 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-muted mb-0">Ainda não existem interesses recebidos.</p>
+        <p class="text-muted mb-0">{{ ui_text.connections_none_received }}</p>
         {% endif %}
     </div>
 </div>

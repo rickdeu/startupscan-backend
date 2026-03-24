@@ -53,7 +53,7 @@
                         <div class="form-group mb-3">
                             <label for="{{ form.username.id_for_label }}">{{ ui_text.username }}</label>
                             {{ form.username }}
-                            <small class="form-text text-muted">Obrigatório. 150 caracteres ou menos. Letras, números e @/./+/-/_ apenas.</small>
+                            <small class="form-text text-muted">{{ ui_text.register_username_help|default:"Obrigatorio. 150 caracteres ou menos. Letras, numeros e @/./+/-/_ apenas." }}</small>
                             {% if form.username.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.username.errors.0 }}
@@ -75,7 +75,7 @@
                             <label for="{{ form.profile_role.id_for_label }}">{{ ui_text.user_profile }}</label>
                             {{ form.profile_role }}
                             <small class="form-text text-muted">
-                                Escolha o perfil que melhor representa o seu acesso no sistema.
+                                {{ ui_text.register_profile_help|default:"Escolha o perfil que melhor representa o seu acesso no sistema." }}
                             </small>
                             {% if form.profile_role.errors %}
                                 <div class="invalid-feedback d-block">
@@ -85,14 +85,14 @@
                         </div>
                         
                         <div class="form-group mb-3">
-                            <label for="{{ form.password1.id_for_label }}">Senha</label>
+                            <label for="{{ form.password1.id_for_label }}">{{ ui_text.password }}</label>
                             {{ form.password1 }}
                             <small class="form-text text-muted">
                                 <ul>
-                                    <li>Sua senha não pode ser muito parecida com suas outras informações pessoais.</li>
-                                    <li>Sua senha precisa conter pelo menos 8 caracteres.</li>
-                                    <li>Sua senha não pode ser uma senha comumente usada.</li>
-                                    <li>Sua senha não pode ser inteiramente numérica.</li>
+                                    <li>{{ ui_text.register_password_rule_similarity|default:"Sua senha nao pode ser muito parecida com suas outras informacoes pessoais." }}</li>
+                                    <li>{{ ui_text.register_password_rule_length|default:"Sua senha precisa conter pelo menos 8 caracteres." }}</li>
+                                    <li>{{ ui_text.register_password_rule_common|default:"Sua senha nao pode ser uma senha comumente usada." }}</li>
+                                    <li>{{ ui_text.register_password_rule_numeric|default:"Sua senha nao pode ser inteiramente numerica." }}</li>
                                 </ul>
                             </small>
                             {% if form.password1.errors %}
@@ -103,9 +103,9 @@
                         </div>
                         
                         <div class="form-group mb-4">
-                            <label for="{{ form.password2.id_for_label }}">Confirmação de Senha</label>
+                            <label for="{{ form.password2.id_for_label }}">{{ ui_text.register_password_confirm_label|default:"Confirmacao de Senha" }}</label>
                             {{ form.password2 }}
-                            <small class="form-text text-muted">Digite a mesma senha novamente, para verificação.</small>
+                            <small class="form-text text-muted">{{ ui_text.register_password_confirm_help|default:"Digite a mesma senha novamente, para verificacao." }}</small>
                             {% if form.password2.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.password2.errors.0 }}
