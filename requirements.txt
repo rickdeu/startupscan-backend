@@ -6,8 +6,8 @@ gunicorn==23.0.0
 whitenoise==6.11.0
 dj-database-url==3.0.1
 psycopg2-binary==2.9.10
-celery
-tf-keras
+celery==5.6.2
+tf-keras==2.21.0
 
 # CORE
 numpy==1.26.4
@@ -20,14 +20,14 @@ Pillow==10.4.0
 xgboost==2.0.3
 
 # PROCESSAMENTO DE ÁUDIO
-whisper
+whisper==1.1.10
 librosa==0.10.1
 soundfile==0.12.1
 speechrecognition==3.10.1
 
 # PROCESSAMENTO DE VÍDEO
 opencv-python==4.9.0.80
-mediapipe
+mediapipe==0.10.33
 deepface==0.0.83
 moviepy==2.1.2
 imageio-ffmpeg==0.6.0
@@ -45,10 +45,10 @@ seaborn==0.13.2
 # SUPORTE GERAL
 python-dotenv==1.0.1
 openai==1.23.2
-requests>=2.32.0
+requests==2.32.5
 
 # COMPATIBILIDADE
-protobuf
+protobuf==7.34.1
 emoji==0.6.0
 
 # DOCUMENTOS E EXPORTAÇÃO
