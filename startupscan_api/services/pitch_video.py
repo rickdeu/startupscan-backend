@@ -514,7 +514,8 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
                 f"{_narrative_tagline(payload['startup_name'], uniqueness_key)}"
             )
         narration = str(data.get("narration", "")).strip() or " ".join(scene["text"] for scene in fixed_scenes)
-        character_name = str(data.get("character_name", payload["startup_name"])).strip() or payload["startup_name"]
+        # Regra de produto: personagem deve ser sempre o nome da startup.
+        character_name = str(payload["startup_name"]).strip() or payload["startup_name"]
         return VideoPlan(
             scenes=fixed_scenes[:8],
             narration=narration,
@@ -1954,8 +1955,16 @@ def generate_explainer_video(
     plan = build_video_plan_from_analysis(analysis, plan_mode=plan_mode)
     payload = _analysis_payload(analysis)
     startup_name = payload["startup_name"]
+    # Regra de negócio: o personagem deve sempre ser o nome da startup inserida.
+    enforced_character_name = str(getattr(analysis, "startup_name", "") or startup_name).strip() or startup_name
+    plan.character_name = enforced_character_name
     score = payload["score"]
     presenter_image = _prepare_presenter_image(presenter_image_path)
+    presenter_image_supplied = bool(str(presenter_image_path or "").strip())
+    if presenter_image_supplied and presenter_image is None:
+        raise ExplainerVideoGenerationError(
+            "A imagem do apresentador foi carregada, mas não pôde ser processada para montagem do vídeo."
+        )
     gender_detect = detect_presenter_gender(presenter_image_path)
     inferred_gender = _normalize_gender_label(gender_detect.get("gender"))
     override_gender = _normalize_gender_label(presenter_gender_override)
@@ -1966,11 +1975,16 @@ def generate_explainer_video(
     should_try_did = mode in {"auto", "did_only"}
     allow_local_render = mode in {"auto", "local_only", "canva_capcut"}
     if should_try_did:
+        # Se o utilizador carregou imagem, ela deve ser usada no vídeo.
+        # Evita fallback para fontes padrão no cenário D-ID.
+        did_source_urls = list(presenter_source_urls or [])
+        if presenter_image_url and presenter_image_url not in did_source_urls:
+            did_source_urls.insert(0, presenter_image_url)
         realistic_meta = _try_generate_realistic_video_did(
             plan=plan,
             source_image_url=presenter_image_url or "",
             output_path=output_path,
-            source_image_urls=presenter_source_urls or [],
+            source_image_urls=did_source_urls,
             presenter_gender=presenter_gender,
             real_image_only=(mode == "did_only"),
             progress_callback=progress_callback,
@@ -1986,7 +2000,7 @@ def generate_explainer_video(
             "scene_count": len(plan.scenes),
             "generated_at": timezone.now().isoformat(),
             "narration_preview": plan.narration[:300],
-            "presenter_image_used": bool(presenter_image_url),
+            "presenter_image_used": bool(presenter_image_url or presenter_image_path),
             "realistic_provider": realistic_meta.get("provider"),
             "realistic_result_url": realistic_meta.get("result_url"),
             "realistic_talk_id": realistic_meta.get("talk_id"),

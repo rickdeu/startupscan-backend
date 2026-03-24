@@ -2090,6 +2090,9 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
                         presenter_image_url=presenter_url,
                         startup_name=analysis.startup_name or "Startup",
                     )
+                    if presenter_url not in presenter_source_urls:
+                        # Garante que a imagem carregada também é considerada no pool de fontes.
+                        presenter_source_urls.insert(0, presenter_url)
 
             if video_mode == "did_only" and not presenter_url:
                 messages.error(
