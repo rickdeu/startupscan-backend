@@ -1,74 +1,74 @@
 {% extends "analyzer/base.html" %}
 
-{% block topbar_title %}Revisão da Ideia Guardada{% endblock %}
-{% block topbar_subtitle %}Dados persistidos no banco e geração de pitch completo para investidores{% endblock %}
+{% block topbar_title %}{{ ui_text.idea_review_title }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.idea_review_subtitle }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0"><i class="fas fa-database me-2"></i>Submissão #{{ submission.id }}</h4>
+    <h4 class="mb-0"><i class="fas fa-database me-2"></i>{{ ui_text.idea_submission }} #{{ submission.id }}</h4>
     <span class="badge bg-{% if submission.status == 'generated' %}success{% else %}secondary{% endif %}">
         {{ submission.get_status_display }}
     </span>
 </div>
 
 <div class="card mb-4">
-    <div class="card-header">Informações guardadas</div>
+    <div class="card-header">{{ ui_text.saved_information }}</div>
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-8">
-                <label class="form-label text-muted mb-1">Nome da Startup</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.startup_name }}</label>
                 <div class="fw-semibold">{{ submission.startup_name }}</div>
             </div>
             <div class="col-md-4">
-                <label class="form-label text-muted mb-1">Motor selecionado</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.selected_engine }}</label>
                 <div class="fw-semibold text-uppercase">{{ submission.model_source }}</div>
             </div>
             <div class="col-12">
-                <label class="form-label text-muted mb-1">One-liner</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.one_liner }}</label>
                 <div>{{ submission.one_liner|default:"—" }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Problema</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.problem }}</label>
                 <div>{{ submission.problem }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Solução</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.solution }}</label>
                 <div>{{ submission.solution }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Cliente-alvo</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.target_customer }}</label>
                 <div>{{ submission.target_customer }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Mercado</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.market }}</label>
                 <div>{{ submission.market_size|default:"—" }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Modelo de Negócio</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.business_model }}</label>
                 <div>{{ submission.business_model }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Diferencial Competitivo</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.competitive_advantage }}</label>
                 <div>{{ submission.competitive_advantage|default:"—" }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Tração</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.traction }}</label>
                 <div>{{ submission.traction|default:"—" }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Equipe</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.team }}</label>
                 <div>{{ submission.team|default:"—" }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Meta de captação</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.funding_goal }}</label>
                 <div>{{ submission.funding_goal|default:"—" }}</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label text-muted mb-1">Uso do capital</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.use_of_funds }}</label>
                 <div>{{ submission.use_of_funds|default:"—" }}</div>
             </div>
             <div class="col-12">
-                <label class="form-label text-muted mb-1">Call to action</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.call_to_action }}</label>
                 <div>{{ submission.call_to_action|default:"—" }}</div>
             </div>
         </div>
@@ -78,16 +78,16 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="generate">
             <button class="btn btn-primary" type="submit">
-                <i class="fas fa-wand-magic-sparkles me-1"></i>Gerar Pitch Completo
+                <i class="fas fa-wand-magic-sparkles me-1"></i>{{ ui_text.generate_full_pitch }}
             </button>
         </form>
         <a href="{% url 'idea_pitch_builder' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i>Nova ideia
+            <i class="fas fa-arrow-left me-1"></i>{{ ui_text.new_idea }}
         </a>
         {% if submission.status == "generated" %}
         <form method="get" action="{% url 'idea_pitch_pdf' submission.id %}" class="row g-2 align-items-end ms-0 me-0 w-100 mt-1">
             <div class="col-md-5">
-                <label class="form-label text-muted mb-1">Modo de design</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.design_mode }}</label>
                 <select class="form-select form-select-sm" name="design_mode" id="ideaPitchDesignMode">
                     {% for value, label in pitch_design_mode_choices %}
                     <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
@@ -95,7 +95,7 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label text-muted mb-1">Template premium manual</label>
+                <label class="form-label text-muted mb-1">{{ ui_text.premium_manual_template }}</label>
                 <select class="form-select form-select-sm" name="design_template" id="ideaPitchDesignTemplate">
                     {% for value, label in pitch_design_template_choices %}
                     <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
@@ -104,7 +104,7 @@
             </div>
             <div class="col-md-3 d-grid">
                 <button type="submit" class="btn btn-outline-primary">
-                    <i class="fas fa-file-pdf me-1"></i>Baixar PDF Completo
+                    <i class="fas fa-file-pdf me-1"></i>{{ ui_text.download_full_pdf }}
                 </button>
             </div>
         </form>
@@ -115,19 +115,19 @@
 {% if generated_pitch %}
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Pitch completo pronto para apresentação</h5>
-        <span class="small text-muted">Gerado em {{ submission.generated_at|date:"d/m/Y H:i" }}</span>
+        <h5 class="mb-0">{{ ui_text.full_pitch_ready }}</h5>
+        <span class="small text-muted">{{ ui_text.generated_at }} {{ submission.generated_at|date:"d/m/Y H:i" }}</span>
     </div>
     <div class="card-body">
         <h4>{{ generated_pitch.title }}</h4>
-        <p class="text-muted"><strong>Slogan:</strong> {{ generated_pitch.slogan }}</p>
+        <p class="text-muted"><strong>{{ ui_text.slogan }}:</strong> {{ generated_pitch.slogan }}</p>
 
         {% if generated_pitch.elevator_pitch %}
-        <h6>Elevator Pitch</h6>
+        <h6>{{ ui_text.elevator_pitch }}</h6>
         <p>{{ generated_pitch.elevator_pitch }}</p>
         {% endif %}
 
-        <h6>Estrutura principal</h6>
+        <h6>{{ ui_text.main_structure }}</h6>
         <div class="row g-3">
             {% for section in generated_pitch.sections %}
             <div class="col-md-6">
@@ -140,7 +140,7 @@
         </div>
 
         {% if generated_pitch.script_3min %}
-        <h6 class="mt-4">Roteiro para apresentação (3 minutos)</h6>
+        <h6 class="mt-4">{{ ui_text.presentation_script_3min }}</h6>
         <ol class="mb-0">
             {% for line in generated_pitch.script_3min %}
             <li>{{ line }}</li>
@@ -149,14 +149,14 @@
         {% endif %}
 
         {% if generated_pitch.pitch_deck %}
-        <h6 class="mt-4">Estrutura sugerida de Pitch Deck</h6>
+        <h6 class="mt-4">{{ ui_text.suggested_pitch_deck }}</h6>
         <div class="table-responsive">
             <table class="table table-sm table-striped">
                 <thead>
                     <tr>
-                        <th>Slide</th>
-                        <th>Título</th>
-                        <th>Pontos-chave</th>
+                        <th>{{ ui_text.slide }}</th>
+                        <th>{{ ui_text.title }}</th>
+                        <th>{{ ui_text.key_points }}</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -140,6 +140,44 @@ def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:
     return normalized
 
 
+def _inject_i18n_labels(context: dict, request) -> dict:
+    """Injeta labels traduzidas para templates que ainda possuem muito conteúdo textual."""
+    context = dict(context or {})
+    ui_text = context.get("ui_text")
+    if not isinstance(ui_text, dict):
+        ui_text = build_ui_text(getattr(request, "ui_language", None))
+        context["ui_text"] = ui_text
+
+    # Labels de períodos usados em múltiplos dashboards.
+    context["ui_days_labels"] = {
+        "30": ui_text.get("days_last_30", "Últimos 30 dias"),
+        "90": ui_text.get("days_last_90", "Últimos 90 dias"),
+        "180": ui_text.get("days_last_180", "Últimos 180 dias"),
+        "365": ui_text.get("days_last_12m", "Últimos 12 meses"),
+        "0": ui_text.get("days_all_period", "Todo o período"),
+    }
+
+    # Labels comuns para status de execução/progresso.
+    context["ui_phase_labels"] = {
+        "queue": ui_text.get("phase_queue", "Fila"),
+        "initialization": ui_text.get("phase_initialization", "Inicialização"),
+        "preparation": ui_text.get("phase_preparation", "Preparação"),
+        "rendering": ui_text.get("phase_rendering", "Renderização"),
+        "persistence": ui_text.get("phase_persistence", "Persistência"),
+        "completed": ui_text.get("phase_completed", "Concluído"),
+        "failed": ui_text.get("phase_failed", "Falha"),
+        "processing": ui_text.get("phase_processing", "Processando"),
+    }
+    context["ui_status_labels"] = {
+        "running": ui_text.get("status_running", "RUNNING"),
+        "pending": ui_text.get("status_pending", "PENDING"),
+        "completed": ui_text.get("status_completed", "COMPLETED"),
+        "failed": ui_text.get("status_failed", "FAILED"),
+        "unavailable": ui_text.get("status_unavailable", "UNAVAILABLE"),
+    }
+    return context
+
+
 def _redirect_for_role(request, *, fallback_role: str | None = None):
     target_role = fallback_role or get_user_role(request.user)
     return redirect(role_home_url_name(target_role))
@@ -350,6 +388,14 @@ def _run_explainer_video_job(
         )
 
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        canva_context_meta = {}
+        if generation_mode == "canva_capcut":
+            try:
+                from startupscan_api.services.pitch_video import _canva_capcut_context_for_meta
+
+                canva_context_meta = _canva_capcut_context_for_meta(analysis)
+            except Exception:
+                canva_context_meta = {}
 
         media_root = settings.MEDIA_ROOT
         try:
@@ -413,6 +459,9 @@ def _run_explainer_video_job(
 
         metadata = analysis.metadata or {}
         metadata["explainer_video"] = video_meta
+        if generation_mode == "canva_capcut" and canva_context_meta:
+            if isinstance(metadata.get("explainer_video"), dict):
+                metadata["explainer_video"].update(canva_context_meta)
         metadata["explainer_video_job_id"] = job_id
         metadata["explainer_video_job_status"] = "COMPLETED"
         metadata["explainer_video_mode"] = generation_mode
@@ -1804,7 +1853,7 @@ class PitchResultsView(RoleRequiredMixin, View):
         if not isinstance(last_pitch_meta, dict):
             last_pitch_meta = {}
         selected_video_mode = str((analysis.metadata or {}).get("explainer_video_mode", "auto") or "auto").strip().lower()
-        if selected_video_mode not in {"auto", "did_only", "local_only"}:
+        if selected_video_mode not in {"auto", "did_only", "local_only", "canva_capcut"}:
             selected_video_mode = "auto"
         selected_presenter_gender_choice = str(
             (analysis.metadata or {}).get("explainer_video_gender_choice", "auto") or "auto"
@@ -2030,7 +2079,7 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
 
         try:
             video_mode = (request.POST.get("video_mode", "auto") or "auto").strip().lower()
-            allowed_modes = {"auto", "did_only", "local_only"}
+            allowed_modes = {"auto", "did_only", "local_only", "canva_capcut"}
             if video_mode not in allowed_modes:
                 video_mode = "auto"
             presenter_gender_choice = (request.POST.get("presenter_gender_choice", "auto") or "auto").strip().lower()
@@ -2079,6 +2128,9 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
                         presenter_image_url=presenter_url,
                         startup_name=analysis.startup_name or "Startup",
                     )
+                    if presenter_url not in presenter_source_urls:
+                        # Garante que a imagem carregada também é considerada no pool de fontes.
+                        presenter_source_urls.insert(0, presenter_url)
 
             if video_mode == "did_only" and not presenter_url:
                 messages.error(

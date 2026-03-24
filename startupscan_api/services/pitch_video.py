@@ -35,6 +35,7 @@ class VideoPlan:
 MIN_VIDEO_SECONDS = 60
 MAX_VIDEO_SECONDS = 180
 TARGET_VIDEO_SECONDS = 130
+ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1"
 
 
 class ExplainerVideoGenerationError(RuntimeError):
@@ -307,6 +308,160 @@ def _local_video_plan(payload: dict) -> VideoPlan:
     return VideoPlan(scenes=scenes, narration=narration, character_name=character_name, engine_used="local")
 
 
+def _build_canva_capcut_context_bundle(payload: dict) -> dict:
+    startup_name = payload.get("startup_name", "Startup")
+    score = float(payload.get("score", 0) or 0)
+    summary = str(payload.get("summary", "") or "").strip()
+    strengths = payload.get("strengths", []) if isinstance(payload.get("strengths"), list) else []
+    recommendations = payload.get("recommendations", []) if isinstance(payload.get("recommendations"), list) else []
+    investor_pitch = payload.get("investor_pitch", {}) if isinstance(payload.get("investor_pitch"), dict) else {}
+    thesis = str(investor_pitch.get("investment_thesis", "") or "").strip()
+
+    top_strength = str(strengths[0]).strip() if strengths else "foco em execução e entrega de valor"
+    top_recommendation = str(recommendations[0]).strip() if recommendations else "manter consistência e ritmo de crescimento"
+
+    script_text = (
+        f"Se você continuar desistindo, nunca vai saber até onde poderia chegar. "
+        f"Comece hoje, mesmo com medo. "
+        f"No contexto da {startup_name}, a análise atual mostra score {score:.1f} por dez, "
+        f"com destaque para {top_strength}. "
+        f"{summary or 'Existe oportunidade real de escala com posicionamento competitivo.'} "
+        f"A prioridade estratégica agora é {top_recommendation}. "
+        f"{thesis or 'Com disciplina comercial e produto bem executado, o potencial de investimento cresce de forma sólida.'}"
+    ).strip()
+
+    return {
+        "mode": "canva_capcut",
+        "title": f"Canva + CapCut Auto para {startup_name}",
+        "script_theme": "Motivacao",
+        "script_text": script_text,
+        "script_example": (
+            "Se você continuar desistindo, nunca vai saber até onde poderia chegar. "
+            "Comece hoje, mesmo com medo."
+        ),
+        "steps": [
+            {
+                "title": "1. Criar personagem (Canva)",
+                "details": [
+                    "Avatar/cartoon com visual alinhado ao contexto da startup.",
+                    "Paleta e roupa adaptadas para apresentação executiva.",
+                    "Exportação pronta para composição em vídeo.",
+                ],
+            },
+            {
+                "title": "2. Narração automática (ElevenLabs/voz neural)",
+                "details": [
+                    "Roteiro contextual gerado automaticamente pela análise.",
+                    "Seleção de voz com base em gênero detectado/confirmado.",
+                    "Áudio final em estilo apresentação formal.",
+                ],
+            },
+            {
+                "title": "3. Edição animada (estilo CapCut)",
+                "details": [
+                    "Movimento suave de câmera, zoom e ritmo de palco.",
+                    "Legendas automáticas no cartão de fala por cena.",
+                    "Transições executivas e pacing para pitch.",
+                ],
+            },
+            {
+                "title": "4. Talking avatar (opcional no fluxo)",
+                "details": [
+                    "Quando houver imagem real, mantém sincronização visual.",
+                    "Quando não houver, usa personagem executivo do modo local.",
+                    "Conclusão obrigatória no final da apresentação.",
+                ],
+            },
+        ],
+        "apps": ["Canva-style avatar", "CapCut-style animation", "ElevenLabs/Neural TTS"],
+    }
+
+
+def _canva_capcut_video_plan(payload: dict) -> VideoPlan:
+    context = _build_canva_capcut_context_bundle(payload)
+    startup_name = payload.get("startup_name", "Startup")
+    score = float(payload.get("score", 0) or 0)
+    summary = str(payload.get("summary", "") or "").strip()
+    investor_pitch = payload.get("investor_pitch", {}) if isinstance(payload.get("investor_pitch"), dict) else {}
+    readiness = str(investor_pitch.get("funding_readiness", "") or "Em evolução").strip()
+    suggested_ticket = str(investor_pitch.get("suggested_ticket", "") or "Seed com milestones claros").strip()
+
+    scenes = [
+        {
+            "title": "Abertura de Impacto",
+            "text": (
+                f"Se você continuar desistindo, nunca vai saber até onde poderia chegar. "
+                f"Comece hoje, mesmo com medo. "
+                f"Hoje eu apresento {startup_name}, com leitura executiva orientada a crescimento."
+            ),
+            "duration": 14,
+        },
+        {
+            "title": "Contexto da Startup",
+            "text": (
+                summary
+                or f"{startup_name} nasce para resolver uma dor real com proposta escalável e aplicação prática."
+            ),
+            "duration": 15,
+        },
+        {
+            "title": "Indicadores de Potencial",
+            "text": (
+                f"O score de avaliação atual é {score:.1f} por dez. "
+                f"Receita estimada: AOA {float(payload.get('revenue', 0) or 0):,.0f}. "
+                f"Crescimento: {float(payload.get('growth_rate', 0) or 0):.1f} por cento. "
+                f"Margem: {float(payload.get('profit_margin', 0) or 0):.1f} por cento."
+            ),
+            "duration": 16,
+        },
+        {
+            "title": "Tese e Prontidão",
+            "text": (
+                f"{str(investor_pitch.get('investment_thesis', '') or 'A tese de investimento indica alinhamento com oportunidade de mercado.')} "
+                f"Prontidão atual: {readiness}. "
+                f"Ticket sugerido: {suggested_ticket}."
+            ),
+            "duration": 15,
+        },
+        {
+            "title": "Roteiro Motivacional da Marca",
+            "text": context["script_text"],
+            "duration": 16,
+        },
+        {
+            "title": "Plano de Execução",
+            "text": (
+                "O foco imediato é transformar potencial em tração previsível, "
+                "com metas comerciais objetivas, melhoria de produto e disciplina operacional."
+            ),
+            "duration": 15,
+        },
+        {
+            "title": "Mensagem Final",
+            "text": (
+                f"{startup_name} está preparada para evoluir com consistência. "
+                "O próximo passo é executar com clareza, velocidade e compromisso com resultado."
+            ),
+            "duration": 14,
+        },
+    ]
+    narration = " ".join(str(scene.get("text", "") or "") for scene in scenes).strip()
+    return VideoPlan(
+        scenes=scenes,
+        narration=narration,
+        character_name=startup_name,
+        engine_used="canva_capcut_auto",
+    )
+
+
+def _canva_capcut_context_for_meta(analysis) -> dict:
+    payload = _analysis_payload(analysis)
+    bundle = _build_canva_capcut_context_bundle(payload)
+    bundle["script_text"] = _normalize_numeric_ratio_for_tts(str(bundle.get("script_text", "") or ""))
+    bundle["script_example"] = _normalize_numeric_ratio_for_tts(str(bundle.get("script_example", "") or ""))
+    return bundle
+
+
 def _gpt_video_plan(payload: dict) -> VideoPlan | None:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -359,7 +514,8 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
                 f"{_narrative_tagline(payload['startup_name'], uniqueness_key)}"
             )
         narration = str(data.get("narration", "")).strip() or " ".join(scene["text"] for scene in fixed_scenes)
-        character_name = str(data.get("character_name", payload["startup_name"])).strip() or payload["startup_name"]
+        # Regra de produto: personagem deve ser sempre o nome da startup.
+        character_name = str(payload["startup_name"]).strip() or payload["startup_name"]
         return VideoPlan(
             scenes=fixed_scenes[:8],
             narration=narration,
@@ -488,11 +644,15 @@ def _ensure_plan_has_conclusion(plan: VideoPlan, payload: dict) -> VideoPlan:
     )
 
 
-def build_video_plan_from_analysis(analysis) -> VideoPlan:
+def build_video_plan_from_analysis(analysis, *, plan_mode: str = "default") -> VideoPlan:
     payload = _analysis_payload(analysis)
-    plan = _gpt_video_plan(payload)
-    if plan is None:
-        plan = _local_video_plan(payload)
+    mode = str(plan_mode or "default").strip().lower()
+    if mode == "canva_capcut":
+        plan = _canva_capcut_video_plan(payload)
+    else:
+        plan = _gpt_video_plan(payload)
+        if plan is None:
+            plan = _local_video_plan(payload)
     plan = _enforce_video_duration(plan, payload)
     plan = _ensure_plan_has_conclusion(plan, payload)
     plan = _apply_tts_speech_fixes(plan)
@@ -757,6 +917,7 @@ def _resolve_voice_profile(presenter_gender: str | None) -> dict:
     return {
         "gender": gender,
         "did_voice_id": did_voice_id,
+        "voice_id": did_voice_id,
         "edge_voices": edge_candidates,
     }
 
@@ -1662,6 +1823,115 @@ def _generate_tts_audio(
         return False, "none"
 
 
+def _generate_elevenlabs_audio(
+    narration_text: str,
+    audio_path: str,
+    *,
+    voice_profile: dict | None = None,
+) -> tuple[bool, str]:
+    api_key = (
+        os.getenv("ELEVENLABS_API_KEY")
+        or os.getenv("ELEVEN_API_KEY")
+        or os.getenv("XI_API_KEY")
+        or ""
+    ).strip()
+    if not api_key:
+        return False, "none"
+
+    profile = voice_profile or {}
+    explicit_voice = str(profile.get("voice_id", "") or "").strip()
+    gender = _normalize_gender_label(profile.get("gender"))
+    default_voice = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
+    male_voice = os.getenv("ELEVENLABS_VOICE_ID_MALE", "").strip()
+    female_voice = os.getenv("ELEVENLABS_VOICE_ID_FEMALE", "").strip()
+    if explicit_voice:
+        voice_id = explicit_voice
+    elif gender == "female":
+        voice_id = female_voice or default_voice
+    elif gender == "male":
+        voice_id = male_voice or default_voice
+    else:
+        voice_id = default_voice
+    voice_id = voice_id or "EXAVITQu4vr4xnSDxMaL"
+
+    model_id = (
+        os.getenv("ELEVENLABS_MODEL_ID")
+        or os.getenv("ELEVENLABS_MODEL")
+        or "eleven_multilingual_v2"
+    ).strip()
+    voice_settings = {
+        "stability": 0.42,
+        "similarity_boost": 0.82,
+        "style": 0.35,
+        "use_speaker_boost": True,
+    }
+    base_url = "https://api.elevenlabs.io/v1/text-to-speech"
+    payload = {
+        "text": narration_text,
+        "model_id": model_id,
+        "voice_settings": voice_settings,
+    }
+    headers = {
+        "xi-api-key": api_key,
+        "accept": "audio/mpeg",
+        "content-type": "application/json",
+    }
+    try:
+        resp = requests.post(
+            f"{base_url}/{voice_id}",
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=120,
+        )
+        if resp.status_code >= 400 or not resp.content:
+            return False, "none"
+        with open(audio_path, "wb") as fh:
+            fh.write(resp.content)
+        return True, f"elevenlabs:{voice_id}"
+    except Exception:
+        return False, "none"
+
+
+def _elevenlabs_tts_save(
+    narration_text: str,
+    audio_path: str,
+    *,
+    voice_id: str = "",
+) -> tuple[bool, str]:
+    """Compat helper para fallback TTS com ElevenLabs."""
+    profile = {}
+    if voice_id:
+        profile["voice_id"] = voice_id
+    return _generate_elevenlabs_audio(
+        narration_text,
+        audio_path,
+        voice_profile=profile,
+    )
+
+
+def _generate_tts_audio_with_fallback(
+    narration_text: str,
+    audio_path: str,
+    *,
+    preferred_voices: list[str] | None = None,
+    use_elevenlabs_first: bool = False,
+    elevenlabs_voice_id: str = "",
+) -> tuple[bool, str]:
+    if use_elevenlabs_first:
+        ok, engine = _elevenlabs_tts_save(
+            narration_text,
+            audio_path,
+            voice_id=elevenlabs_voice_id,
+        )
+        if ok:
+            return True, engine
+    return _generate_tts_audio(
+        narration_text,
+        audio_path,
+        preferred_voices=preferred_voices,
+    )
+
+
 def _safe_error_text(exc: Exception) -> str:
     text = str(exc).strip()
     return text if text else exc.__class__.__name__
@@ -1679,13 +1949,22 @@ def generate_explainer_video(
 ):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     mode = str(generation_mode or "auto").strip().lower()
-    if mode not in {"auto", "did_only", "local_only"}:
+    if mode not in {"auto", "did_only", "local_only", "canva_capcut"}:
         mode = "auto"
-    plan = build_video_plan_from_analysis(analysis)
+    plan_mode = "canva_capcut" if mode == "canva_capcut" else "default"
+    plan = build_video_plan_from_analysis(analysis, plan_mode=plan_mode)
     payload = _analysis_payload(analysis)
     startup_name = payload["startup_name"]
+    # Regra de negócio: o personagem deve sempre ser o nome da startup inserida.
+    enforced_character_name = str(getattr(analysis, "startup_name", "") or startup_name).strip() or startup_name
+    plan.character_name = enforced_character_name
     score = payload["score"]
     presenter_image = _prepare_presenter_image(presenter_image_path)
+    presenter_image_supplied = bool(str(presenter_image_path or "").strip())
+    if presenter_image_supplied and presenter_image is None:
+        raise ExplainerVideoGenerationError(
+            "A imagem do apresentador foi carregada, mas não pôde ser processada para montagem do vídeo."
+        )
     gender_detect = detect_presenter_gender(presenter_image_path)
     inferred_gender = _normalize_gender_label(gender_detect.get("gender"))
     override_gender = _normalize_gender_label(presenter_gender_override)
@@ -1694,13 +1973,18 @@ def generate_explainer_video(
 
     realistic_meta = None
     should_try_did = mode in {"auto", "did_only"}
-    allow_local_render = mode in {"auto", "local_only"}
+    allow_local_render = mode in {"auto", "local_only", "canva_capcut"}
     if should_try_did:
+        # Se o utilizador carregou imagem, ela deve ser usada no vídeo.
+        # Evita fallback para fontes padrão no cenário D-ID.
+        did_source_urls = list(presenter_source_urls or [])
+        if presenter_image_url and presenter_image_url not in did_source_urls:
+            did_source_urls.insert(0, presenter_image_url)
         realistic_meta = _try_generate_realistic_video_did(
             plan=plan,
             source_image_url=presenter_image_url or "",
             output_path=output_path,
-            source_image_urls=presenter_source_urls or [],
+            source_image_urls=did_source_urls,
             presenter_gender=presenter_gender,
             real_image_only=(mode == "did_only"),
             progress_callback=progress_callback,
@@ -1716,7 +2000,7 @@ def generate_explainer_video(
             "scene_count": len(plan.scenes),
             "generated_at": timezone.now().isoformat(),
             "narration_preview": plan.narration[:300],
-            "presenter_image_used": bool(presenter_image_url),
+            "presenter_image_used": bool(presenter_image_url or presenter_image_path),
             "realistic_provider": realistic_meta.get("provider"),
             "realistic_result_url": realistic_meta.get("result_url"),
             "realistic_talk_id": realistic_meta.get("talk_id"),
@@ -1803,10 +2087,12 @@ def generate_explainer_video(
 
         final_clip = concatenate_videoclips(clips, method="compose")
 
-        has_audio, tts_engine = _generate_tts_audio(
+        has_audio, tts_engine = _generate_tts_audio_with_fallback(
             plan.narration,
             tmp_audio_path,
             preferred_voices=voice_profile.get("edge_voices") or None,
+            use_elevenlabs_first=(mode == "canva_capcut"),
+            elevenlabs_voice_id=str(voice_profile.get("voice_id", "") or ""),
         )
         if has_audio and os.path.exists(tmp_audio_path):
             audio_clip = AudioFileClip(tmp_audio_path)
@@ -1890,6 +2176,7 @@ def generate_explainer_video(
     return {
         "output_path": output_path,
         "engine_used": plan.engine_used,
+        "mode": "canva_capcut" if mode == "canva_capcut" else "auto_generated",
         "character_name": plan.character_name,
         "voice_engine": tts_engine,
         "voice_gender_target": voice_profile.get("gender", "unknown"),

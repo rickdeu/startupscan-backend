@@ -1,30 +1,33 @@
 {% extends "analyzer/base.html" %}
 
+{% block topbar_title %}{{ ui_text.error_processing_title|default:"Erro no Processamento" }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.error_processing_subtitle|default:"Falha durante a análise da startup" }}{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
     <div class="card border-danger">
         <div class="card-header bg-danger text-white">
-            <h2 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>Erro no Processamento</h2>
+            <h2 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>{{ ui_text.error_processing_title|default:"Erro no Processamento" }}</h2>
         </div>
         <div class="card-body">
             <div class="alert alert-danger">
-                <h4 class="alert-heading">Ocorreu um erro durante a análise</h4>
+                <h4 class="alert-heading">{{ ui_text.error_processing_heading|default:"Ocorreu um erro durante a análise" }}</h4>
                 <p>{{ error }}</p>
                 <hr>
-                <p class="mb-0">Por favor, tente novamente mais tarde ou entre em contato com o suporte técnico se o problema persistir.</p>
+                <p class="mb-0">{{ ui_text.error_processing_help|default:"Por favor, tente novamente mais tarde ou entre em contato com o suporte técnico se o problema persistir." }}</p>
             </div>
             
             <div class="mt-4">
                 <a href="{% url 'dashboard' %}" class="btn btn-primary mr-3">
-                    <i class="fas fa-home mr-2"></i> Voltar ao Dashboard
+                    <i class="fas fa-home mr-2"></i> {{ ui_text.error_processing_back_dashboard|default:"Voltar ao Dashboard" }}
                 </a>
                 <a href="{% url 'pitch_form' %}" class="btn btn-secondary">
-                    <i class="fas fa-redo mr-2"></i> Tentar Novamente
+                    <i class="fas fa-redo mr-2"></i> {{ ui_text.error_processing_try_again|default:"Tentar Novamente" }}
                 </a>
             </div>
         </div>
         <div class="card-footer text-muted">
-            Erro ocorrido em {% now "d/m/Y H:i" %}
+            {{ ui_text.error_processing_occurred_at|default:"Erro ocorrido em" }} {% now "d/m/Y H:i" %}
         </div>
     </div>
 </div>
