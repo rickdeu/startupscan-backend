@@ -21,7 +21,6 @@ class UiLanguageMiddleware:
             or request.POST.get("language")
             or request.session.get("ui_language")
             or request.COOKIES.get("ui_language")
-            or getattr(request, "LANGUAGE_CODE", "")
             or settings.LANGUAGE_CODE
         )
         ui_lang = normalize_ui_language(requested)
