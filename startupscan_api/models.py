@@ -2,6 +2,12 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from startupscan_api.modules.subscriptions.constants import (
+    SUBSCRIPTION_INTERVAL_ANNUAL,
+    SUBSCRIPTION_INTERVAL_MONTHLY,
+    SUBSCRIPTION_PLAN_BASIC,
+    SUBSCRIPTION_PLAN_PRO,
+)
 
 
 class UserProfile(models.Model):
@@ -449,3 +455,135 @@ class IdeaPublicFeedback(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> {self.submission.startup_name} ({self.stars} estrelas)"
+
+
+class UserSubscription(models.Model):
+    STATUS_TRIAL = "trial"
+    STATUS_ACTIVE = "active"
+    STATUS_PAST_DUE = "past_due"
+    STATUS_CANCELED = "canceled"
+    STATUS_INCOMPLETE = "incomplete"
+    STATUS_EXPIRED = "expired"
+    STATUS_UNPAID = "unpaid"
+    STATUS_PAUSED = "paused"
+
+    STATUS_CHOICES = [
+        (STATUS_TRIAL, "Trial"),
+        (STATUS_ACTIVE, "Ativa"),
+        (STATUS_PAST_DUE, "Em atraso"),
+        (STATUS_CANCELED, "Cancelada"),
+        (STATUS_INCOMPLETE, "Incompleta"),
+        (STATUS_EXPIRED, "Expirada"),
+        (STATUS_UNPAID, "Não paga"),
+        (STATUS_PAUSED, "Pausada"),
+    ]
+
+    PLAN_CHOICES = [
+        (SUBSCRIPTION_PLAN_BASIC, "Basic"),
+        (SUBSCRIPTION_PLAN_PRO, "Pro"),
+    ]
+
+    INTERVAL_CHOICES = [
+        (SUBSCRIPTION_INTERVAL_MONTHLY, "Mensal"),
+        (SUBSCRIPTION_INTERVAL_ANNUAL, "Anual"),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="subscription",
+        verbose_name="Utilizador",
+    )
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default=SUBSCRIPTION_PLAN_BASIC, verbose_name="Plano")
+    interval = models.CharField(
+        max_length=20,
+        choices=INTERVAL_CHOICES,
+        default=SUBSCRIPTION_INTERVAL_MONTHLY,
+        verbose_name="Periodicidade",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_INCOMPLETE, verbose_name="Status")
+    stripe_customer_id = models.CharField(max_length=120, blank=True, default="", verbose_name="Stripe Customer ID")
+    stripe_subscription_id = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        verbose_name="Stripe Subscription ID",
+    )
+    trial_started_at = models.DateTimeField(null=True, blank=True, verbose_name="Início do trial")
+    trial_ends_at = models.DateTimeField(null=True, blank=True, verbose_name="Fim do trial")
+    current_period_start = models.DateTimeField(null=True, blank=True, verbose_name="Início do período atual")
+    current_period_end = models.DateTimeField(null=True, blank=True, verbose_name="Fim do período atual")
+    cancel_at_period_end = models.BooleanField(default=False, verbose_name="Cancelar no fim do período")
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadados")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Subscrição de Utilizador"
+        verbose_name_plural = "Subscrições de Utilizador"
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["plan", "interval"]),
+            models.Index(fields=["current_period_end"]),
+            models.Index(fields=["trial_ends_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.plan}/{self.interval} ({self.status})"
+
+    @property
+    def is_trial_active(self) -> bool:
+        return bool(self.status == self.STATUS_TRIAL and self.trial_ends_at and self.trial_ends_at > timezone.now())
+
+    @property
+    def is_active_paid(self) -> bool:
+        return bool(self.status == self.STATUS_ACTIVE and (not self.current_period_end or self.current_period_end > timezone.now()))
+
+    @property
+    def has_full_access(self) -> bool:
+        if self.is_trial_active:
+            return True
+        return self.is_active_paid
+
+
+class PaymentTransaction(models.Model):
+    subscription = models.ForeignKey(
+        UserSubscription,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        verbose_name="Subscrição",
+    )
+    amount_cents = models.PositiveIntegerField(verbose_name="Valor (cêntimos)")
+    currency = models.CharField(max_length=10, default="usd", verbose_name="Moeda")
+    status = models.CharField(max_length=30, default="pending", verbose_name="Status de pagamento")
+    stripe_invoice_id = models.CharField(
+        max_length=120,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name="Stripe Invoice ID",
+    )
+    stripe_payment_intent_id = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        verbose_name="Stripe Payment Intent ID",
+    )
+    invoice_pdf_url = models.URLField(blank=True, default="", verbose_name="URL da fatura")
+    paid_at = models.DateTimeField(null=True, blank=True, verbose_name="Data de pagamento")
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadados")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Transação de Pagamento"
+        verbose_name_plural = "Transações de Pagamento"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["paid_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.subscription.user.username} - {self.amount_cents} {self.currency} ({self.status})"

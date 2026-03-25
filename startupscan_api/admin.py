@@ -2,7 +2,9 @@ from django.contrib import admin
 from startupscan_api.models import (
     IdeaPublicFeedback,
     InvestorConnectionInterest,
+    PaymentTransaction,
     PitchAnalysis,
+    UserSubscription,
     UserProfile,
 )
 from django.utils.html import format_html
@@ -284,4 +286,37 @@ class IdeaPublicFeedbackAdmin(admin.ModelAdmin):
     list_display = ("id", "submission", "user", "stars", "endorsed", "created_at", "updated_at")
     list_filter = ("stars", "endorsed", "created_at")
     search_fields = ("submission__startup_name", "user__username", "comment")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "user",
+        "plan",
+        "interval",
+        "status",
+        "trial_ends_at",
+        "current_period_end",
+        "updated_at",
+    )
+    list_filter = ("plan", "interval", "status", "cancel_at_period_end")
+    search_fields = ("user__username", "user__email", "stripe_customer_id", "stripe_subscription_id")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "subscription",
+        "amount_cents",
+        "currency",
+        "status",
+        "paid_at",
+        "created_at",
+    )
+    list_filter = ("status", "currency", "created_at", "paid_at")
+    search_fields = ("subscription__user__username", "stripe_invoice_id", "stripe_payment_intent_id")
     readonly_fields = ("created_at", "updated_at")

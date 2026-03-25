@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from django.contrib.auth import views as auth_views
 from .views import (
     BatchAnalysisResultsView,
@@ -34,6 +34,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path('subscriptions/', include('startupscan_api.modules.subscriptions.urls')),
+    path('payments/', include('startupscan_api.modules.payments.urls')),
     path('analyze/', StartupPitchAnalyzer.as_view(), name='pitch-analyzer'),
     path('model/retrain/', ModelRetrainView.as_view(), name='model-retrain'),
     path('training/status/<str:task_id>/', TrainingStatusView.as_view(), name='training-status'),

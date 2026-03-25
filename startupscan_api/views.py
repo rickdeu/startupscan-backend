@@ -45,6 +45,7 @@ from startupscan_api.services.pitch_builder import (
     get_pitch_design_template_choices,
     normalize_pitch_design_options,
 )
+from startupscan_api.modules.subscriptions.service import ensure_trial_for_user
 
 import joblib
 try:
@@ -194,6 +195,7 @@ class RoleRequiredMixin(LoginRequiredMixin):
     allowed_roles = {ROLE_PUBLICO, ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def dispatch(self, request, *args, **kwargs):
+        ensure_trial_for_user(request.user)
         role = get_user_role(request.user)
         if role == ROLE_ADMIN:
             # Admin tem acesso total independentemente da matriz de papéis da view.
@@ -2648,6 +2650,7 @@ def register_view(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+            ensure_trial_for_user(user)
             login(request, user)
             get_or_create_profile_for_user(user)
             messages.success(request, "Registro realizado com sucesso!")
