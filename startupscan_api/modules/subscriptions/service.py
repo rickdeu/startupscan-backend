@@ -66,11 +66,26 @@ def ensure_trial_for_user(user) -> UserSubscription | None:
         return None
     if subscription.status in {UserSubscription.STATUS_ACTIVE, UserSubscription.STATUS_TRIAL}:
         return subscription
+    if subscription.status in {
+        UserSubscription.STATUS_PAST_DUE,
+        UserSubscription.STATUS_CANCELED,
+        UserSubscription.STATUS_EXPIRED,
+        UserSubscription.STATUS_UNPAID,
+        UserSubscription.STATUS_PAUSED,
+    }:
+        # Não reativa trial automaticamente para estados de cobrança/bloqueio.
+        return subscription
     if subscription.trial_started_at and subscription.trial_ends_at and subscription.trial_ends_at > timezone.now():
         subscription.status = UserSubscription.STATUS_TRIAL
         subscription.current_period_start = subscription.trial_started_at
         subscription.current_period_end = subscription.trial_ends_at
         subscription.save(update_fields=["status", "current_period_start", "current_period_end", "updated_at"])
+        return subscription
+    if subscription.trial_started_at and subscription.trial_ends_at and subscription.trial_ends_at <= timezone.now():
+        if subscription.status != UserSubscription.STATUS_EXPIRED:
+            subscription.status = UserSubscription.STATUS_EXPIRED
+            subscription.current_period_end = subscription.trial_ends_at
+            subscription.save(update_fields=["status", "current_period_end", "updated_at"])
         return subscription
     return start_full_access_trial(subscription)
 

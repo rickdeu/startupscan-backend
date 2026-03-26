@@ -195,6 +195,17 @@ class SubscriptionModuleTests(TestCase):
         role_codes = {code for code, _ in ROLE_CHOICES_PUBLIC_REGISTRATION}
         self.assertEqual(role_codes, {"publico_geral", "empreendedor", "investidor"})
 
+    def test_expired_or_canceled_subscription_shows_blocking_update_modal(self):
+        subscription = ensure_trial_for_user(self.user)
+        subscription.status = UserSubscription.STATUS_CANCELED
+        subscription.current_period_end = timezone.now() - timedelta(days=1)
+        subscription.save(update_fields=["status", "current_period_end", "updated_at"])
+
+        response = self.client.get("/profile/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="subscriptionUpdateModal"')
+        self.assertContains(response, "Atualize a sua subscrição")
+
     def test_sync_subscription_uses_db_catalog_by_stripe_price_id(self):
         subscription = ensure_trial_for_user(self.user)
         payload = {
