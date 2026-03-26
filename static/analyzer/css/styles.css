@@ -450,3 +450,246 @@ canvas {
 .submit-progress-meta strong {
     color: #7dd3fc;
 }
+
+/* Public landing redesign */
+.public-landing {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.public-landing-hero {
+    background:
+        linear-gradient(130deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.9)),
+        radial-gradient(circle at top right, rgba(34, 211, 238, 0.35), transparent 35%);
+    border: 1px solid rgba(191, 219, 254, 0.35);
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+}
+
+.public-landing-kicker {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid rgba(191, 219, 254, 0.7);
+    background: rgba(15, 23, 42, 0.25);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.public-landing-title {
+    margin-top: 0.8rem;
+    margin-bottom: 0.5rem;
+    font-size: clamp(1.65rem, 2.8vw, 2.4rem);
+    line-height: 1.18;
+    font-weight: 700;
+}
+
+.public-landing-subtitle {
+    margin-bottom: 0;
+    max-width: 64ch;
+    opacity: 0.95;
+    font-size: 1.03rem;
+}
+
+.public-stat-card {
+    background: rgba(15, 23, 42, 0.32);
+    border: 1px solid rgba(191, 219, 254, 0.28);
+    border-radius: 12px;
+    padding: 0.7rem 0.8rem;
+    height: 100%;
+}
+
+.public-stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.public-stat-label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.95;
+}
+
+.public-hero-media-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid rgba(191, 219, 254, 0.35);
+    min-height: 300px;
+}
+
+.public-hero-media-card img {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    object-fit: cover;
+    filter: saturate(1.06) contrast(1.04);
+}
+
+.public-hero-media-badge {
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(191, 219, 254, 0.4);
+    background: rgba(15, 23, 42, 0.78);
+    backdrop-filter: blur(5px);
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+}
+
+.public-landing-strip {
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #111d33 0%, #0f1a2f 100%);
+    padding: 0.8rem 1rem;
+}
+
+.public-strip-title {
+    font-weight: 600;
+    margin-right: 0.4rem;
+}
+
+.public-role-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(37, 99, 235, 0.5);
+    background: rgba(37, 99, 235, 0.14);
+    border-radius: 999px;
+    padding: 0.26rem 0.65rem;
+    font-size: 0.78rem;
+}
+
+.public-feature-card {
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #121f35, #0f182c);
+    box-shadow: var(--shadow-card);
+}
+
+.public-feature-image {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+}
+
+.public-feature-content {
+    padding: 1rem;
+}
+
+.public-feature-content h5 {
+    margin-bottom: 0.45rem;
+}
+
+.public-feature-content p {
+    margin-bottom: 0;
+    opacity: 0.96;
+}
+
+.public-process {
+    background: linear-gradient(180deg, #141f35 0%, #111b2e 100%);
+}
+
+.public-process-step {
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.45);
+    padding: 0.95rem;
+    height: 100%;
+}
+
+.public-step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+
+.public-plan-card {
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1rem;
+    background: linear-gradient(180deg, #111d31 0%, #0f182a 100%);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+}
+
+.public-plan-card.plan-highlight {
+    border-color: rgba(245, 158, 11, 0.55);
+    box-shadow: 0 18px 36px rgba(245, 158, 11, 0.18);
+}
+
+.public-plan-price-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.65rem;
+    align-items: center;
+    border-bottom: 1px dashed rgba(148, 163, 184, 0.28);
+    padding: 0.5rem 0;
+    font-size: 0.92rem;
+}
+
+.public-plan-price-list li:last-child {
+    border-bottom: 0;
+}
+
+.public-trial-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    background: rgba(34, 197, 94, 0.12);
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.78rem;
+}
+
+.public-idea-card {
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #111d31 0%, #0e1628 100%);
+    box-shadow: var(--shadow-card);
+}
+
+.public-idea-image {
+    width: 100%;
+    height: 145px;
+    object-fit: cover;
+}
+
+.public-idea-content {
+    padding: 0.9rem;
+}
+
+.public-rank-chip {
+    border: 1px solid rgba(191, 219, 254, 0.55);
+    border-radius: 999px;
+    padding: 0.16rem 0.55rem;
+    font-size: 0.74rem;
+    background: rgba(37, 99, 235, 0.2);
+}
+
+.public-cta {
+    border: 1px solid rgba(191, 219, 254, 0.4);
+    border-radius: 16px;
+    padding: 1.1rem 1.25rem;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, 0.2), transparent 40%),
+        linear-gradient(130deg, rgba(37, 99, 235, 0.9), rgba(79, 70, 229, 0.86));
+}

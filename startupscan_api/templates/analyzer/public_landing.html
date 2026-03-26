@@ -5,177 +5,278 @@
 {% block topbar_subtitle %}{{ ui_text.public_landing_subtitle|default:"Ideias públicas, planos de subscrição e acesso rápido ao sistema" }}{% endblock %}
 
 {% block content %}
-<div class="hero-panel p-4 p-lg-5 mb-4">
-    <div class="row align-items-center">
-        <div class="col-lg-8">
-            <h1 class="display-6 fw-bold mb-2">{{ ui_text.public_landing_hero_title|default:"O cartão de visita da StartupScan" }}</h1>
-            <p class="lead mb-3">{{ ui_text.public_landing_hero_text|default:"Explore ideias de pitch públicas, compare planos Basic/Pro e entre na plataforma para analisar, investir e colaborar." }}</p>
-            <div class="d-flex flex-wrap gap-2">
-                {% if user.is_authenticated %}
-                    <a href="{% url 'user_profile' %}" class="btn btn-light btn-lg">
-                        <i class="fas fa-user me-2"></i>{{ ui_text.nav_profile|default:"Meu Perfil" }}
-                    </a>
-                    <a href="{% url 'subscription_catalog' %}" class="btn btn-outline-light btn-lg">
-                        <i class="fas fa-layer-group me-2"></i>{{ ui_text.public_landing_catalog|default:"Catálogo de subscrições (API)" }}
-                    </a>
-                {% else %}
+<div class="public-landing">
+    <section class="public-landing-hero mb-4">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-7">
+                <span class="public-landing-kicker">{{ ui_text.public_landing_system_info_title|default:"Plataforma de inovação com IA e dados" }}</span>
+                <h1 class="public-landing-title">{{ ui_text.public_landing_hero_title|default:"O cartão de visita da StartupScan" }}</h1>
+                <p class="public-landing-subtitle">{{ ui_text.public_landing_hero_text|default:"Explore ideias de pitch públicas, compare planos Basic/Pro e entre na plataforma para analisar, investir e colaborar." }}</p>
+                <div class="d-flex flex-wrap gap-2 mt-3">
                     <a href="{% url 'register' %}" class="btn btn-light btn-lg">
                         <i class="fas fa-user-plus me-2"></i>{{ ui_text.register_now|default:"Registre-se" }}
                     </a>
                     <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
                         <i class="fas fa-right-to-bracket me-2"></i>{{ ui_text.login|default:"Entrar" }}
                     </a>
-                {% endif %}
-            </div>
-        </div>
-        <div class="col-lg-4 mt-4 mt-lg-0">
-            <div class="glass-card p-3">
-                <div class="small text-muted text-uppercase mb-2">{{ ui_text.public_landing_visible_roles|default:"Perfis permitidos no registo público" }}</div>
-                <ul class="mb-0 ps-3">
-                    {% for role in public_registration_roles %}
-                    <li>{{ role.label }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ ui_text.public_landing_public_ideas_title|default:"Ideias de pitch públicas" }}</h5>
-                <span class="small text-muted">{{ total_ideas }} {{ ui_text.public_landing_ideas_count|default:"ideias visíveis" }}</span>
-            </div>
-            <div class="card-body">
-                <form method="get" class="row g-2 align-items-end mb-3">
-                    <div class="col-md-9">
-                        <label for="id_q_public" class="form-label mb-1">{{ ui_text.search_ideas|default:"Pesquisar ideias" }}</label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="id_q_public"
-                            name="q"
-                            value="{{ search_query }}"
-                            placeholder="{{ ui_text.search_ideas_placeholder|default:'procure ideias...' }}"
-                        >
-                    </div>
-                    <div class="col-md-3 d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i>{{ ui_text.search|default:"Pesquisar" }}
-                        </button>
-                    </div>
-                </form>
-
-                {% if ideas %}
-                    <div class="list-group list-group-flush">
-                        {% for idea in ideas %}
-                        <div class="list-group-item px-0">
-                            <div class="d-flex justify-content-between align-items-start gap-3">
-                                <div>
-                                    <div class="small text-muted">#{{ idea.rank_position }}</div>
-                                    <h6 class="mb-1">{{ idea.startup_name }}</h6>
-                                    <p class="mb-2 text-muted">{{ idea.one_liner|default:idea.problem|truncatechars:160 }}</p>
-                                    {% if user.is_authenticated %}
-                                    <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-circle-info me-1"></i>{{ ui_text.view_details_comment_rate|default:"Ver detalhes, comentar e avaliar" }}
-                                    </a>
-                                    {% else %}
-                                    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-lock me-1"></i>{{ ui_text.public_landing_login_to_interact|default:"Faça login para interagir" }}
-                                    </a>
-                                    {% endif %}
-                                </div>
-                                <div class="text-end">
-                                    <div class="badge text-bg-warning mb-1">
-                                        <i class="fas fa-star me-1"></i>{{ idea.avg_stars|default:0|floatformat:1 }}/5
-                                    </div>
-                                    <div class="small text-muted">{{ ui_text.score|default:"Score" }} {{ idea.ranking_points|floatformat:1 }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="alert alert-secondary mb-0">
-                        {{ ui_text.no_ideas_found|default:"Nenhuma ideia pública encontrada no momento." }}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header">
-                <h5 class="mb-0">{{ ui_text.public_landing_subscriptions_title|default:"Planos de subscrição" }}</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">{{ ui_text.public_landing_subscriptions_hint|default:"Escolha o plano ideal para seu nível de acesso." }}</p>
-                <div class="small text-muted mb-2">
-                    <strong>{{ ui_text.public_landing_trial_label|default:"Trial" }}:</strong>
-                    {{ plan_catalog.trial_days }} {{ ui_text.public_landing_trial_days|default:"dias com acesso total" }}
+                    <a href="#public-plans" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-layer-group me-2"></i>{{ ui_text.public_landing_subscriptions_title|default:"Planos de subscrição" }}
+                    </a>
                 </div>
+                <div class="row g-2 mt-3">
+                    <div class="col-6 col-md-4">
+                        <div class="public-stat-card">
+                            <div class="public-stat-value">{{ total_ideas }}</div>
+                            <div class="public-stat-label">{{ ui_text.public_landing_ideas_count|default:"ideias visíveis" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="public-stat-card">
+                            <div class="public-stat-value">{{ plan_catalog.trial_days }}</div>
+                            <div class="public-stat-label">{{ ui_text.public_landing_trial_days|default:"dias de trial total" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="public-stat-card">
+                            <div class="public-stat-value">{{ plan_catalog.plans|length }}</div>
+                            <div class="public-stat-label">{{ ui_text.public_landing_subscriptions_title|default:"planos ativos" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="public-hero-media-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80"
+                        alt="Equipa a colaborar em inovação"
+                        class="img-fluid"
+                        loading="lazy"
+                    >
+                    <div class="public-hero-media-badge">
+                        <i class="fas fa-shield-heart"></i>
+                        <span>{{ ui_text.public_landing_visible_roles|default:"Registo público controlado e seguro" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-                {% for plan_key, plan in plan_catalog.plans.items %}
-                <div class="border rounded p-3 mb-2">
-                    <div class="fw-semibold">{{ plan.label }}</div>
-                    <div class="small text-muted mb-2">{{ plan.description }}</div>
-                    <div class="small">
+    <section class="public-landing-strip mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="public-strip-title">{{ ui_text.public_landing_visible_roles|default:"Perfis permitidos no registo público" }}:</span>
+            {% for role in public_registration_roles %}
+            <span class="public-role-chip"><i class="fas fa-check-circle me-1"></i>{{ role.label }}</span>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <article class="public-feature-card h-100">
+                <img
+                    src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80"
+                    alt="Dashboard com análises estratégicas"
+                    class="public-feature-image"
+                    loading="lazy"
+                >
+                <div class="public-feature-content">
+                    <h5>{{ ui_text.public_landing_system_info_title|default:"Análise estratégica" }}</h5>
+                    <p>{{ ui_text.public_landing_system_info_text|default:"A StartupScan integra análise de pitch, gestão de ideias, feedback público, conexões entre empreendedores e investidores, além de subscrições com Stripe." }}</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-lg-4">
+            <article class="public-feature-card h-100">
+                <img
+                    src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=900&q=80"
+                    alt="Empreendedor a apresentar ideia"
+                    class="public-feature-image"
+                    loading="lazy"
+                >
+                <div class="public-feature-content">
+                    <h5>{{ ui_text.public_landing_public_ideas_title|default:"Vitrine de ideias públicas" }}</h5>
+                    <p>{{ ui_text.view_details_comment_rate|default:"Descubra ideias, acompanhe o ranking e interaja com comentários e avaliações." }}</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-lg-4">
+            <article class="public-feature-card h-100">
+                <img
+                    src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=900&q=80"
+                    alt="Planejamento financeiro de subscrições"
+                    class="public-feature-image"
+                    loading="lazy"
+                >
+                <div class="public-feature-content">
+                    <h5>{{ ui_text.public_landing_subscriptions_title|default:"Subscrições flexíveis" }}</h5>
+                    <p>{{ ui_text.public_landing_subscriptions_hint|default:"Escolha o plano ideal para seu nível de acesso." }}</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="public-process card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="public-process-step">
+                        <span class="public-step-index">01</span>
+                        <h6>{{ ui_text.public_landing_create_account|default:"Crie a sua conta" }}</h6>
+                        <p>{{ ui_text.public_landing_visible_roles|default:"Escolha um perfil autorizado: Público em geral, Empreendedor ou Investidor." }}</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="public-process-step">
+                        <span class="public-step-index">02</span>
+                        <h6>{{ ui_text.public_landing_trial_label|default:"Ative o trial" }}</h6>
+                        <p>{{ plan_catalog.trial_days }} {{ ui_text.public_landing_trial_days|default:"dias com acesso total para explorar todos os recursos." }}</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="public-process-step">
+                        <span class="public-step-index">03</span>
+                        <h6>{{ ui_text.public_landing_manage_subscription|default:"Escale para o plano ideal" }}</h6>
+                        <p>{{ ui_text.public_landing_subscriptions_hint|default:"Escolha o plano ideal para seu nível de acesso e acompanhe tudo pelo perfil." }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="public-plans" class="mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+            <div>
+                <h4 class="mb-1">{{ ui_text.public_landing_subscriptions_title|default:"Planos de subscrição" }}</h4>
+                <p class="mb-0 text-muted">{{ ui_text.public_landing_subscriptions_hint|default:"Escolha o plano ideal para seu nível de acesso." }}</p>
+            </div>
+            <span class="public-trial-badge">
+                <i class="fas fa-bolt me-1"></i>{{ ui_text.public_landing_trial_label|default:"Trial" }}: {{ plan_catalog.trial_days }} {{ ui_text.public_landing_trial_days|default:"dias com acesso total" }}
+            </span>
+        </div>
+        <div class="row g-3">
+            {% for plan_key, plan in plan_catalog.plans.items %}
+            <div class="col-lg-6">
+                <article class="public-plan-card h-100 {% if plan_key == 'pro' %}plan-highlight{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1">{{ plan.label }}</h5>
+                            <p class="mb-2">{{ plan.description }}</p>
+                        </div>
+                        {% if plan_key == 'pro' %}
+                        <span class="badge text-bg-warning">Popular</span>
+                        {% endif %}
+                    </div>
+
+                    <ul class="list-unstyled public-plan-price-list mb-3">
                         {% if plan.prices.monthly %}
-                            <div>
-                                <strong>{{ ui_text.monthly|default:"Mensal" }}:</strong>
-                                {{ plan.prices.monthly.amount_cents|floatformat:0 }} {{ plan.prices.monthly.currency|upper }}
-                            </div>
+                        <li>
+                            <span>{{ ui_text.monthly|default:"Mensal" }}</span>
+                            <strong>{{ plan.prices.monthly.amount_cents|floatformat:0 }} cêntimos ({{ plan.prices.monthly.currency|upper }})</strong>
+                        </li>
                         {% endif %}
                         {% if plan.prices.annual %}
-                            <div>
-                                <strong>{{ ui_text.annual|default:"Anual" }}:</strong>
-                                {{ plan.prices.annual.amount_cents|floatformat:0 }} {{ plan.prices.annual.currency|upper }}
-                            </div>
+                        <li>
+                            <span>{{ ui_text.annual|default:"Anual" }}</span>
+                            <strong>{{ plan.prices.annual.amount_cents|floatformat:0 }} cêntimos ({{ plan.prices.annual.currency|upper }})</strong>
+                        </li>
                         {% endif %}
+                    </ul>
+
+                    <div class="d-flex flex-wrap gap-2 mt-auto">
+                        <a href="{% url 'register' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-1"></i>{{ ui_text.public_landing_create_account|default:"Criar conta" }}
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}
+                        </a>
                     </div>
+                </article>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="small text-muted mt-2 mb-0">{{ ui_text.public_landing_prices_note|default:"Valores exibidos em cêntimos, conforme configuração do sistema." }}</p>
+    </section>
+
+    <section class="card border-0 shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0">{{ ui_text.public_landing_public_ideas_title|default:"Ideias de pitch públicas" }}</h5>
+            <span class="small text-muted">{{ total_ideas }} {{ ui_text.public_landing_ideas_count|default:"ideias visíveis" }}</span>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end mb-3">
+                <div class="col-md-9">
+                    <label for="id_q_public" class="form-label mb-1">{{ ui_text.search_ideas|default:"Pesquisar ideias" }}</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="id_q_public"
+                        name="q"
+                        value="{{ search_query }}"
+                        placeholder="{{ ui_text.search_ideas_placeholder|default:'procure ideias...' }}"
+                    >
+                </div>
+                <div class="col-md-3 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>{{ ui_text.search|default:"Pesquisar" }}
+                    </button>
+                </div>
+            </form>
+
+            {% if ideas %}
+            <div class="row g-3">
+                {% for idea in ideas %}
+                <div class="col-md-6 col-xl-4">
+                    <article class="public-idea-card h-100">
+                        <img
+                            src="{% if forloop.counter0|divisibleby:3 %}https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80{% elif forloop.counter0|divisibleby:2 %}https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80{% else %}https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=900&q=80{% endif %}"
+                            alt="Imagem ilustrativa de inovação e pitch"
+                            class="public-idea-image"
+                            loading="lazy"
+                        >
+                        <div class="public-idea-content">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <span class="public-rank-chip">#{{ idea.rank_position }}</span>
+                                <span class="badge text-bg-warning"><i class="fas fa-star me-1"></i>{{ idea.avg_stars|default:0|floatformat:1 }}/5</span>
+                            </div>
+                            <h6 class="mb-1">{{ idea.startup_name }}</h6>
+                            <p class="text-muted mb-2">{{ idea.one_liner|default:idea.problem|truncatechars:130 }}</p>
+                            <div class="small text-muted mb-3">{{ ui_text.score|default:"Score" }} {{ idea.ranking_points|floatformat:1 }}</div>
+                            <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="fas fa-lock me-1"></i>{{ ui_text.public_landing_login_to_interact|default:"Faça login para interagir" }}
+                            </a>
+                        </div>
+                    </article>
                 </div>
                 {% endfor %}
-                <div class="small text-muted">
-                    {{ ui_text.public_landing_prices_note|default:"Valores exibidos em cêntimos, conforme configuração do sistema." }}
-                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{% url 'public_ideas' %}" class="btn btn-outline-light">
+                    <i class="fas fa-lightbulb me-1"></i>{{ ui_text.nav_platform_ideas|default:"Ver todas as ideias públicas" }}
+                </a>
+            </div>
+            {% else %}
+            <div class="alert alert-secondary mb-0">
+                {{ ui_text.no_ideas_found|default:"Nenhuma ideia pública encontrada no momento." }}
+            </div>
+            {% endif %}
+        </div>
+    </section>
 
-                <div class="d-grid gap-2 mt-3">
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'user_profile' %}" class="btn btn-primary">
-                        <i class="fas fa-user-gear me-1"></i>{{ ui_text.public_landing_manage_subscription|default:"Gerir minha subscrição" }}
-                    </a>
-                    {% else %}
-                    <a href="{% url 'register' %}" class="btn btn-primary">
-                        <i class="fas fa-user-plus me-1"></i>{{ ui_text.public_landing_create_account|default:"Criar conta" }}
-                    </a>
-                    <a href="{% url 'login' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}
-                    </a>
-                    {% endif %}
-                </div>
+    <section class="public-cta mb-2">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <h4 class="mb-1">{{ ui_text.public_landing_hero_title|default:"Pronto para evoluir as suas ideias?" }}</h4>
+                <p class="mb-0">{{ ui_text.public_landing_hero_text|default:"Entre na StartupScan, ative seu trial e leve sua jornada de inovação para outro nível." }}</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="{% url 'register' %}" class="btn btn-light me-2">
+                    <i class="fas fa-rocket me-1"></i>{{ ui_text.register_now|default:"Registre-se" }}
+                </a>
+                <a href="{% url 'login' %}" class="btn btn-outline-light">
+                    <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}
+                </a>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
-        <h5>{{ ui_text.public_landing_system_info_title|default:"Informações do sistema" }}</h5>
-        <p class="mb-2 text-muted">{{ ui_text.public_landing_system_info_text|default:"A StartupScan integra análise de pitch, gestão de ideias, feedback público, conexões entre empreendedores e investidores, além de subscrições com Stripe." }}</p>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'public_ideas' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-lightbulb me-1"></i>{{ ui_text.nav_platform_ideas|default:"Ideias da Plataforma" }}
-            </a>
-            <a href="{% url 'register' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-user-plus me-1"></i>{{ ui_text.register_now|default:"Registre-se" }}
-            </a>
-            <a href="{% url 'login' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}
-            </a>
-        </div>
-    </div>
+    </section>
 </div>
 {% endblock %}
