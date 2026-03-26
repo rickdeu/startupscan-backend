@@ -90,7 +90,6 @@ ROUTE_ACCESS_REQUIREMENTS = {
     "idea_pitch_builder": "can_idea_builder",
     "idea_pitch_detail": "can_idea_builder",
     "idea_pitch_pdf": "can_idea_builder",
-    "public_ideas": "can_public_ideas",
     "public_idea_detail": "can_public_ideas",
     "public_idea_feedback": "can_public_ideas",
     "investor_dashboard": "can_investor",

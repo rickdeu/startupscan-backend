@@ -22,6 +22,7 @@ from .views import (
     PitchInvestorPDFView,
     PitchReportPDFView,
     PitchResultsView,
+    PublicLandingView,
     PublicIdeaDetailView,
     PublicIdeaFeedbackView,
     PublicIdeasView,
@@ -35,6 +36,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path('public/', PublicLandingView.as_view(), name='public_landing'),
     path('subscriptions/', include('startupscan_api.modules.subscriptions.urls')),
     path('payments/', include('startupscan_api.modules.payments.urls')),
     path('analyze/', StartupPitchAnalyzer.as_view(), name='pitch-analyzer'),
@@ -52,7 +54,8 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='user_profile'),
     path('home/', RoleHomeView.as_view(), name='role_home'),
 
-    path('', DashboardView.as_view(), name='dashboard'),
+    path('', PublicLandingView.as_view(), name='public_home'),
+    path('app/', DashboardView.as_view(), name='dashboard'),
     path('pitch/builder/', IdeaPitchBuilderView.as_view(), name='idea_pitch_builder'),
     path('pitch/builder/<int:submission_id>/', IdeaPitchDetailView.as_view(), name='idea_pitch_detail'),
     path('pitch/builder/<int:submission_id>/pdf/', IdeaPitchPDFView.as_view(), name='idea_pitch_pdf'),

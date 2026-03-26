@@ -33,6 +33,15 @@
             </div>
 
             <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="id_is_public" name="is_public" {% if form_data.is_public %}checked{% endif %}>
+                    <label class="form-check-label" for="id_is_public">
+                        {{ ui_text.idea_form_mark_public|default:"Marcar ideia como pública para aparecer na área pública" }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-12">
                 <label class="form-label">{{ ui_text.idea_form_one_liner }}</label>
                 <input type="text" class="form-control" name="one_liner" value="{{ form_data.one_liner }}" placeholder="{{ ui_text.idea_form_one_liner_placeholder }}">
             </div>

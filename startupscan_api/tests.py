@@ -11,6 +11,7 @@ from startupscan_api.modules.payments.service import (
     record_payment_from_invoice_event,
     sync_subscription_from_stripe_data,
 )
+from startupscan_api.roles import ROLE_CHOICES_PUBLIC_REGISTRATION
 from startupscan_api.roles import get_or_create_profile_for_user
 from startupscan_api.modules.subscriptions.service import ensure_trial_for_user
 
@@ -152,3 +153,13 @@ class SubscriptionModuleTests(TestCase):
 
     def test_route_access_helper_allows_non_mapped_routes(self):
         self.assertTrue(is_subscription_allowed_for_route("some_unknown_route", {"can_dashboard": False}))
+
+    def test_public_landing_is_accessible_without_auth(self):
+        anonymous = APIClient()
+        response = anonymous.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "StartupScan")
+
+    def test_register_role_choices_are_limited_to_public_entrepreneur_investor(self):
+        role_codes = {code for code, _ in ROLE_CHOICES_PUBLIC_REGISTRATION}
+        self.assertEqual(role_codes, {"publico_geral", "empreendedor", "investidor"})

@@ -1035,7 +1035,7 @@ class DashboardView(RoleRequiredMixin, View):
     allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
     def get(self, request):
         role = get_user_role(request.user)
-        if request.user.is_authenticated and request.path == "/" and role_home_url_name(role) != "dashboard":
+        if request.user.is_authenticated and request.path == "/app/" and role_home_url_name(role) != "dashboard":
             return _redirect_for_role(request, fallback_role=role)
         try:
             min_score = float(request.GET.get("min_score", 0) or 0)
@@ -1172,6 +1172,7 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
             "use_of_funds": request.POST.get("use_of_funds", "").strip(),
             "call_to_action": request.POST.get("call_to_action", "").strip(),
             "model_source": request.POST.get("model_source", "local").strip().lower(),
+            "is_public": (request.POST.get("is_public") or "").strip().lower() in {"1", "true", "on", "yes"},
         }
         if form_data["model_source"] not in {"local", "gpt"}:
             form_data["model_source"] = "local"
@@ -1216,6 +1217,7 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
                 use_of_funds=form_data["use_of_funds"],
                 call_to_action=form_data["call_to_action"],
                 model_source=form_data["model_source"],
+                is_public=bool(form_data.get("is_public", False)),
             )
             messages.success(
                 request,
@@ -1314,7 +1316,7 @@ class PublicIdeasView(RoleRequiredMixin, View):
     Área do perfil público: visualização e ranking de ideias da plataforma.
     """
 
-    allowed_roles = {ROLE_PUBLICO}
+    allowed_roles = {ROLE_PUBLICO, ROLE_ADMIN}
 
     @staticmethod
     def _ranking_points(submission) -> float:
@@ -1326,7 +1328,7 @@ class PublicIdeasView(RoleRequiredMixin, View):
 
     def get(self, request):
         query = (request.GET.get("q") or "").strip()
-        submissions_qs = IdeaPitchSubmission.objects.all()
+        submissions_qs = IdeaPitchSubmission.objects.filter(is_public=True)
         if query:
             submissions_qs = submissions_qs.filter(
                 Q(startup_name__icontains=query)
@@ -1385,15 +1387,93 @@ class PublicIdeasView(RoleRequiredMixin, View):
         return render(request, "analyzer/public_ideas.html", context)
 
 
+class PublicLandingView(View):
+    """
+    Página pública de apresentação do sistema (cartão de visita):
+    - ideias públicas
+    - planos/subscrições
+    - links de entrada (login/registro/perfil)
+    """
+
+    @staticmethod
+    def _ranking_points(submission) -> float:
+        avg_stars = float(getattr(submission, "avg_stars", 0) or 0)
+        endorsements = int(getattr(submission, "endorsement_count", 0) or 0)
+        feedbacks = int(getattr(submission, "feedback_count", 0) or 0)
+        return round((avg_stars * 18.0) + (endorsements * 4.0) + (feedbacks * 2.0), 2)
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return _redirect_for_role(request)
+
+        query = (request.GET.get("q") or "").strip()
+        ideas_qs = IdeaPitchSubmission.objects.filter(is_public=True)
+        if query:
+            ideas_qs = ideas_qs.filter(
+                Q(startup_name__icontains=query)
+                | Q(one_liner__icontains=query)
+                | Q(problem__icontains=query)
+                | Q(solution__icontains=query)
+                | Q(target_customer__icontains=query)
+            )
+
+        ideas_qs = ideas_qs.annotate(
+            avg_stars=Avg("public_feedbacks__stars"),
+            feedback_count=Count("public_feedbacks", distinct=True),
+            endorsement_count=Count("public_feedbacks", filter=Q(public_feedbacks__endorsed=True), distinct=True),
+            comments_count=Count(
+                "public_feedbacks",
+                filter=(~Q(public_feedbacks__comment="") & ~Q(public_feedbacks__comment__isnull=True)),
+                distinct=True,
+            ),
+        )
+        ideas = list(ideas_qs)
+        for idea in ideas:
+            idea.ranking_points = self._ranking_points(idea)
+        ideas.sort(
+            key=lambda item: (
+                item.ranking_points,
+                float(getattr(item, "avg_stars", 0) or 0),
+                int(getattr(item, "endorsement_count", 0) or 0),
+                item.created_at,
+            ),
+            reverse=True,
+        )
+        for idx, idea in enumerate(ideas, start=1):
+            idea.rank_position = idx
+
+        plan_catalog = get_plan_catalog_payload()
+        role = get_user_role(request.user)
+        is_admin = role == ROLE_ADMIN
+        if request.user.is_authenticated:
+            role_home = role_home_url_name(role)
+        else:
+            role_home = ""
+        context = {
+            "ideas": ideas[:12],
+            "search_query": query,
+            "total_ideas": len(ideas),
+            "plan_catalog": plan_catalog,
+            "is_admin": is_admin,
+            "role_home_url_name": role_home,
+            "public_registration_roles": [
+                {"code": ROLE_PUBLICO, "label": "Público em geral"},
+                {"code": ROLE_EMPREENDEDOR, "label": "Empreendedor"},
+                {"code": ROLE_INVESTIDOR, "label": "Investidor"},
+            ],
+        }
+        return render(request, "analyzer/public_landing.html", context)
+
+
 class PublicIdeaDetailView(RoleRequiredMixin, View):
     """
     Detalhe da ideia pública com comentários e avaliação por estrelas.
     """
 
-    allowed_roles = {ROLE_PUBLICO}
+    allowed_roles = {ROLE_PUBLICO, ROLE_ADMIN}
 
     def get(self, request, submission_id):
-        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id, is_public=True)
         feedback_qs = IdeaPublicFeedback.objects.filter(submission=submission).select_related("user")
 
         stats = feedback_qs.aggregate(
@@ -1422,10 +1502,10 @@ class PublicIdeaFeedbackView(RoleRequiredMixin, View):
     Cria/atualiza feedback público (estrelas, comentário e apoio) para uma ideia.
     """
 
-    allowed_roles = {ROLE_PUBLICO}
+    allowed_roles = {ROLE_PUBLICO, ROLE_ADMIN}
 
     def post(self, request, submission_id):
-        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
+        submission = get_object_or_404(IdeaPitchSubmission, id=submission_id, is_public=True)
 
         stars_raw = (request.POST.get("stars") or "").strip()
         comment = (request.POST.get("comment") or "").strip()

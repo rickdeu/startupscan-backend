@@ -1,0 +1,177 @@
+{% extends "analyzer/base.html" %}
+
+{% block page_title %}{{ ui_text.public_landing_title|default:"StartupScan - Plataforma de Ideias e Subscrições" }}{% endblock %}
+{% block topbar_title %}{{ ui_text.public_landing_title|default:"StartupScan" }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.public_landing_subtitle|default:"Ideias públicas, planos de subscrição e acesso rápido ao sistema" }}{% endblock %}
+
+{% block content %}
+<div class="hero-panel p-4 p-lg-5 mb-4">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h1 class="display-6 fw-bold mb-2">{{ ui_text.public_landing_hero_title|default:"O cartão de visita da StartupScan" }}</h1>
+            <p class="lead mb-3">{{ ui_text.public_landing_hero_text|default:"Explore ideias de pitch públicas, compare planos Basic/Pro e entre na plataforma para analisar, investir e colaborar." }}</p>
+            <div class="d-flex flex-wrap gap-2">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'user_profile' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-user me-2"></i>{{ ui_text.nav_profile|default:"Meu Perfil" }}
+                    </a>
+                    <a href="{% url 'subscription_catalog' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-layer-group me-2"></i>{{ ui_text.public_landing_catalog|default:"Catálogo de subscrições (API)" }}
+                    </a>
+                {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>{{ ui_text.register_now|default:"Registre-se" }}
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-right-to-bracket me-2"></i>{{ ui_text.login|default:"Entrar" }}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-4 mt-4 mt-lg-0">
+            <div class="glass-card p-3">
+                <div class="small text-muted text-uppercase mb-2">{{ ui_text.public_landing_visible_roles|default:"Perfis permitidos no registo público" }}</div>
+                <ul class="mb-0 ps-3">
+                    {% for role in public_registration_roles %}
+                    <li>{{ role.label }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ ui_text.public_landing_public_ideas_title|default:"Ideias de pitch públicas" }}</h5>
+                <span class="small text-muted">{{ total_ideas }} {{ ui_text.public_landing_ideas_count|default:"ideias visíveis" }}</span>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end mb-3">
+                    <div class="col-md-9">
+                        <label for="id_q_public" class="form-label mb-1">{{ ui_text.search_ideas|default:"Pesquisar ideias" }}</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="id_q_public"
+                            name="q"
+                            value="{{ search_query }}"
+                            placeholder="{{ ui_text.search_ideas_placeholder|default:'procure ideias...' }}"
+                        >
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>{{ ui_text.search|default:"Pesquisar" }}
+                        </button>
+                    </div>
+                </form>
+
+                {% if ideas %}
+                    <div class="list-group list-group-flush">
+                        {% for idea in ideas %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div>
+                                    <div class="small text-muted">#{{ idea.rank_position }}</div>
+                                    <h6 class="mb-1">{{ idea.startup_name }}</h6>
+                                    <p class="mb-2 text-muted">{{ idea.one_liner|default:idea.problem|truncatechars:160 }}</p>
+                                    {% if user.is_authenticated %}
+                                    <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-circle-info me-1"></i>{{ ui_text.view_details_comment_rate|default:"Ver detalhes, comentar e avaliar" }}
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-lock me-1"></i>{{ ui_text.public_landing_login_to_interact|default:"Faça login para interagir" }}
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <div class="badge text-bg-warning mb-1">
+                                        <i class="fas fa-star me-1"></i>{{ idea.avg_stars|default:0|floatformat:1 }}/5
+                                    </div>
+                                    <div class="small text-muted">{{ ui_text.score|default:"Score" }} {{ idea.ranking_points|floatformat:1 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-secondary mb-0">
+                        {{ ui_text.no_ideas_found|default:"Nenhuma ideia pública encontrada no momento." }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header">
+                <h5 class="mb-0">{{ ui_text.public_landing_subscriptions_title|default:"Planos de subscrição" }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">{{ ui_text.public_landing_subscriptions_hint|default:"Escolha o plano ideal para seu nível de acesso." }}</p>
+                <div class="small text-muted mb-2">
+                    <strong>{{ ui_text.public_landing_trial_label|default:"Trial" }}:</strong>
+                    {{ plan_catalog.trial_days }} {{ ui_text.public_landing_trial_days|default:"dias com acesso total" }}
+                </div>
+
+                {% for plan_key, plan in plan_catalog.plans.items %}
+                <div class="border rounded p-3 mb-2">
+                    <div class="fw-semibold">{{ plan.label }}</div>
+                    <div class="small text-muted mb-2">{{ plan.description }}</div>
+                    <div class="small">
+                        <div>
+                            <strong>{{ ui_text.monthly|default:"Mensal" }}:</strong>
+                            {{ plan.prices.monthly.amount_cents|floatformat:0 }} {{ plan.prices.monthly.currency|upper }}
+                        </div>
+                        <div>
+                            <strong>{{ ui_text.annual|default:"Anual" }}:</strong>
+                            {{ plan.prices.annual.amount_cents|floatformat:0 }} {{ plan.prices.annual.currency|upper }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="small text-muted">
+                    {{ ui_text.public_landing_prices_note|default:"Valores exibidos em cêntimos, conforme configuração do sistema." }}
+                </div>
+
+                <div class="d-grid gap-2 mt-3">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'user_profile' %}" class="btn btn-primary">
+                        <i class="fas fa-user-gear me-1"></i>{{ ui_text.public_landing_manage_subscription|default:"Gerir minha subscrição" }}
+                    </a>
+                    {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>{{ ui_text.public_landing_create_account|default:"Criar conta" }}
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h5>{{ ui_text.public_landing_system_info_title|default:"Informações do sistema" }}</h5>
+        <p class="mb-2 text-muted">{{ ui_text.public_landing_system_info_text|default:"A StartupScan integra análise de pitch, gestão de ideias, feedback público, conexões entre empreendedores e investidores, além de subscrições com Stripe." }}</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'public_ideas' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-lightbulb me-1"></i>{{ ui_text.nav_platform_ideas|default:"Ideias da Plataforma" }}
+            </a>
+            <a href="{% url 'register' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-user-plus me-1"></i>{{ ui_text.register_now|default:"Registre-se" }}
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -334,6 +334,7 @@ class IdeaPitchSubmission(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     generated_pitch = models.JSONField(default=dict, blank=True)
     generated_at = models.DateTimeField(null=True, blank=True)
+    is_public = models.BooleanField(default=False, verbose_name="Visível na área pública")
 
     class Meta:
         ordering = ["-created_at"]

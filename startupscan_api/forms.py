@@ -2,7 +2,7 @@ from django import forms
 from django.db import OperationalError, ProgrammingError
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from startupscan_api.roles import ROLE_CHOICES_REGISTRATION, ROLE_PUBLICO, normalize_role
+from startupscan_api.roles import ROLE_CHOICES_PUBLIC_REGISTRATION, ROLE_PUBLICO, normalize_role
 from startupscan_api.models import UserProfile
 
 class RegisterForm(UserCreationForm):
@@ -10,7 +10,7 @@ class RegisterForm(UserCreationForm):
     first_name = forms.CharField(max_length=30, required=True)
     last_name = forms.CharField(max_length=30, required=True)
     profile_role = forms.ChoiceField(
-        choices=ROLE_CHOICES_REGISTRATION,
+        choices=ROLE_CHOICES_PUBLIC_REGISTRATION,
         required=True,
         initial=ROLE_PUBLICO,
         label="Perfil de acesso",

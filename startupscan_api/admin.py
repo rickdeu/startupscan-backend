@@ -1,5 +1,6 @@
 from django.contrib import admin
 from startupscan_api.models import (
+    IdeaPitchSubmission,
     IdeaPublicFeedback,
     InvestorConnectionInterest,
     PaymentTransaction,
@@ -287,6 +288,23 @@ class IdeaPublicFeedbackAdmin(admin.ModelAdmin):
     list_filter = ("stars", "endorsed", "created_at")
     search_fields = ("submission__startup_name", "user__username", "comment")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(IdeaPitchSubmission)
+class IdeaPitchSubmissionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "startup_name",
+        "user",
+        "status",
+        "model_source",
+        "is_public",
+        "generated_at",
+        "created_at",
+    )
+    list_filter = ("is_public", "status", "model_source", "created_at")
+    search_fields = ("startup_name", "one_liner", "problem", "solution", "target_customer", "user__username")
+    readonly_fields = ("created_at", "updated_at", "generated_at")
 
 
 @admin.register(UserSubscription)

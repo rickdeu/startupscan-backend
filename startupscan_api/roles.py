@@ -12,6 +12,11 @@ ROLE_ADMIN = UserProfile.ROLE_ADMIN
 
 ROLE_CHOICES = list(UserProfile.ROLE_CHOICES)
 ROLE_CHOICES_REGISTRATION = [choice for choice in ROLE_CHOICES if choice[0] != ROLE_ADMIN]
+ROLE_CHOICES_PUBLIC_REGISTRATION = [
+    choice
+    for choice in ROLE_CHOICES
+    if choice[0] in {ROLE_PUBLICO, ROLE_EMPREENDEDOR, ROLE_INVESTIDOR}
+]
 
 
 def normalize_role(value: str | None) -> str:
@@ -87,7 +92,7 @@ def role_access_matrix(role: str) -> dict:
     can_dashboard = is_admin or is_analista or is_empreendedor
     can_idea_builder = can_pitch
     can_connections = is_admin or is_analista or is_investidor or is_empreendedor
-    can_public_ideas = is_publico or is_admin
+    can_public_ideas = is_publico or is_admin or is_empreendedor or is_investidor or is_analista
 
     return {
         "is_admin": is_admin,
