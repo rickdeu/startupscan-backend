@@ -20,7 +20,13 @@ from django.core.files import File
 from django.contrib import messages
 from django.contrib.auth import login
 from startupscan_api.forms import RegisterForm
-from startupscan_api.models import IdeaPitchSubmission, IdeaPublicFeedback, InvestorConnectionInterest, PitchAnalysis
+from startupscan_api.models import (
+    IdeaPitchSubmission,
+    IdeaPublicFeedback,
+    InvestorConnectionInterest,
+    PaymentTransaction,
+    PitchAnalysis,
+)
 from startupscan_api.services.model_training import (
     ensure_model_exists,
     predict_pitch_score,
@@ -45,7 +51,17 @@ from startupscan_api.services.pitch_builder import (
     get_pitch_design_template_choices,
     normalize_pitch_design_options,
 )
-from startupscan_api.modules.subscriptions.service import ensure_trial_for_user
+from startupscan_api.modules.payments.service import (
+    create_checkout_session,
+    create_customer_portal_session,
+)
+from startupscan_api.modules.subscriptions.service import (
+    ensure_trial_for_user,
+    get_plan_price_config,
+    get_plan_catalog_payload,
+    normalize_interval,
+    normalize_plan,
+)
 
 import joblib
 try:
@@ -2505,6 +2521,88 @@ class InvestorDashboardView(RoleRequiredMixin, View):
 
 
 
+
+
+class UserProfileView(RoleRequiredMixin, View):
+    """Página do perfil do utilizador com subscrição, pagamentos e serviços."""
+    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_PUBLICO, ROLE_ANALISTA, ROLE_ADMIN}
+
+    def get(self, request):
+        user = request.user
+        role = get_user_role(user)
+        role_access = role_access_matrix(role)
+        subscription = ensure_trial_for_user(user)
+        if not subscription:
+            messages.error(request, "Não foi possível carregar a subscrição do seu perfil.")
+            return _redirect_back_or_default(request, "dashboard")
+
+        payments = list(
+            PaymentTransaction.objects.filter(subscription=subscription)
+            .order_by("-created_at")[:30]
+        )
+
+        services = {
+            "can_dashboard": role_access.get("can_dashboard", False),
+            "can_pitch": role_access.get("can_pitch", False),
+            "can_idea_builder": role_access.get("can_idea_builder", False),
+            "can_investor": role_access.get("can_investor", False),
+            "can_models": role_access.get("can_models", False),
+            "can_connections": role_access.get("can_connections", False),
+            "can_public_ideas": role_access.get("can_public_ideas", False),
+        }
+
+        plan_catalog = get_plan_catalog_payload()
+        plan_cfg = get_plan_price_config(subscription.plan, subscription.interval)
+        context = {
+            "subscription": subscription,
+            "payments": payments,
+            "services": services,
+            "role_access": role_access,
+            "stripe_publishable_key": getattr(settings, "STRIPE_PUBLISHABLE_KEY", ""),
+            "catalog_price": plan_cfg,
+            "plan_catalog": plan_catalog,
+        }
+        return render(request, "analyzer/user_profile.html", context)
+
+    def post(self, request):
+        action = (request.POST.get("action", "") or "").strip().lower()
+        plan = normalize_plan((request.POST.get("plan", "") or "").strip().lower())
+        interval = normalize_interval((request.POST.get("interval", "") or "").strip().lower())
+
+        if action == "start_trial":
+            ensure_trial_for_user(request.user)
+            messages.success(request, "Trial de 14 dias ativado com acesso total.")
+            return redirect("user_profile")
+
+        if action == "create_checkout":
+            try:
+                checkout = create_checkout_session(
+                    request=request,
+                    user=request.user,
+                    plan=plan,
+                    interval=interval,
+                )
+                checkout_url = str(checkout.get("url") or "").strip()
+                if checkout_url:
+                    return redirect(checkout_url)
+                raise ValueError("Stripe não retornou URL de checkout.")
+            except Exception as exc:
+                messages.error(request, f"Falha ao iniciar checkout: {_safe_exception_message(exc)}")
+                return redirect("user_profile")
+
+        if action == "open_billing_portal":
+            try:
+                portal = create_customer_portal_session(request, request.user)
+                portal_url = str(portal.get("url") or "").strip()
+                if portal_url:
+                    return redirect(portal_url)
+                raise ValueError("Stripe não retornou URL do portal.")
+            except Exception as exc:
+                messages.error(request, f"Falha ao abrir portal Stripe: {_safe_exception_message(exc)}")
+                return redirect("user_profile")
+
+        messages.error(request, "Ação inválida no perfil do utilizador.")
+        return redirect("user_profile")
 
 
 class InvestorInterestCreateView(RoleRequiredMixin, View):

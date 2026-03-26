@@ -47,6 +47,11 @@
                     <i class="fas fa-link"></i><span>{{ ui_text.nav_connections }}</span>
                 </a>
                 {% endif %}
+                {% if user.is_authenticated %}
+                <a class="sidebar-link {% if '/profile/' in request.path %}active{% endif %}" href="{% url 'user_profile' %}">
+                    <i class="fas fa-user-circle"></i><span>{{ ui_text.nav_profile|default:"Perfil" }}</span>
+                </a>
+                {% endif %}
                 {% if user_role_access.can_public_ideas %}
                 <a class="sidebar-link {% if '/ideas/' in request.path %}active{% endif %}" href="{% url 'public_ideas' %}">
                     <i class="fas fa-lightbulb"></i><span>{{ ui_text.nav_platform_ideas }}</span>

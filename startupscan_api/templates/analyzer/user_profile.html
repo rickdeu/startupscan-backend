@@ -1,0 +1,213 @@
+{% extends "analyzer/base.html" %}
+
+{% block page_title %}{{ ui_text.nav_profile|default:"Perfil" }}{% endblock %}
+{% block topbar_title %}{{ ui_text.nav_profile|default:"Perfil" }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.profile_view_subtitle|default:"Acompanhe sua subscrição, pagamentos e serviços disponíveis" }}{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ ui_text.profile_subscriptions_title|default:"Subscrição e serviços" }}</h5>
+                <span class="badge rounded-pill bg-{% if subscription.has_full_access %}success{% else %}secondary{% endif %}">
+                    {% if subscription.has_full_access %}
+                        {{ ui_text.full_access|default:"Acesso total" }}
+                    {% else %}
+                        {{ ui_text.limited_access|default:"Acesso limitado" }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <div class="small text-muted">{{ ui_text.profile_current_plan|default:"Plano atual" }}</div>
+                        <div class="fw-semibold text-uppercase">{{ subscription.plan }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="small text-muted">{{ ui_text.profile_billing_cycle|default:"Ciclo de cobrança" }}</div>
+                        <div class="fw-semibold">
+                            {% if subscription.interval == "annual" %}
+                                {{ ui_text.annual|default:"Anual" }}
+                            {% else %}
+                                {{ ui_text.monthly|default:"Mensal" }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="small text-muted">{{ ui_text.profile_current_status|default:"Estado atual" }}</div>
+                        <div class="fw-semibold">{{ subscription.status }}</div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="small text-muted">{{ ui_text.profile_trial_ends_at|default:"Trial termina em" }}</div>
+                        <div>{{ subscription.trial_ends_at|date:"d/m/Y H:i"|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">{{ ui_text.profile_next_renewal|default:"Próxima renovação" }}</div>
+                        <div>{{ subscription.current_period_end|date:"d/m/Y H:i"|default:"-" }}</div>
+                    </div>
+                </div>
+
+                <div class="small text-muted mb-3">
+                    {{ ui_text.profile_member_since|default:"Membro desde" }}: {{ subscription.created_at|date:"d/m/Y H:i" }}
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="start_trial">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-gift me-1"></i>{{ ui_text.profile_start_trial|default:"Ativar trial de 14 dias" }}
+                        </button>
+                    </form>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="open_billing_portal">
+                        <button type="submit" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-credit-card me-1"></i>{{ ui_text.profile_manage_billing|default:"Gerir cobrança no Stripe" }}
+                        </button>
+                    </form>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="mb-3">{{ ui_text.profile_open_checkout|default:"Fazer upgrade/ativar subscrição" }}</h6>
+                <form method="post" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_checkout">
+                    <div class="col-md-4">
+                        <label class="form-label">{{ ui_text.profile_current_plan|default:"Plano atual" }}</label>
+                        <select name="plan" class="form-select form-select-sm">
+                            {% for plan_key, plan_cfg in plan_catalog.plans.items %}
+                            <option value="{{ plan_key }}" {% if plan_key == subscription.plan %}selected{% endif %}>
+                                {{ plan_cfg.label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ ui_text.profile_billing_cycle|default:"Ciclo de cobrança" }}</label>
+                        <select name="interval" class="form-select form-select-sm">
+                            <option value="monthly" {% if subscription.interval == "monthly" %}selected{% endif %}>{{ ui_text.monthly|default:"Mensal" }}</option>
+                            <option value="annual" {% if subscription.interval == "annual" %}selected{% endif %}>{{ ui_text.annual|default:"Anual" }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-grid">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-lock me-1"></i>{{ ui_text.proceed_to_payment|default:"Prosseguir para pagamento" }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">{{ ui_text.profile_available_services|default:"Serviços disponíveis" }}</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_dashboard|default:"Painel" }}
+                        <span class="badge bg-{% if services.can_dashboard %}success{% else %}secondary{% endif %}">
+                            {% if services.can_dashboard %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_new_pitch|default:"Novo Pitch" }}
+                        <span class="badge bg-{% if services.can_pitch %}success{% else %}secondary{% endif %}">
+                            {% if services.can_pitch %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_generate_pitch_pdf|default:"Gerar Pitch PDF" }}
+                        <span class="badge bg-{% if services.can_idea_builder %}success{% else %}secondary{% endif %}">
+                            {% if services.can_idea_builder %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_investors|default:"Investidores" }}
+                        <span class="badge bg-{% if services.can_investor %}success{% else %}secondary{% endif %}">
+                            {% if services.can_investor %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_models|default:"Modelos" }}
+                        <span class="badge bg-{% if services.can_models %}success{% else %}secondary{% endif %}">
+                            {% if services.can_models %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_connections|default:"Conexões" }}
+                        <span class="badge bg-{% if services.can_connections %}success{% else %}secondary{% endif %}">
+                            {% if services.can_connections %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.nav_platform_ideas|default:"Ideias da Plataforma" }}
+                        <span class="badge bg-{% if services.can_public_ideas %}success{% else %}secondary{% endif %}">
+                            {% if services.can_public_ideas %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{{ ui_text.profile_payments_history|default:"Histórico de pagamentos" }}</h5>
+        <span class="small text-muted">{{ payments|length }} {{ ui_text.records|default:"registos" }}</span>
+    </div>
+    <div class="card-body p-0">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>{{ ui_text.date|default:"Data" }}</th>
+                        <th>{{ ui_text.amount|default:"Valor" }}</th>
+                        <th>{{ ui_text.status|default:"Status" }}</th>
+                        <th>Invoice</th>
+                        <th>{{ ui_text.actions|default:"Ações" }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ payment.id }}</td>
+                        <td>{{ payment.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ payment.amount_cents|floatformat:0 }} {{ payment.currency|upper }}</td>
+                        <td>
+                            <span class="badge bg-{% if payment.status == 'paid' %}success{% elif payment.status == 'open' or payment.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                {{ payment.status }}
+                            </span>
+                        </td>
+                        <td>{{ payment.stripe_invoice_id|default:"-" }}</td>
+                        <td>
+                            {% if payment.invoice_pdf_url %}
+                            <a class="btn btn-sm btn-outline-primary" href="{{ payment.invoice_pdf_url }}" target="_blank" rel="noopener">
+                                <i class="fas fa-file-invoice-dollar me-1"></i>{{ ui_text.view|default:"Ver" }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">{{ ui_text.profile_history_empty|default:"Ainda não existem pagamentos registados." }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

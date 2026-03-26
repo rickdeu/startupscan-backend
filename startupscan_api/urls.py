@@ -25,6 +25,7 @@ from .views import (
     PublicIdeaDetailView,
     PublicIdeaFeedbackView,
     PublicIdeasView,
+    UserProfileView,
     StartupPitchAnalyzer,
     BatchAnalysisView,
     ModelRetrainView,
@@ -48,6 +49,7 @@ urlpatterns = [
     path('investors/interest/<int:analysis_id>/', InvestorInterestCreateView.as_view(), name='investor_interest_create'),
     path('connections/', ConnectionsHubView.as_view(), name='connections_hub'),
     path('connections/<int:interest_id>/update/', ConnectionInterestUpdateView.as_view(), name='connection_interest_update'),
+    path('profile/', UserProfileView.as_view(), name='user_profile'),
     path('home/', RoleHomeView.as_view(), name='role_home'),
 
     path('', DashboardView.as_view(), name='dashboard'),
