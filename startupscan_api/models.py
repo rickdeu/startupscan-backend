@@ -458,6 +458,82 @@ class IdeaPublicFeedback(models.Model):
         return f"{self.user.username} -> {self.submission.startup_name} ({self.stars} estrelas)"
 
 
+class SubscriptionPlan(models.Model):
+    code = models.CharField(max_length=30, unique=True, verbose_name="Código do plano")
+    name = models.CharField(max_length=80, verbose_name="Nome do plano")
+    description = models.TextField(blank=True, default="", verbose_name="Descrição")
+    display_order = models.PositiveSmallIntegerField(default=0, verbose_name="Ordem de exibição")
+    is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    stripe_product_id = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        verbose_name="Stripe Product ID",
+    )
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadados")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Plano de Subscrição"
+        verbose_name_plural = "Planos de Subscrição"
+        ordering = ["display_order", "name"]
+        indexes = [
+            models.Index(fields=["code"]),
+            models.Index(fields=["is_active"]),
+            models.Index(fields=["display_order"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class SubscriptionPlanPrice(models.Model):
+    INTERVAL_CHOICES = [
+        (SUBSCRIPTION_INTERVAL_MONTHLY, "Mensal"),
+        (SUBSCRIPTION_INTERVAL_ANNUAL, "Anual"),
+    ]
+
+    plan = models.ForeignKey(
+        SubscriptionPlan,
+        on_delete=models.CASCADE,
+        related_name="prices",
+        verbose_name="Plano",
+    )
+    interval = models.CharField(max_length=20, choices=INTERVAL_CHOICES, verbose_name="Periodicidade")
+    amount_cents = models.PositiveIntegerField(verbose_name="Valor (cêntimos)")
+    currency = models.CharField(max_length=10, default="usd", verbose_name="Moeda")
+    is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    stripe_price_id = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        verbose_name="Stripe Price ID",
+    )
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadados")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Preço de Plano de Subscrição"
+        verbose_name_plural = "Preços de Planos de Subscrição"
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "interval"], name="unique_plan_interval_price"),
+            models.UniqueConstraint(
+                fields=["stripe_price_id"],
+                condition=~models.Q(stripe_price_id=""),
+                name="unique_stripe_price_id_non_empty",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["interval"]),
+            models.Index(fields=["is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.plan.code}/{self.interval} - {self.amount_cents} {self.currency}"
+
+
 class UserSubscription(models.Model):
     STATUS_TRIAL = "trial"
     STATUS_ACTIVE = "active"
@@ -546,6 +622,10 @@ class UserSubscription(models.Model):
             return True
         return self.is_active_paid
 
+    @property
+    def plan_obj(self):
+        return SubscriptionPlan.objects.filter(code=self.plan).first()
+
 
 class PaymentTransaction(models.Model):
     subscription = models.ForeignKey(
@@ -588,3 +668,55 @@ class PaymentTransaction(models.Model):
 
     def __str__(self):
         return f"{self.subscription.user.username} - {self.amount_cents} {self.currency} ({self.status})"
+
+
+def _seed_default_subscription_catalog(apps, schema_editor):
+    SubscriptionPlan = apps.get_model("startupscan_api", "SubscriptionPlan")
+    SubscriptionPlanPrice = apps.get_model("startupscan_api", "SubscriptionPlanPrice")
+
+    defaults = [
+        {
+            "code": SUBSCRIPTION_PLAN_BASIC,
+            "name": "Basic",
+            "description": "Plano essencial para uso regular da plataforma.",
+            "display_order": 1,
+            "monthly": {"amount_cents": 2900, "currency": "usd"},
+            "annual": {"amount_cents": 29000, "currency": "usd"},
+        },
+        {
+            "code": SUBSCRIPTION_PLAN_PRO,
+            "name": "Pro",
+            "description": "Plano avançado com recursos premium e maior capacidade.",
+            "display_order": 2,
+            "monthly": {"amount_cents": 7900, "currency": "usd"},
+            "annual": {"amount_cents": 79000, "currency": "usd"},
+        },
+    ]
+
+    for item in defaults:
+        plan, _ = SubscriptionPlan.objects.get_or_create(
+            code=item["code"],
+            defaults={
+                "name": item["name"],
+                "description": item["description"],
+                "display_order": item["display_order"],
+                "is_active": True,
+            },
+        )
+        plan.name = item["name"]
+        plan.description = item["description"]
+        plan.display_order = item["display_order"]
+        plan.is_active = True
+        plan.save(update_fields=["name", "description", "display_order", "is_active", "updated_at"])
+
+        for interval in (SUBSCRIPTION_INTERVAL_MONTHLY, SUBSCRIPTION_INTERVAL_ANNUAL):
+            price_defaults = item["monthly"] if interval == SUBSCRIPTION_INTERVAL_MONTHLY else item["annual"]
+            SubscriptionPlanPrice.objects.update_or_create(
+                plan=plan,
+                interval=interval,
+                defaults={
+                    "amount_cents": int(price_defaults["amount_cents"]),
+                    "currency": str(price_defaults["currency"]).lower(),
+                    "is_active": True,
+                },
+            )

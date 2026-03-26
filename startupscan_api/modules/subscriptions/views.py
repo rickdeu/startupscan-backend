@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from startupscan_api.models import PaymentTransaction
+from startupscan_api.modules.payments.service import sync_all_plans_from_stripe
 from startupscan_api.modules.subscriptions.serializers import SubscriptionSummarySerializer
 from startupscan_api.modules.subscriptions.service import (
     ensure_trial_for_user,
@@ -18,6 +19,12 @@ class SubscriptionCatalogView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # Tenta manter catálogo local alinhado ao Stripe antes de responder.
+        try:
+            sync_all_plans_from_stripe()
+        except Exception:
+            # Não quebra listagem se Stripe estiver indisponível.
+            pass
         return Response(get_plan_catalog_payload(), status=status.HTTP_200_OK)
 
 

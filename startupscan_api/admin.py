@@ -4,6 +4,8 @@ from startupscan_api.models import (
     IdeaPublicFeedback,
     InvestorConnectionInterest,
     PaymentTransaction,
+    SubscriptionPlan,
+    SubscriptionPlanPrice,
     PitchAnalysis,
     UserSubscription,
     UserProfile,
@@ -305,6 +307,22 @@ class IdeaPitchSubmissionAdmin(admin.ModelAdmin):
     list_filter = ("is_public", "status", "model_source", "created_at")
     search_fields = ("startup_name", "one_liner", "problem", "solution", "target_customer", "user__username")
     readonly_fields = ("created_at", "updated_at", "generated_at")
+
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ("id", "code", "name", "is_active", "display_order", "stripe_product_id", "updated_at")
+    list_filter = ("is_active",)
+    search_fields = ("code", "name", "description", "stripe_product_id")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(SubscriptionPlanPrice)
+class SubscriptionPlanPriceAdmin(admin.ModelAdmin):
+    list_display = ("id", "plan", "interval", "amount_cents", "currency", "is_active", "stripe_price_id", "updated_at")
+    list_filter = ("interval", "currency", "is_active")
+    search_fields = ("plan__code", "plan__name", "stripe_price_id")
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(UserSubscription)

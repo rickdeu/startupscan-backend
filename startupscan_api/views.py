@@ -2655,7 +2655,17 @@ class UserProfileView(RoleRequiredMixin, View):
         }
 
         plan_catalog = get_plan_catalog_payload()
-        plan_cfg = get_plan_price_config(subscription.plan, subscription.interval)
+        try:
+            plan_cfg = get_plan_price_config(subscription.plan, subscription.interval)
+        except Exception:
+            plan_cfg = {
+                "amount_cents": 0,
+                "currency": "usd",
+                "stripe_price_id": "",
+                "plan_code": subscription.plan,
+                "plan_name": subscription.plan.title(),
+                "plan_description": "",
+            }
         context = {
             "subscription": subscription,
             "payments": payments,

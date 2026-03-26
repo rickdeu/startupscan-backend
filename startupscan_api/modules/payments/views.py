@@ -15,6 +15,7 @@ from startupscan_api.modules.payments.service import (
     create_checkout_session,
     create_customer_portal_session,
     record_payment_from_invoice_event,
+    sync_all_plans_from_stripe,
     sync_subscription_from_stripe_data,
 )
 from startupscan_api.modules.payments.stripe_client import get_stripe_client, get_webhook_secret
@@ -102,5 +103,12 @@ class StripeWebhookView(APIView):
 
         if event_type in {"invoice.paid", "invoice.payment_succeeded", "invoice.payment_failed"}:
             record_payment_from_invoice_event(event_data)
+
+        if event_type in {"price.created", "price.updated", "product.created", "product.updated"}:
+            try:
+                sync_all_plans_from_stripe()
+            except Exception:
+                # Não falha webhook por erro de sincronização de catálogo.
+                pass
 
         return Response({"received": True}, status=status.HTTP_200_OK)

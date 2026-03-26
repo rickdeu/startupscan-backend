@@ -123,14 +123,18 @@
                     <div class="fw-semibold">{{ plan.label }}</div>
                     <div class="small text-muted mb-2">{{ plan.description }}</div>
                     <div class="small">
-                        <div>
-                            <strong>{{ ui_text.monthly|default:"Mensal" }}:</strong>
-                            {{ plan.prices.monthly.amount_cents|floatformat:0 }} {{ plan.prices.monthly.currency|upper }}
-                        </div>
-                        <div>
-                            <strong>{{ ui_text.annual|default:"Anual" }}:</strong>
-                            {{ plan.prices.annual.amount_cents|floatformat:0 }} {{ plan.prices.annual.currency|upper }}
-                        </div>
+                        {% if plan.prices.monthly %}
+                            <div>
+                                <strong>{{ ui_text.monthly|default:"Mensal" }}:</strong>
+                                {{ plan.prices.monthly.amount_cents|floatformat:0 }} {{ plan.prices.monthly.currency|upper }}
+                            </div>
+                        {% endif %}
+                        {% if plan.prices.annual %}
+                            <div>
+                                <strong>{{ ui_text.annual|default:"Anual" }}:</strong>
+                                {{ plan.prices.annual.amount_cents|floatformat:0 }} {{ plan.prices.annual.currency|upper }}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}

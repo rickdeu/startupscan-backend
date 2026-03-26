@@ -6,7 +6,7 @@ from datetime import timezone as datetime_timezone
 from django.urls import reverse
 from django.utils import timezone
 
-from startupscan_api.models import PaymentTransaction, UserSubscription
+from startupscan_api.models import PaymentTransaction, SubscriptionPlan, SubscriptionPlanPrice, UserSubscription
 from startupscan_api.modules.payments.stripe_client import get_stripe_client
 from startupscan_api.modules.subscriptions.service import (
     get_or_create_user_subscription,
@@ -36,6 +36,95 @@ def _checkout_urls(request) -> tuple[str, str]:
     return success_url, cancel_url
 
 
+def _sync_price_from_stripe(price_obj: dict) -> SubscriptionPlanPrice | None:
+    stripe_price_id = str(price_obj.get("id") or "").strip()
+    if not stripe_price_id:
+        return None
+
+    recurring = price_obj.get("recurring") or {}
+    recurring_interval = str(recurring.get("interval") or "").strip().lower()
+    interval_map = {"month": "monthly", "year": "annual"}
+    interval = interval_map.get(recurring_interval, "")
+    if not interval:
+        return None
+
+    unit_amount = int(price_obj.get("unit_amount") or 0)
+    currency = str(price_obj.get("currency") or "usd").lower()
+
+    product_obj = price_obj.get("product")
+    if isinstance(product_obj, dict):
+        product_id = str(product_obj.get("id") or "").strip()
+        product_name = str(product_obj.get("name") or "").strip()
+        product_description = str(product_obj.get("description") or "").strip()
+        product_metadata = product_obj.get("metadata") or {}
+    else:
+        product_id = str(product_obj or "").strip()
+        product_name = ""
+        product_description = ""
+        product_metadata = {}
+
+    plan_code_hint = str((product_metadata or {}).get("plan_code") or "").strip().lower()
+    if not plan_code_hint:
+        lookup_name = product_name.lower()
+        if "pro" in lookup_name:
+            plan_code_hint = "pro"
+        elif "basic" in lookup_name:
+            plan_code_hint = "basic"
+
+    if plan_code_hint not in {"basic", "pro"}:
+        return None
+
+    plan_defaults = {
+        "name": product_name or plan_code_hint.title(),
+        "description": product_description,
+        "is_active": True,
+        "stripe_product_id": product_id,
+        "metadata": {"stripe_product_metadata": product_metadata},
+    }
+    plan, _ = SubscriptionPlan.objects.update_or_create(code=plan_code_hint, defaults=plan_defaults)
+
+    price_defaults = {
+        "amount_cents": max(0, unit_amount),
+        "currency": currency,
+        "is_active": bool(price_obj.get("active", True)),
+        "stripe_price_id": stripe_price_id,
+        "metadata": {"stripe_price": price_obj},
+    }
+    db_price, _ = SubscriptionPlanPrice.objects.update_or_create(
+        plan=plan,
+        interval=interval,
+        defaults=price_defaults,
+    )
+    return db_price
+
+
+def sync_all_plans_from_stripe() -> list[SubscriptionPlanPrice]:
+    stripe_api = get_stripe_client()
+    synced: list[SubscriptionPlanPrice] = []
+    has_more = True
+    starting_after = None
+
+    while has_more:
+        kwargs = {"limit": 100, "active": True, "expand": ["data.product"]}
+        if starting_after:
+            kwargs["starting_after"] = starting_after
+        response = stripe_api.Price.list(**kwargs)
+        data = list(response.get("data") or [])
+        for item in data:
+            if str(item.get("type") or "").strip().lower() != "recurring":
+                continue
+            db_price = _sync_price_from_stripe(item)
+            if db_price:
+                synced.append(db_price)
+        has_more = bool(response.get("has_more"))
+        if data:
+            starting_after = data[-1].get("id")
+        else:
+            has_more = False
+
+    return synced
+
+
 def _ensure_stripe_customer_for_subscription(stripe_api, user, subscription: UserSubscription) -> str:
     if subscription.stripe_customer_id:
         return subscription.stripe_customer_id
@@ -63,10 +152,7 @@ def create_checkout_session(request, user, plan: str, interval: str) -> dict:
     price_cfg = get_plan_price_config(normalized_plan, normalized_interval)
     price_id = str(price_cfg.get("stripe_price_id", "") or "").strip()
     if not price_id:
-        raise ValueError(
-            "Preço Stripe não configurado para o plano/intervalo. "
-            "Defina STRIPE_PRICE_BASIC_MONTHLY/ANNUAL e STRIPE_PRICE_PRO_MONTHLY/ANNUAL."
-        )
+        raise ValueError("Preço Stripe não configurado no banco para o plano/intervalo selecionado.")
 
     stripe_api = get_stripe_client()
     success_url, cancel_url = _checkout_urls(request)
@@ -157,8 +243,27 @@ def sync_subscription_from_stripe_data(stripe_subscription: dict, fallback_user_
     if subscription is None:
         return None
 
-    plan = normalize_plan(metadata.get("plan") or subscription.plan)
-    interval = normalize_interval(metadata.get("interval") or subscription.interval)
+    items = ((stripe_subscription.get("items") or {}).get("data") or [])
+    first_item = items[0] if items else {}
+    price_obj = first_item.get("price") or {}
+    stripe_price_id = str(price_obj.get("id") or "").strip()
+
+    db_price = None
+    if stripe_price_id:
+        db_price = _sync_price_from_stripe(price_obj) if isinstance(price_obj, dict) else None
+    if db_price is None and stripe_price_id:
+        db_price = (
+            SubscriptionPlanPrice.objects.select_related("plan")
+            .filter(stripe_price_id=stripe_price_id, is_active=True, plan__is_active=True)
+            .first()
+        )
+
+    if db_price:
+        plan = normalize_plan(db_price.plan.code)
+        interval = normalize_interval(db_price.interval)
+    else:
+        plan = normalize_plan(metadata.get("plan") or subscription.plan)
+        interval = normalize_interval(metadata.get("interval") or subscription.interval)
     local_status = _map_stripe_status_to_local(stripe_subscription.get("status"))
 
     subscription.plan = plan
@@ -171,6 +276,10 @@ def sync_subscription_from_stripe_data(stripe_subscription: dict, fallback_user_
     subscription.trial_started_at = _to_datetime(stripe_subscription.get("trial_start"))
     subscription.trial_ends_at = _to_datetime(stripe_subscription.get("trial_end"))
     subscription.cancel_at_period_end = bool(stripe_subscription.get("cancel_at_period_end") or False)
+    if stripe_price_id:
+        metadata_payload = dict(subscription.metadata or {})
+        metadata_payload["stripe_price_id"] = stripe_price_id
+        subscription.metadata = metadata_payload
     subscription.save()
     return subscription
 

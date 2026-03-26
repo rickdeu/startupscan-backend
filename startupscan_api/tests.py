@@ -5,12 +5,9 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from startupscan_api.models import PaymentTransaction, UserSubscription
+from startupscan_api.models import PaymentTransaction, SubscriptionPlan, SubscriptionPlanPrice, UserSubscription
 from startupscan_api.modules.subscriptions.access import is_subscription_allowed_for_route
-from startupscan_api.modules.payments.service import (
-    record_payment_from_invoice_event,
-    sync_subscription_from_stripe_data,
-)
+from startupscan_api.modules.payments.service import record_payment_from_invoice_event, sync_subscription_from_stripe_data
 from startupscan_api.roles import ROLE_CHOICES_PUBLIC_REGISTRATION
 from startupscan_api.roles import get_or_create_profile_for_user
 from startupscan_api.modules.subscriptions.service import ensure_trial_for_user
@@ -31,6 +28,40 @@ class SubscriptionModuleTests(TestCase):
         self.client.force_authenticate(self.user)
         self.client.logout()
         self.client.login(username="alice", password="password123")
+        self.basic_plan = SubscriptionPlan.objects.create(code="basic", name="Basic", is_active=True, display_order=1)
+        self.pro_plan = SubscriptionPlan.objects.create(code="pro", name="Pro", is_active=True, display_order=2)
+        SubscriptionPlanPrice.objects.create(
+            plan=self.basic_plan,
+            interval="monthly",
+            amount_cents=2900,
+            currency="usd",
+            is_active=True,
+            stripe_price_id="price_basic_monthly",
+        )
+        SubscriptionPlanPrice.objects.create(
+            plan=self.basic_plan,
+            interval="annual",
+            amount_cents=29000,
+            currency="usd",
+            is_active=True,
+            stripe_price_id="price_basic_annual",
+        )
+        SubscriptionPlanPrice.objects.create(
+            plan=self.pro_plan,
+            interval="monthly",
+            amount_cents=7900,
+            currency="usd",
+            is_active=True,
+            stripe_price_id="price_pro_monthly",
+        )
+        SubscriptionPlanPrice.objects.create(
+            plan=self.pro_plan,
+            interval="annual",
+            amount_cents=79000,
+            currency="usd",
+            is_active=True,
+            stripe_price_id="price_pro_annual",
+        )
 
     def test_ensure_trial_for_user_creates_14_day_trial_with_full_access(self):
         subscription = ensure_trial_for_user(self.user)
@@ -163,3 +194,38 @@ class SubscriptionModuleTests(TestCase):
     def test_register_role_choices_are_limited_to_public_entrepreneur_investor(self):
         role_codes = {code for code, _ in ROLE_CHOICES_PUBLIC_REGISTRATION}
         self.assertEqual(role_codes, {"publico_geral", "empreendedor", "investidor"})
+
+    def test_sync_subscription_uses_db_catalog_by_stripe_price_id(self):
+        subscription = ensure_trial_for_user(self.user)
+        payload = {
+            "id": "sub_sync_price",
+            "customer": "cus_xyz",
+            "status": "active",
+            "current_period_start": int(timezone.now().timestamp()),
+            "current_period_end": int((timezone.now() + timedelta(days=30)).timestamp()),
+            "items": {
+                "data": [
+                    {
+                        "price": {
+                            "id": "price_pro_annual",
+                            "unit_amount": 79000,
+                            "currency": "usd",
+                            "active": True,
+                            "recurring": {"interval": "year"},
+                            "product": {
+                                "id": "prod_pro",
+                                "name": "Pro",
+                                "metadata": {"plan_code": "pro"},
+                            },
+                        }
+                    }
+                ]
+            },
+            "metadata": {"user_id": str(self.user.id)},
+        }
+        synced = sync_subscription_from_stripe_data(payload)
+        self.assertIsNotNone(synced)
+        assert synced is not None
+        self.assertEqual(synced.id, subscription.id)
+        self.assertEqual(synced.plan, "pro")
+        self.assertEqual(synced.interval, "annual")
