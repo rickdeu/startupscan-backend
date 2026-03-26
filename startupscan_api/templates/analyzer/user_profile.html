@@ -149,6 +149,12 @@
                         </span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ ui_text.profile_explainer_video|default:"Vídeo explicativo" }}
+                        <span class="badge bg-{% if services.can_explainer_video %}success{% else %}secondary{% endif %}">
+                            {% if services.can_explainer_video %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ ui_text.nav_platform_ideas|default:"Ideias da Plataforma" }}
                         <span class="badge bg-{% if services.can_public_ideas %}success{% else %}secondary{% endif %}">
                             {% if services.can_public_ideas %}{{ ui_text.enabled|default:"Ativo" }}{% else %}{{ ui_text.disabled|default:"Inativo" }}{% endif %}
@@ -157,6 +163,31 @@
                 </ul>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">{{ ui_text.profile_access_rules|default:"Regras de acesso do plano" }}</h5>
+    </div>
+    <div class="card-body">
+        {% if subscription.is_trial_active %}
+            <div class="alert alert-success mb-0">
+                {{ ui_text.profile_rule_trial_full|default:"No trial de 14 dias, tem acesso total a todos os módulos." }}
+            </div>
+        {% elif subscription.plan == "pro" and subscription.is_active_paid %}
+            <div class="alert alert-success mb-0">
+                {{ ui_text.profile_rule_pro_full|default:"Plano Pro ativo: acesso completo (inclui vídeos IA, conexões, investidor e modelos)." }}
+            </div>
+        {% elif subscription.plan == "basic" and subscription.is_active_paid %}
+            <div class="alert alert-warning mb-0">
+                {{ ui_text.profile_rule_basic_limited|default:"Plano Basic ativo: acesso a dashboard, análise/pitch, ideias públicas e perfil. Recursos premium ficam bloqueados." }}
+            </div>
+        {% else %}
+            <div class="alert alert-secondary mb-0">
+                {{ ui_text.profile_rule_inactive_limited|default:"Subscrição inativa: acesso limitado ao perfil para reativar o plano." }}
+            </div>
+        {% endif %}
     </div>
 </div>
 

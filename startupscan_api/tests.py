@@ -6,10 +6,12 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from startupscan_api.models import PaymentTransaction, UserSubscription
+from startupscan_api.modules.subscriptions.access import is_subscription_allowed_for_route
 from startupscan_api.modules.payments.service import (
     record_payment_from_invoice_event,
     sync_subscription_from_stripe_data,
 )
+from startupscan_api.roles import get_or_create_profile_for_user
 from startupscan_api.modules.subscriptions.service import ensure_trial_for_user
 
 
@@ -20,8 +22,14 @@ class SubscriptionModuleTests(TestCase):
             email="alice@example.com",
             password="password123",
         )
+        profile = get_or_create_profile_for_user(self.user)
+        if profile is not None:
+            profile.role = "empreendedor"
+            profile.save(update_fields=["role", "updated_at"])
         self.client = APIClient()
         self.client.force_authenticate(self.user)
+        self.client.logout()
+        self.client.login(username="alice", password="password123")
 
     def test_ensure_trial_for_user_creates_14_day_trial_with_full_access(self):
         subscription = ensure_trial_for_user(self.user)
@@ -96,3 +104,51 @@ class SubscriptionModuleTests(TestCase):
         self.assertEqual(transaction.stripe_invoice_id, "in_001")
         self.assertEqual(transaction.stripe_payment_intent_id, "pi_001")
         self.assertEqual(PaymentTransaction.objects.count(), 1)
+
+    def test_basic_paid_subscription_blocks_premium_routes(self):
+        subscription = ensure_trial_for_user(self.user)
+        subscription.status = UserSubscription.STATUS_ACTIVE
+        subscription.plan = "basic"
+        subscription.interval = "monthly"
+        subscription.current_period_end = timezone.now() + timedelta(days=30)
+        subscription.save(
+            update_fields=[
+                "status",
+                "plan",
+                "interval",
+                "current_period_end",
+                "updated_at",
+            ]
+        )
+
+        investor_response = self.client.get("/investors/")
+        self.assertEqual(investor_response.status_code, 302)
+        self.assertIn("/", investor_response.url)
+
+        models_response = self.client.get("/models/")
+        self.assertEqual(models_response.status_code, 302)
+
+    def test_basic_paid_subscription_allows_core_routes(self):
+        subscription = ensure_trial_for_user(self.user)
+        subscription.status = UserSubscription.STATUS_ACTIVE
+        subscription.plan = "basic"
+        subscription.interval = "monthly"
+        subscription.current_period_end = timezone.now() + timedelta(days=30)
+        subscription.save(
+            update_fields=[
+                "status",
+                "plan",
+                "interval",
+                "current_period_end",
+                "updated_at",
+            ]
+        )
+
+        profile_response = self.client.get("/profile/")
+        self.assertEqual(profile_response.status_code, 200)
+
+        pitch_response = self.client.get("/analyze/form/")
+        self.assertEqual(pitch_response.status_code, 200)
+
+    def test_route_access_helper_allows_non_mapped_routes(self):
+        self.assertTrue(is_subscription_allowed_for_route("some_unknown_route", {"can_dashboard": False}))

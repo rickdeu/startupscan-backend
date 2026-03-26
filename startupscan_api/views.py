@@ -62,6 +62,10 @@ from startupscan_api.modules.subscriptions.service import (
     normalize_interval,
     normalize_plan,
 )
+from startupscan_api.modules.subscriptions.access import (
+    get_subscription_and_access_for_user,
+    is_subscription_allowed_for_route,
+)
 
 import joblib
 try:
@@ -197,7 +201,11 @@ def _inject_i18n_labels(context: dict, request) -> dict:
 
 def _redirect_for_role(request, *, fallback_role: str | None = None):
     target_role = fallback_role or get_user_role(request.user)
-    return redirect(role_home_url_name(target_role))
+    role_target_name = role_home_url_name(target_role)
+    _, subscription_access = get_subscription_and_access_for_user(request.user)
+    if not is_subscription_allowed_for_route(role_target_name, subscription_access):
+        return redirect("user_profile")
+    return redirect(role_target_name)
 
 
 def _redirect_back_or_default(request, default_name: str):
@@ -211,7 +219,6 @@ class RoleRequiredMixin(LoginRequiredMixin):
     allowed_roles = {ROLE_PUBLICO, ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def dispatch(self, request, *args, **kwargs):
-        ensure_trial_for_user(request.user)
         role = get_user_role(request.user)
         if role == ROLE_ADMIN:
             # Admin tem acesso total independentemente da matriz de papéis da view.
@@ -219,6 +226,14 @@ class RoleRequiredMixin(LoginRequiredMixin):
         if role not in set(self.allowed_roles or []):
             messages.error(request, "O seu perfil não tem permissão para acessar esta página.")
             return _redirect_for_role(request, fallback_role=role)
+        _, subscription_access = get_subscription_and_access_for_user(request.user)
+        current_url_name = getattr(getattr(request, "resolver_match", None), "url_name", "")
+        if not is_subscription_allowed_for_route(current_url_name, subscription_access):
+            messages.error(
+                request,
+                "A sua subscrição atual não permite acesso a esta página. Atualize para um plano superior.",
+            )
+            return redirect("user_profile")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -232,7 +247,13 @@ class RoleBasedLoginView(LoginView):
 
 class RoleHomeView(LoginRequiredMixin, View):
     def get(self, request):
-        return _redirect_for_role(request)
+        role = get_user_role(request.user)
+        if role == ROLE_ADMIN:
+            return _redirect_for_role(request)
+        _, subscription_access = get_subscription_and_access_for_user(request.user)
+        if subscription_access.get("can_dashboard"):
+            return _redirect_for_role(request)
+        return redirect("user_profile")
 
 
 def _infer_error_field(error_text: str) -> str:
@@ -2531,6 +2552,7 @@ class UserProfileView(RoleRequiredMixin, View):
         user = request.user
         role = get_user_role(user)
         role_access = role_access_matrix(role)
+        _, subscription_access = get_subscription_and_access_for_user(user)
         subscription = ensure_trial_for_user(user)
         if not subscription:
             messages.error(request, "Não foi possível carregar a subscrição do seu perfil.")
@@ -2542,13 +2564,14 @@ class UserProfileView(RoleRequiredMixin, View):
         )
 
         services = {
-            "can_dashboard": role_access.get("can_dashboard", False),
-            "can_pitch": role_access.get("can_pitch", False),
-            "can_idea_builder": role_access.get("can_idea_builder", False),
-            "can_investor": role_access.get("can_investor", False),
-            "can_models": role_access.get("can_models", False),
-            "can_connections": role_access.get("can_connections", False),
-            "can_public_ideas": role_access.get("can_public_ideas", False),
+            "can_dashboard": bool(role_access.get("can_dashboard", False) and subscription_access.get("can_dashboard", False)),
+            "can_pitch": bool(role_access.get("can_pitch", False) and subscription_access.get("can_pitch", False)),
+            "can_idea_builder": bool(role_access.get("can_idea_builder", False) and subscription_access.get("can_idea_builder", False)),
+            "can_investor": bool(role_access.get("can_investor", False) and subscription_access.get("can_investor", False)),
+            "can_models": bool(role_access.get("can_models", False) and subscription_access.get("can_models", False)),
+            "can_connections": bool(role_access.get("can_connections", False) and subscription_access.get("can_connections", False)),
+            "can_public_ideas": bool(role_access.get("can_public_ideas", False) and subscription_access.get("can_public_ideas", False)),
+            "can_explainer_video": bool(role_access.get("can_pitch", False) and subscription_access.get("can_explainer_video", False)),
         }
 
         plan_catalog = get_plan_catalog_payload()
