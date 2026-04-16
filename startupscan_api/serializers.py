@@ -22,8 +22,6 @@ class ModelRetrainSerializer(serializers.Serializer):
 
 
 
-from rest_framework import serializers
-
 class BatchAnalysisSerializer(serializers.Serializer):
     file = serializers.FileField(required=True)
     
