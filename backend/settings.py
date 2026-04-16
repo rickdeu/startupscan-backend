@@ -43,10 +43,16 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-crkp-(b387n6l!ucz8)!-p0f^faj5hw9p%9n-%vgrf1lw4m&l3")
+_secret_key = os.getenv("SECRET_KEY")
+if not _secret_key:
+    if _env_bool("DJANGO_DEBUG", False):
+        _secret_key = "django-insecure-dev-only-do-not-use-in-production"
+    else:
+        raise RuntimeError("SECRET_KEY environment variable must be set in production.")
+SECRET_KEY = _secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool("DJANGO_DEBUG", True)
+DEBUG = _env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = _env_list(
     "DJANGO_ALLOWED_HOSTS",
@@ -213,8 +219,13 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# CORS (para desenvolvimento)
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS — em produção define CORS_ALLOWED_ORIGINS no .env (lista separada por vírgula)
+_cors_origins = _env_list("CORS_ALLOWED_ORIGINS", [])
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = _cors_origins
+else:
+    # Só permite all-origins se DEBUG estiver activo
+    CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 
 # Default primary key field type

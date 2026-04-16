@@ -272,7 +272,10 @@ def _read_json_file(path):
         with open(path, "r", encoding="utf-8") as fh:
             data = json.load(fh)
             return data if isinstance(data, dict) else {}
+    except FileNotFoundError:
+        return {}
     except Exception:
+        logger.warning("Falha ao ler ficheiro JSON: %s", path)
         return {}
 
 
@@ -516,7 +519,7 @@ def _run_explainer_video_job(
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
         except Exception:
-            pass
+            logger.exception("Erro ao salvar metadados de vídeo para análise %s", analysis_id)
         _write_video_generation_state(
             job_id,
             status="FAILED",

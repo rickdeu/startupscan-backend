@@ -1,9 +1,52 @@
 from celery import shared_task
+import logging
 import pandas as pd
 import os
 from django.core.cache import cache
 from django.conf import settings
 from .utils import prepare_features
+
+logger = logging.getLogger(__name__)
+
+
+@shared_task(bind=True, max_retries=3)
+def reprocess_pitch_analysis(self, analysis_id):
+    """Reprocessa uma análise de pitch existente, recalculando score e relatório."""
+    from .models import PitchAnalysis
+    from .services.model_training import predict_pitch_score
+    from .utils import generate_interpretable_report
+
+    try:
+        analysis = PitchAnalysis.objects.get(pk=analysis_id)
+    except PitchAnalysis.DoesNotExist:
+        logger.error("reprocess_pitch_analysis: análise %s não encontrada", analysis_id)
+        return
+
+    try:
+        analysis.status = "processing"
+        analysis.save(update_fields=["status", "updated_at"])
+
+        features_dict = {
+            "revenue": float(analysis.revenue or 0),
+            "growth_rate": float(analysis.growth_rate or 0),
+            "profit_margin": float(analysis.profit_margin or 0),
+            "burn_rate": float(analysis.burn_rate or 0),
+        }
+        score, confidence = predict_pitch_score(features_dict)
+        report = generate_interpretable_report(features_dict, score)
+
+        analysis.success_score = score
+        analysis.confidence = confidence
+        analysis.report = report
+        analysis.status = "completed"
+        analysis.save(update_fields=["success_score", "confidence", "report", "status", "updated_at"])
+        logger.info("reprocess_pitch_analysis: análise %s reprocessada com sucesso", analysis_id)
+
+    except Exception as exc:
+        logger.exception("reprocess_pitch_analysis: erro ao reprocessar análise %s", analysis_id)
+        analysis.status = "failed"
+        analysis.save(update_fields=["status", "updated_at"])
+        raise self.retry(exc=exc, countdown=60)
 
 @shared_task(bind=True)
 def process_batch_analysis(self, file_path, batch_id):

@@ -1,5 +1,8 @@
 from .commom_imports import *
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 🔊 9. Função de Processamento de Áudio Completa
@@ -49,8 +52,8 @@ def process_audio(audio_path):
                 audio_data = r.record(source)
                 transcription = r.recognize_google(audio_data, language='pt-BR')
                 audio_features['transcription'] = transcription
-        except:
-            pass
+        except Exception:
+            logger.warning("Fallback speech_recognition também falhou para %s", audio_path)
 
     return audio_features
 

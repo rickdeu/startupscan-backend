@@ -259,10 +259,10 @@ class PitchAnalysis(models.Model):
             return None
             
         try:
-            score = (float(self.growth_rate) * 0.4 + 
+            score = (float(self.growth_rate) * 0.4 +
                     float(self.profit_margin) * 0.6) * float(self.revenue) / 1000000
             return min(max(score, 0), 100)
-        except:
+        except (TypeError, ValueError, ZeroDivisionError):
             return None
 
     def get_file_links(self):
