@@ -1,14 +1,11 @@
 import os
-import tempfile
 from datetime import datetime
 
-from django.conf import settings
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
-    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -17,26 +14,37 @@ from reportlab.platypus import (
 )
 
 
-def _build_category_chart(categories: dict, target_path: str):
-    import matplotlib
+def _build_category_chart_native(categories: dict):
+    """Returns a ReportLab Drawing — no matplotlib required."""
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    from reportlab.graphics.shapes import Drawing, String
 
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    labels = [k.replace("_", " ").title() for k in categories.keys()]
+    values = [[float(v) for v in categories.values()]]
 
-    labels = list(categories.keys())
-    values = [float(categories[k]) for k in labels]
+    d = Drawing(420, 170)
+    chart = VerticalBarChart()
+    chart.x = 55
+    chart.y = 30
+    chart.width = 340
+    chart.height = 120
+    chart.data = values
+    chart.categoryAxis.categoryNames = labels
+    chart.categoryAxis.labels.angle = 30
+    chart.categoryAxis.labels.dy = -12
+    chart.categoryAxis.labels.fontSize = 7.5
+    chart.valueAxis.valueMin = 0
+    chart.valueAxis.valueMax = 10
+    chart.valueAxis.valueStep = 2
+    chart.bars[0].fillColor = colors.HexColor("#2563eb")
+    chart.bars[0].strokeColor = colors.HexColor("#1d4ed8")
+    chart.bars[0].strokeWidth = 0.5
 
-    plt.figure(figsize=(9, 4))
-    bars = plt.bar(labels, values, color="#2563eb")
-    plt.ylim(0, 10)
-    plt.ylabel("Pontuação (0-10)")
-    plt.title("Pontuação por categoria")
-    plt.xticks(rotation=35, ha="right")
-    for bar, val in zip(bars, values):
-        plt.text(bar.get_x() + bar.get_width() / 2, val + 0.15, f"{val:.1f}", ha="center", fontsize=8)
-    plt.tight_layout()
-    plt.savefig(target_path, dpi=140)
-    plt.close()
+    title = String(210, 162, "Pontuação por categoria", textAnchor="middle",
+                   fontSize=9, fillColor=colors.HexColor("#0f172a"))
+    d.add(chart)
+    d.add(title)
+    return d
 
 
 def export_analysis_pdf(analysis, output_path: str):
@@ -117,9 +125,7 @@ def export_analysis_pdf(analysis, output_path: str):
         story.append(cat_table)
         story.append(Spacer(1, 0.3 * cm))
 
-        tmp_chart_path = os.path.join(tempfile.gettempdir(), f"chart_pitch_{analysis.id}.png")
-        _build_category_chart(category_scores, tmp_chart_path)
-        story.append(Image(tmp_chart_path, width=16 * cm, height=7 * cm))
+        story.append(_build_category_chart_native(category_scores))
         story.append(Spacer(1, 0.4 * cm))
 
     investor_pitch = report.get("investor_pitch", {})
