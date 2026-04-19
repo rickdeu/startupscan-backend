@@ -120,61 +120,62 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-"""DATABASES = {
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}"""
-
-# Use dj_database_url to parse the DATABASE_URL into Django's DATABASES configuration
-DB_USERNAME = os.getenv('POSTGRES_USER', '')
-DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
-DB_DATABASE = os.getenv('POSTGRES_DB', '')
-DB_HOST = os.getenv('POSTGRES_HOST', '')
-DB_PORT = os.getenv('POSTGRES_PORT', '')
-DB_IS_AVAILABLE = all([
-    DB_USERNAME, 
-    DB_PASSWORD, 
-    DB_DATABASE, 
-    DB_HOST, 
-    DB_PORT
-])
-
-DB_IGNORE_SSL = _env_bool('DB_IGNORE_SSL', False)
+}
 
 
-database_url = str(os.getenv("DATABASE_URL", "") or "").strip()
-if database_url and dj_database_url is not None:
-    DATABASES = {
-        'default': dj_database_url.parse(
-            database_url,
-            conn_max_age=600,
-            ssl_require=not DB_IGNORE_SSL,
-        )
-    }
-elif DB_IS_AVAILABLE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': DB_DATABASE,
-            'USER': DB_USERNAME,
-            'PASSWORD': DB_PASSWORD,
-            'HOST': DB_HOST,
-            'PORT': DB_PORT,
-        }
-    }
-    if not DB_IGNORE_SSL:
-        DATABASES['default']['OPTIONS'] = {
-            'sslmode': 'require',
-        }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+
+# # PostgreSQL configuration (disabled — using SQLite)
+# DB_USERNAME = os.getenv('POSTGRES_USER', '')
+# DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+# DB_DATABASE = os.getenv('POSTGRES_DB', '')
+# DB_HOST = os.getenv('POSTGRES_HOST', '')
+# DB_PORT = os.getenv('POSTGRES_PORT', '')
+# DB_IS_AVAILABLE = all([
+#     DB_USERNAME,
+#     DB_PASSWORD,
+#     DB_DATABASE,
+#     DB_HOST,
+#     DB_PORT
+# ])
+#
+# DB_IGNORE_SSL = _env_bool('DB_IGNORE_SSL', False)
+#
+# database_url = str(os.getenv("DATABASE_URL", "") or "").strip()
+# if database_url and dj_database_url is not None:
+#     DATABASES = {
+#         'default': dj_database_url.parse(
+#             database_url,
+#             conn_max_age=600,
+#             ssl_require=not DB_IGNORE_SSL,
+#         )
+#     }
+# elif DB_IS_AVAILABLE:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': DB_DATABASE,
+#             'USER': DB_USERNAME,
+#             'PASSWORD': DB_PASSWORD,
+#             'HOST': DB_HOST,
+#             'PORT': DB_PORT,
+#         }
+#     }
+#     if not DB_IGNORE_SSL:
+#         DATABASES['default']['OPTIONS'] = {
+#             'sslmode': 'require',
+#         }
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'db.sqlite3',
+#         }
+#     }
 
 
 
