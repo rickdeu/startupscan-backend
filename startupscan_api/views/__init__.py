@@ -7,7 +7,7 @@ from .api import (
     TrainingStatusView,
 )
 from .auth import RoleBasedLoginView, RoleHomeView, register_view, set_ui_language
-from .dashboard import DashboardView
+from .dashboard import DashboardView, LandingView
 from .idea import (
     IdeaPitchBuilderView,
     IdeaPitchDetailView,
@@ -37,6 +37,7 @@ __all__ = [
     "ConnectionInterestUpdateView",
     "ConnectionsHubView",
     "DashboardView",
+    "LandingView",
     "IdeaPitchBuilderView",
     "IdeaPitchDetailView",
     "IdeaPitchPDFView",

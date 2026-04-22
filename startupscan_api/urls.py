@@ -6,6 +6,7 @@ from .views import (
     ConnectionsHubView,
     ConnectionInterestUpdateView,
     DashboardView,
+    LandingView,
     IdeaPitchDetailView,
     IdeaPitchPDFView,
     InvestorDashboardView,
@@ -48,7 +49,8 @@ urlpatterns = [
     path('connections/<int:interest_id>/update/', ConnectionInterestUpdateView.as_view(), name='connection_interest_update'),
     path('home/', RoleHomeView.as_view(), name='role_home'),
 
-    path('', DashboardView.as_view(), name='dashboard'),
+    path('', LandingView.as_view(), name='landing'),
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('pitch/builder/', IdeaPitchBuilderView.as_view(), name='idea_pitch_builder'),
     path('pitch/builder/<int:submission_id>/', IdeaPitchDetailView.as_view(), name='idea_pitch_detail'),
     path('pitch/builder/<int:submission_id>/pdf/', IdeaPitchPDFView.as_view(), name='idea_pitch_pdf'),

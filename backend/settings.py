@@ -14,6 +14,12 @@ from pathlib import Path
 import importlib.util
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except Exception:
+    pass
+
+try:
     import dj_database_url
 except Exception:  # pragma: no cover - fallback quando pacote não está disponível
     dj_database_url = None
@@ -77,6 +83,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'startupscan_api',
+    'subscriptions',
 ]
 
 MIDDLEWARE = [
@@ -254,8 +261,7 @@ import os
 # }
 
 
-# Configurações para o Docker
-MEDIA_ROOT = '/app/media'
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 MEDIA_URL = '/media/'
 LOGIN_URL = 'login'
 #LOGOUT_REDIRECT_URL = '/'
@@ -286,3 +292,20 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Sao_Paulo'
+
+# Stripe
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = True
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@startupscan.io')
+
+# URL base do site (para links nos emails)
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')

@@ -15,7 +15,7 @@
     <div class="app-shell">
         <aside class="app-sidebar" id="appSidebar">
             <div class="sidebar-brand">
-                <a href="{% if user.is_authenticated %}{% url user_role_home_url_name %}{% else %}{% url 'login' %}{% endif %}" class="brand-link">
+                <a href="{% url 'landing' %}" class="brand-link">
                     <span class="brand-icon"><i class="fas fa-rocket"></i></span>
                     <span class="brand-text">StartupScan</span>
                 </a>
@@ -64,6 +64,23 @@
                 <div class="small text-muted mb-2">{{ ui_text.session_active }}</div>
                 <div class="fw-semibold mb-2">{{ user.first_name|default:user.username }}</div>
                 <div class="small text-muted mb-2">{{ ui_text.profile }}: {{ user_role_label }}</div>
+
+                {% if user_plan_tier == 'trial' %}
+                <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
+                    <span class="badge bg-warning text-dark w-100">
+                        Trial — {{ subscription_trial_days_left }} dia(s)
+                    </span>
+                </a>
+                {% elif user_plan_tier == 'basic' %}
+                <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
+                    <span class="badge bg-info text-dark w-100">Plano Basic</span>
+                </a>
+                {% elif user_plan_tier == 'pro' %}
+                <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
+                    <span class="badge w-100" style="background:#7c3aed;">Plano Pro</span>
+                </a>
+                {% endif %}
+
                 <form action="{% url 'logout' %}" method="post">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-light w-100">{{ ui_text.logout }}</button>

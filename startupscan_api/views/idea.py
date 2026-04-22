@@ -24,6 +24,7 @@ from startupscan_api.services.pitch_builder import (
 )
 from .helpers import _resolve_pitch_design_selection
 from .mixins import RoleRequiredMixin
+from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
 
 import os
 from django.conf import settings
@@ -158,6 +159,12 @@ class IdeaPitchDetailView(RoleRequiredMixin, View):
         action = request.POST.get("action", "generate").strip().lower()
         if action != "generate":
             return redirect("idea_pitch_detail", submission_id=submission.id)
+
+        if submission.model_source == 'gpt' and get_user_role(request.user) != ROLE_ADMIN:
+            allowed, _ = check_feature_access(request.user, 'pitch_gpt')
+            if not allowed:
+                messages.warning(request, 'Geração de pitch via GPT requer um plano superior.')
+                return redirect('idea_pitch_detail', submission_id=submission.id)
 
         try:
             pitch_payload = generate_pitch_from_idea(self._to_payload(submission), model_source=submission.model_source)

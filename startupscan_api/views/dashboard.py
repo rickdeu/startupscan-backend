@@ -22,13 +22,41 @@ from .mixins import RoleRequiredMixin
 logger = logging.getLogger(__name__)
 
 
+class LandingView(View):
+    def get(self, request):
+        if request.user.is_authenticated:
+            role = get_user_role(request.user)
+            return redirect(role_home_url_name(role))
+
+        basic_monthly = basic_annual = pro_monthly = pro_annual = None
+        try:
+            from subscriptions.models import SubscriptionPlan
+            all_plans = list(SubscriptionPlan.objects.filter(is_active=True).order_by('price_usd'))
+            for p in all_plans:
+                if p.tier == SubscriptionPlan.TIER_BASIC and p.interval == SubscriptionPlan.INTERVAL_MONTH:
+                    basic_monthly = p
+                elif p.tier == SubscriptionPlan.TIER_BASIC and p.interval == SubscriptionPlan.INTERVAL_YEAR:
+                    basic_annual = p
+                elif p.tier == SubscriptionPlan.TIER_PRO and p.interval == SubscriptionPlan.INTERVAL_MONTH:
+                    pro_monthly = p
+                elif p.tier == SubscriptionPlan.TIER_PRO and p.interval == SubscriptionPlan.INTERVAL_YEAR:
+                    pro_annual = p
+        except Exception:
+            pass
+
+        return render(request, 'analyzer/landing.html', {
+            'basic_monthly': basic_monthly,
+            'basic_annual': basic_annual,
+            'pro_monthly': pro_monthly,
+            'pro_annual': pro_annual,
+        })
+
+
 class DashboardView(RoleRequiredMixin, View):
     allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
 
     def get(self, request):
         role = get_user_role(request.user)
-        if request.user.is_authenticated and request.path == "/" and role_home_url_name(role) != "dashboard":
-            return _redirect_for_role(request, fallback_role=role)
 
         try:
             min_score = float(request.GET.get("min_score", 0) or 0)

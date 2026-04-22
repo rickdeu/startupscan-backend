@@ -18,12 +18,16 @@ from .helpers import (
 )
 from .jobs import _start_explainer_video_job, _video_generation_cache_key
 from .mixins import RoleRequiredMixin
+from subscriptions.mixins import SubscriptionGate
 
 logger = logging.getLogger(__name__)
 
 
-class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
+class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View):
     allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    required_feature = 'video_generation'
+    required_counter = 'videos_per_month'
+    usage_field = 'videos_count'
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
@@ -118,6 +122,10 @@ class PitchExplainerVideoGenerateView(RoleRequiredMixin, View):
                 presenter_gender_choice=presenter_gender_choice,
                 generation_mode=video_mode,
             )
+
+            if request.user.is_authenticated and get_user_role(request.user) != ROLE_ADMIN:
+                from subscriptions.models import MonthlyUsage
+                MonthlyUsage.increment(request.user, 'videos_count')
 
             metadata = analysis.metadata or {}
             metadata["explainer_video_job_id"] = job_id

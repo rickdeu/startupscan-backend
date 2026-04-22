@@ -15,6 +15,18 @@ def user_role_context(request):
     current_ui_language = normalize_ui_language(
         getattr(request, "ui_language", None) or request.session.get("ui_language")
     )
+
+    user_subscription = None
+    user_plan_tier = None
+    subscription_trial_days_left = 0
+    if user and getattr(user, "is_authenticated", False):
+        try:
+            user_subscription = user.subscription
+            user_plan_tier = user_subscription.plan_tier
+            subscription_trial_days_left = user_subscription.trial_days_left
+        except Exception:
+            pass
+
     return {
         "user_role": role,
         "user_role_label": role_label(role),
@@ -24,5 +36,8 @@ def user_role_context(request):
         "current_ui_language": current_ui_language,
         "ui_languages": SUPPORTED_UI_LANGUAGES,
         "ui_text": build_ui_text(current_ui_language),
+        "user_subscription": user_subscription,
+        "user_plan_tier": user_plan_tier,
+        "subscription_trial_days_left": subscription_trial_days_left,
     }
 

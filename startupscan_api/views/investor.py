@@ -18,14 +18,16 @@ from startupscan_api.roles import (
 from startupscan_api.services.model_registry import get_active_model_name
 from .helpers import _redirect_back_or_default
 from .mixins import RoleRequiredMixin
+from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
 
 logger = logging.getLogger(__name__)
 
 INTEREST_STATUS_LABELS = dict(InvestorConnectionInterest.STATUS_CHOICES)
 
 
-class InvestorDashboardView(RoleRequiredMixin, View):
+class InvestorDashboardView(SubscriptionGate, RoleRequiredMixin, View):
     allowed_roles = {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    required_feature = 'investor_dashboard'
 
     def get(self, request):
         user_role = get_user_role(request.user)
@@ -135,6 +137,13 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
         if not investor.is_authenticated:
             return redirect("login")
 
+        if get_user_role(investor) != ROLE_ADMIN:
+            allowed, _ = check_limit_access(investor, 'investor_interests_per_month', 'investor_interests_count')
+            if not allowed:
+                from django.contrib import messages
+                messages.warning(request, 'Limite mensal de interesses de investidor atingido. Faça upgrade para continuar.')
+                return _redirect_back_or_default(request, 'investor_dashboard')
+
         if analysis.user_id and analysis.user_id == investor.id:
             from django.contrib import messages
             messages.info(request, "Não é possível demonstrar interesse na sua própria startup.")
@@ -158,6 +167,9 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
 
         from django.contrib import messages
         if created:
+            if get_user_role(investor) != ROLE_ADMIN:
+                from subscriptions.models import MonthlyUsage
+                MonthlyUsage.increment(investor, 'investor_interests_count')
             messages.success(request, "Interesse registado com sucesso. O empreendedor foi notificado no fluxo interno.")
             return _redirect_back_or_default(request, "investor_dashboard")
 

@@ -171,6 +171,17 @@ class TrainingStatusView(APIView):
 class BatchAnalysisView(APIView):
     def post(self, request):
         try:
+            if request.user.is_authenticated:
+                from subscriptions.mixins import check_feature_access
+                from startupscan_api.roles import ROLE_ADMIN, get_user_role
+                if get_user_role(request.user) != ROLE_ADMIN:
+                    allowed, _ = check_feature_access(request.user, 'batch_analysis')
+                    if not allowed:
+                        return Response(
+                            {'error': 'Batch analysis requires a higher subscription plan.'},
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+
             serializer = BatchAnalysisSerializer(data=request.data)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

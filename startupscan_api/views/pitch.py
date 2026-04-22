@@ -40,6 +40,7 @@ from .helpers import (
 )
 from .jobs import _video_generation_cache_key
 from .mixins import RoleRequiredMixin
+from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,15 @@ class PitchFormView(RoleRequiredMixin, View):
             if model_source not in {"local", "gpt"}:
                 model_source = "local"
 
+            if request.user.is_authenticated and get_user_role(request.user) != ROLE_ADMIN:
+                gate = self._check_pitch_gates(
+                    request, model_source=model_source,
+                    has_audio=bool(audio_file), has_video=bool(video_file),
+                    has_youtube=bool(youtube_url),
+                )
+                if gate is not None:
+                    return gate
+
             model = None
             if model_source == "local":
                 model = ensure_model_exists()
@@ -240,6 +250,9 @@ class PitchFormView(RoleRequiredMixin, View):
                         financial_data=financial_data, prediction=prediction,
                         report=report, metadata=metadata,
                     )
+                    if request.user.is_authenticated and get_user_role(request.user) != ROLE_ADMIN:
+                        from subscriptions.models import MonthlyUsage
+                        MonthlyUsage.increment(request.user, 'analyses_count')
                     return redirect('pitch_results', analysis_id=analysis.id)
 
             except Exception as e:
@@ -320,6 +333,38 @@ class PitchFormView(RoleRequiredMixin, View):
             metadata=metadata,
             ip_address=ip,
         )
+
+    def _check_pitch_gates(self, request, *, model_source, has_audio, has_video, has_youtube):
+        allowed, _ = check_limit_access(request.user, 'analyses_per_month', 'analyses_count')
+        if not allowed:
+            messages.warning(request, 'Limite mensal de análises atingido. Faça upgrade para continuar.')
+            return redirect('subscription_plans')
+
+        if model_source == 'gpt':
+            allowed, _ = check_feature_access(request.user, 'gpt_analysis')
+            if not allowed:
+                messages.warning(request, 'Análise via GPT requer um plano superior.')
+                return redirect('subscription_plans')
+
+        if has_audio:
+            allowed, _ = check_feature_access(request.user, 'audio_upload')
+            if not allowed:
+                messages.warning(request, 'Upload de áudio requer um plano superior.')
+                return redirect('subscription_plans')
+
+        if has_video:
+            allowed, _ = check_feature_access(request.user, 'video_upload')
+            if not allowed:
+                messages.warning(request, 'Upload de vídeo requer um plano superior.')
+                return redirect('subscription_plans')
+
+        if has_youtube:
+            allowed, _ = check_feature_access(request.user, 'youtube_url')
+            if not allowed:
+                messages.warning(request, 'Processamento de YouTube requer um plano superior.')
+                return redirect('subscription_plans')
+
+        return None
 
     def _render_form_with_data(self, request):
         form_data = {
@@ -438,8 +483,9 @@ class PitchResultsView(RoleRequiredMixin, View):
         })
 
 
-class PitchReportPDFView(RoleRequiredMixin, View):
+class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
     allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    required_feature = 'pdf_report'
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
@@ -471,8 +517,9 @@ class PitchReportPDFView(RoleRequiredMixin, View):
         )
 
 
-class PitchInvestorPDFView(RoleRequiredMixin, View):
+class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
     allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    required_feature = 'pdf_investor'
 
     def get(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
