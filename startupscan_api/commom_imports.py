@@ -126,4 +126,4 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 
 # Mensagem de boas-vindas
-print(f"✅ Imports base carregados - StartupScan.AI [{datetime.now().strftime('%d/%m/%Y %H:%M')}]")
+print(f"[OK] Imports base carregados - StartupScan.AI [{datetime.now().strftime('%d/%m/%Y %H:%M')}]")
