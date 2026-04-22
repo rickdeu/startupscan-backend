@@ -1,5 +1,6 @@
 # WEB BACKEND
 Django==6.0.3
+stripe>=11.0.0
 djangorestframework==3.16.1
 django-cors-headers==4.9.0
 gunicorn==23.0.0
@@ -45,6 +46,7 @@ seaborn==0.13.2
 # SUPORTE GERAL
 python-dotenv==1.0.1
 openai==1.23.2
+httpx<0.28.0
 requests>=2.32.0
 
 # COMPATIBILIDADE

@@ -74,8 +74,8 @@ def ensure_audio_imports():
     try:
         import speech_recognition as _sr
         sr = _sr
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.warning("speech_recognition indisponível: %s", exc)
     return whisper is not None and librosa is not None
 
 

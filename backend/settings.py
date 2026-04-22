@@ -14,6 +14,12 @@ from pathlib import Path
 import importlib.util
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except Exception:
+    pass
+
+try:
     import dj_database_url
 except Exception:  # pragma: no cover - fallback quando pacote não está disponível
     dj_database_url = None
@@ -43,10 +49,16 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-crkp-(b387n6l!ucz8)!-p0f^faj5hw9p%9n-%vgrf1lw4m&l3")
+_secret_key = os.getenv("SECRET_KEY")
+if not _secret_key:
+    if _env_bool("DJANGO_DEBUG", False):
+        _secret_key = "django-insecure-dev-only-do-not-use-in-production"
+    else:
+        raise RuntimeError("SECRET_KEY environment variable must be set in production.")
+SECRET_KEY = _secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool("DJANGO_DEBUG", True)
+DEBUG = _env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = _env_list(
     "DJANGO_ALLOWED_HOSTS",
@@ -71,6 +83,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'startupscan_api',
+    'subscriptions',
 ]
 
 MIDDLEWARE = [
@@ -114,61 +127,62 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-"""DATABASES = {
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}"""
-
-# Use dj_database_url to parse the DATABASE_URL into Django's DATABASES configuration
-DB_USERNAME = os.getenv('POSTGRES_USER', '')
-DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
-DB_DATABASE = os.getenv('POSTGRES_DB', '')
-DB_HOST = os.getenv('POSTGRES_HOST', '')
-DB_PORT = os.getenv('POSTGRES_PORT', '')
-DB_IS_AVAILABLE = all([
-    DB_USERNAME, 
-    DB_PASSWORD, 
-    DB_DATABASE, 
-    DB_HOST, 
-    DB_PORT
-])
-
-DB_IGNORE_SSL = _env_bool('DB_IGNORE_SSL', False)
+}
 
 
-database_url = str(os.getenv("DATABASE_URL", "") or "").strip()
-if database_url and dj_database_url is not None:
-    DATABASES = {
-        'default': dj_database_url.parse(
-            database_url,
-            conn_max_age=600,
-            ssl_require=not DB_IGNORE_SSL,
-        )
-    }
-elif DB_IS_AVAILABLE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': DB_DATABASE,
-            'USER': DB_USERNAME,
-            'PASSWORD': DB_PASSWORD,
-            'HOST': DB_HOST,
-            'PORT': DB_PORT,
-        }
-    }
-    if not DB_IGNORE_SSL:
-        DATABASES['default']['OPTIONS'] = {
-            'sslmode': 'require',
-        }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+
+# # PostgreSQL configuration (disabled — using SQLite)
+# DB_USERNAME = os.getenv('POSTGRES_USER', '')
+# DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+# DB_DATABASE = os.getenv('POSTGRES_DB', '')
+# DB_HOST = os.getenv('POSTGRES_HOST', '')
+# DB_PORT = os.getenv('POSTGRES_PORT', '')
+# DB_IS_AVAILABLE = all([
+#     DB_USERNAME,
+#     DB_PASSWORD,
+#     DB_DATABASE,
+#     DB_HOST,
+#     DB_PORT
+# ])
+#
+# DB_IGNORE_SSL = _env_bool('DB_IGNORE_SSL', False)
+#
+# database_url = str(os.getenv("DATABASE_URL", "") or "").strip()
+# if database_url and dj_database_url is not None:
+#     DATABASES = {
+#         'default': dj_database_url.parse(
+#             database_url,
+#             conn_max_age=600,
+#             ssl_require=not DB_IGNORE_SSL,
+#         )
+#     }
+# elif DB_IS_AVAILABLE:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': DB_DATABASE,
+#             'USER': DB_USERNAME,
+#             'PASSWORD': DB_PASSWORD,
+#             'HOST': DB_HOST,
+#             'PORT': DB_PORT,
+#         }
+#     }
+#     if not DB_IGNORE_SSL:
+#         DATABASES['default']['OPTIONS'] = {
+#             'sslmode': 'require',
+#         }
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'db.sqlite3',
+#         }
+#     }
 
 
 
@@ -213,8 +227,13 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# CORS (para desenvolvimento)
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS — em produção define CORS_ALLOWED_ORIGINS no .env (lista separada por vírgula)
+_cors_origins = _env_list("CORS_ALLOWED_ORIGINS", [])
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = _cors_origins
+else:
+    # Só permite all-origins se DEBUG estiver activo
+    CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 
 # Default primary key field type
@@ -242,8 +261,7 @@ import os
 # }
 
 
-# Configurações para o Docker
-MEDIA_ROOT = '/app/media'
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 MEDIA_URL = '/media/'
 LOGIN_URL = 'login'
 #LOGOUT_REDIRECT_URL = '/'
@@ -274,3 +292,20 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Sao_Paulo'
+
+# Stripe
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = True
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@startupscan.io')
+
+# URL base do site (para links nos emails)
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')

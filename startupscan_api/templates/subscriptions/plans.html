@@ -1,0 +1,210 @@
+{% extends "analyzer/base.html" %}
+{% load static %}
+
+{% block page_title %}Planos & Preços – StartupScan{% endblock %}
+
+{% block extra_head %}
+<style>
+.plan-card {
+    border: 1px solid var(--border-color, #2d3748);
+    border-radius: 1rem;
+    transition: transform .2s, box-shadow .2s;
+    background: var(--card-bg, #1a202c);
+}
+.plan-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+.plan-card.featured { border-color: #7c3aed; box-shadow: 0 0 0 2px #7c3aed55; }
+.plan-badge { background: #7c3aed; color: #fff; font-size:.7rem; padding:.25rem .6rem; border-radius:9999px; }
+.plan-price { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+.plan-period { font-size:.9rem; color:#94a3b8; }
+.feature-list li { padding:.3rem 0; font-size:.9rem; }
+.feature-list li .fa-check { color:#22c55e; }
+.feature-list li .fa-times { color:#ef4444; }
+.savings-badge { background:#166534; color:#bbf7d0; font-size:.72rem; padding:.2rem .5rem; border-radius:4px; }
+.current-plan-badge { background:#1d4ed8; color:#bfdbfe; font-size:.72rem; padding:.2rem .5rem; border-radius:4px; }
+.tab-toggle { display:flex; gap:.5rem; justify-content:center; margin-bottom:2rem; }
+.tab-btn { padding:.5rem 1.5rem; border-radius:9999px; border:1px solid #4b5563; background:transparent; color:#94a3b8; cursor:pointer; transition:all .2s; }
+.tab-btn.active { background:#7c3aed; border-color:#7c3aed; color:#fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold mb-2">Planos & Preços</h1>
+        <p class="text-muted">Escolha o plano certo para o seu negócio</p>
+
+        <div class="tab-toggle mt-4" id="billingToggle">
+            <button class="tab-btn active" data-billing="monthly" onclick="setBilling('monthly')">Mensal</button>
+            <button class="tab-btn" data-billing="annual" onclick="setBilling('annual')">
+                Anual <span class="savings-badge ms-1">~33% off</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+        <!-- Trial -->
+        <div class="col-md-4 col-lg-3">
+            <div class="plan-card p-4 h-100 d-flex flex-column">
+                <div class="mb-3">
+                    <div class="fw-semibold text-muted text-uppercase small mb-1">Trial</div>
+                    <div class="plan-price">$0</div>
+                    <div class="plan-period">7 dias grátis</div>
+                    {% if user_plan_tier == 'trial' %}
+                    <span class="current-plan-badge mt-2 d-inline-block">Plano atual</span>
+                    {% endif %}
+                </div>
+                <ul class="feature-list list-unstyled flex-grow-1">
+                    <li><i class="fas fa-check me-2"></i>3 análises de pitch</li>
+                    <li><i class="fas fa-check me-2"></i>Modelo local</li>
+                    <li><i class="fas fa-check me-2"></i>Upload de documento</li>
+                    <li><i class="fas fa-check me-2"></i>Gerar pitch (modelo local)</li>
+                    <li><i class="fas fa-times me-2"></i>Análise GPT</li>
+                    <li><i class="fas fa-times me-2"></i>Upload áudio/vídeo</li>
+                    <li><i class="fas fa-times me-2"></i>Exportar PDF</li>
+                    <li><i class="fas fa-times me-2"></i>Vídeo IA</li>
+                    <li><i class="fas fa-times me-2"></i>Análise em lote</li>
+                </ul>
+                {% if not user.is_authenticated %}
+                <a href="{% url 'register' %}" class="btn btn-outline-light w-100 mt-3">Começar trial</a>
+                {% elif user_plan_tier == 'trial' %}
+                <button class="btn btn-outline-secondary w-100 mt-3" disabled>Ativo</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Basic -->
+        <div class="col-md-4 col-lg-3">
+            <div class="plan-card p-4 h-100 d-flex flex-column">
+                <div class="mb-3">
+                    <div class="fw-semibold text-muted text-uppercase small mb-1">Basic</div>
+                    {% if basic_monthly %}
+                    <div class="plan-price billing-monthly">${{ basic_monthly.price_usd|floatformat:0 }}</div>
+                    {% endif %}
+                    {% if basic_annual %}
+                    <div class="plan-price billing-annual d-none">
+                        ${{ basic_annual.price_usd|floatformat:0 }}
+                        <span class="savings-badge fs-6">ano</span>
+                    </div>
+                    {% endif %}
+                    <div class="plan-period billing-monthly">por mês</div>
+                    <div class="plan-period billing-annual d-none">por ano (~${{ basic_annual.price_usd|floatformat:0 }}/12/mês)</div>
+                    {% if user_plan_tier == 'basic' %}
+                    <span class="current-plan-badge mt-2 d-inline-block">Plano atual</span>
+                    {% endif %}
+                </div>
+                <ul class="feature-list list-unstyled flex-grow-1">
+                    <li><i class="fas fa-check me-2"></i>15 análises/mês</li>
+                    <li><i class="fas fa-check me-2"></i>Modelo local</li>
+                    <li><i class="fas fa-check me-2"></i>Dados financeiros</li>
+                    <li><i class="fas fa-check me-2"></i>Upload de documento</li>
+                    <li><i class="fas fa-check me-2"></i>PDF relatório de análise</li>
+                    <li><i class="fas fa-check me-2"></i>Gerar pitch + PDF</li>
+                    <li><i class="fas fa-check me-2"></i>Dashboard investidores</li>
+                    <li><i class="fas fa-times me-2"></i>GPT / áudio / vídeo / YouTube</li>
+                    <li><i class="fas fa-times me-2"></i>Template de pitch</li>
+                    <li><i class="fas fa-times me-2"></i>PDF pitch investidor</li>
+                    <li><i class="fas fa-times me-2"></i>Vídeo IA / Análise em lote</li>
+                </ul>
+                {% if user.is_authenticated and user_plan_tier != 'basic' %}
+                <form method="post" action="{% url 'subscription_checkout' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="plan_id" class="billing-monthly-input" value="{{ basic_monthly.pk }}">
+                    <input type="hidden" name="plan_id" class="billing-annual-input d-none" value="{{ basic_annual.pk }}">
+                    <button type="submit" class="btn btn-outline-primary w-100 mt-3">Assinar Basic</button>
+                </form>
+                {% elif not user.is_authenticated %}
+                <a href="{% url 'register' %}" class="btn btn-outline-primary w-100 mt-3">Começar</a>
+                {% else %}
+                <button class="btn btn-outline-secondary w-100 mt-3" disabled>Plano atual</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Pro -->
+        <div class="col-md-4 col-lg-3">
+            <div class="plan-card featured p-4 h-100 d-flex flex-column">
+                <div class="mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="fw-semibold text-muted text-uppercase small">Pro</span>
+                        <span class="plan-badge">Recomendado</span>
+                    </div>
+                    {% if pro_monthly %}
+                    <div class="plan-price billing-monthly">${{ pro_monthly.price_usd|floatformat:0 }}</div>
+                    {% endif %}
+                    {% if pro_annual %}
+                    <div class="plan-price billing-annual d-none">
+                        ${{ pro_annual.price_usd|floatformat:0 }}
+                        <span class="savings-badge fs-6">ano</span>
+                    </div>
+                    {% endif %}
+                    <div class="plan-period billing-monthly">por mês</div>
+                    <div class="plan-period billing-annual d-none">por ano (~$100/mês)</div>
+                    {% if user_plan_tier == 'pro' %}
+                    <span class="current-plan-badge mt-2 d-inline-block">Plano atual</span>
+                    {% endif %}
+                </div>
+                <ul class="feature-list list-unstyled flex-grow-1">
+                    <li><i class="fas fa-check me-2"></i><strong>Análises ilimitadas</strong></li>
+                    <li><i class="fas fa-check me-2"></i>Modelo local + GPT</li>
+                    <li><i class="fas fa-check me-2"></i>Todos os uploads (áudio, vídeo, YouTube)</li>
+                    <li><i class="fas fa-check me-2"></i>Dados financeiros</li>
+                    <li><i class="fas fa-check me-2"></i>PDF relatório + PDF pitch investidor</li>
+                    <li><i class="fas fa-check me-2"></i>Template de pitch à escolha</li>
+                    <li><i class="fas fa-check me-2"></i>Pitch via GPT</li>
+                    <li><i class="fas fa-check me-2"></i>3 vídeos IA/mês</li>
+                    <li><i class="fas fa-check me-2"></i>Análise em lote (max 200 linhas)</li>
+                    <li><i class="fas fa-check me-2"></i>Dashboard investidores</li>
+                    <li><i class="fas fa-check me-2"></i>Conexões ilimitadas</li>
+                </ul>
+                {% if user.is_authenticated and user_plan_tier != 'pro' %}
+                <form method="post" action="{% url 'subscription_checkout' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="plan_id" class="billing-monthly-input" value="{{ pro_monthly.pk }}">
+                    <input type="hidden" name="plan_id" class="billing-annual-input d-none" value="{{ pro_annual.pk }}">
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Assinar Pro</button>
+                </form>
+                {% elif not user.is_authenticated %}
+                <a href="{% url 'register' %}" class="btn btn-primary w-100 mt-3">Começar</a>
+                {% else %}
+                <button class="btn btn-outline-secondary w-100 mt-3" disabled>Plano atual</button>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    {% if user.is_authenticated and user_subscription %}
+    <div class="text-center mt-5">
+        {% if user_subscription.stripe_customer_id %}
+        <a href="{% url 'subscription_portal' %}" class="btn btn-sm btn-outline-light">
+            <i class="fas fa-credit-card me-1"></i> Gerir faturação & cartão
+        </a>
+        {% endif %}
+        <div class="text-muted small mt-3">
+            Status atual:
+            <strong>{{ user_subscription.get_status_display }}</strong>
+            {% if user_subscription.status == 'trialing' %}
+            — {{ user_subscription.trial_days_left }} dia(s) restante(s)
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function setBilling(mode) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.billing === mode));
+    document.querySelectorAll('.billing-monthly').forEach(el => el.classList.toggle('d-none', mode !== 'monthly'));
+    document.querySelectorAll('.billing-annual').forEach(el => el.classList.toggle('d-none', mode !== 'annual'));
+    document.querySelectorAll('.billing-monthly-input').forEach(el => el.disabled = (mode !== 'monthly'));
+    document.querySelectorAll('.billing-annual-input').forEach(el => el.disabled = (mode !== 'annual'));
+    if (mode === 'annual') {
+        document.querySelectorAll('.billing-annual-input').forEach(el => el.classList.remove('d-none'));
+    } else {
+        document.querySelectorAll('.billing-annual-input').forEach(el => el.classList.add('d-none'));
+    }
+}
+setBilling('monthly');
+</script>
+{% endblock %}
