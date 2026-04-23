@@ -156,12 +156,19 @@ def _handle_checkout_completed(session):
     customer_id = session.get('customer')
     stripe_sub_id = session.get('subscription')
 
-    if not user_id:
-        return
+    user = None
+    if user_id:
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            pass
 
-    try:
-        user = User.objects.get(pk=user_id)
-    except User.DoesNotExist:
+    if user is None:
+        customer_email = session.get('customer_details', {}).get('email') or session.get('customer_email')
+        if customer_email:
+            user = User.objects.filter(email=customer_email).first()
+
+    if user is None:
         return
 
     plan = None

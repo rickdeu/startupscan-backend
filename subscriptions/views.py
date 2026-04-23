@@ -89,6 +89,11 @@ class CheckoutView(LoginRequiredMixin, View):
             return redirect('subscription_plans')
 
         if not getattr(settings, 'STRIPE_SECRET_KEY', ''):
+            # Fall back to static payment links if Stripe API is not configured
+            link_key = f'STRIPE_PAYMENT_LINK_{plan.tier.upper()}'
+            payment_link = getattr(settings, link_key, '')
+            if payment_link:
+                return redirect(payment_link)
             messages.error(request, ui.get('msg_payments_not_configured', 'Pagamentos não configurados. Contacte o suporte.'))
             return redirect('subscription_plans')
 
