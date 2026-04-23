@@ -384,11 +384,13 @@ setupRecorder({ kind: "video", startId: "startVideoBtn", stopId: "stopVideoBtn",
 // If there are errors, detect which step and go to it
 (function () {
     {% if errors %}
-    const hasStep1 = {{ "true" if (errors.startup_name or errors.industry or errors.contact_email) else "false" }};
-    const hasStep2 = {{ "true" if (errors.text or errors.text_file or errors.youtube_url or errors.audio_file or errors.video_file) else "false" }};
-    if (hasStep1) { goStep(1); }
-    else if (hasStep2) { goStep(2); }
-    else { goStep(3); }
+    {% if errors.startup_name or errors.industry or errors.contact_email %}
+    goStep(1);
+    {% elif errors.text or errors.text_file or errors.youtube_url or errors.audio_file or errors.video_file %}
+    goStep(2);
+    {% else %}
+    goStep(3);
+    {% endif %}
     {% endif %}
 })();
 </script>
