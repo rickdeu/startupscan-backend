@@ -4,126 +4,249 @@
 {% block topbar_subtitle %}{{ ui_text.pitch_form_topbar_subtitle }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h2 class="mb-0">{{ ui_text.pitch_form_heading }}</h2>
+{% if general_errors %}
+<div class="alert alert-danger mb-4 animate-fade-up">
+    <div class="fw-semibold mb-1"><i class="fas fa-circle-xmark me-2"></i>{{ ui_text.pitch_form_validation_failed|default:"Não foi possível validar a startup:" }}</div>
+    <ul class="mb-0 mt-1 ps-3">{% for err in general_errors %}<li>{{ err }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="card animate-fade-up">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="fas fa-chart-line me-2" style="color:#60a5fa;"></i>{{ ui_text.pitch_form_heading }}</h4>
     </div>
-    <div class="card-body">
-        {% if general_errors %}
-        <div class="alert alert-danger mb-3">
-            <div class="fw-semibold mb-1">{{ ui_text.pitch_form_validation_failed|default:"Nao foi possivel validar a startup:" }}</div>
-            <ul class="mb-0">
-                {% for err in general_errors %}
-                <li>{{ err }}</li>
-                {% endfor %}
-            </ul>
+    <div class="card-body pt-4">
+
+        <!-- Step wizard -->
+        <div class="step-wizard" id="stepWizard">
+            <div class="step-item active" id="step-indicator-1">
+                <div class="step-dot">1</div>
+                <div class="step-label">{{ ui_text.pitch_form_startup_info|default:"Startup" }}</div>
+            </div>
+            <div class="step-item" id="step-indicator-2">
+                <div class="step-dot">2</div>
+                <div class="step-label">{{ ui_text.pitch_form_modalities|default:"Conteúdo" }}</div>
+            </div>
+            <div class="step-item" id="step-indicator-3">
+                <div class="step-dot">3</div>
+                <div class="step-label">{{ ui_text.pitch_form_financial_data|default:"Financeiro" }}</div>
+            </div>
         </div>
-        {% endif %}
-        <form method="post" enctype="multipart/form-data">
+
+        <form method="post" enctype="multipart/form-data" id="pitchForm">
             {% csrf_token %}
 
-            <h5 class="mb-3">{{ ui_text.pitch_form_startup_info }}</h5>
-            <div class="row g-3">
-                <div class="col-md-5">
-                    <label class="form-label" for="startup_name">{{ ui_text.pitch_form_startup_name }}</label>
-                    <input class="form-control {% if errors.startup_name %}is-invalid{% endif %}" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}">
-                    {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="industry">{{ ui_text.pitch_form_industry }}</label>
-                    <select class="form-select {% if errors.industry %}is-invalid{% endif %}" id="industry" name="industry">
-                        {% for value, label in industries %}
-                        <option value="{{ value }}" {% if form_data.industry|default:'tech' == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                    {% if errors.industry %}<div class="invalid-feedback">{{ errors.industry }}</div>{% endif %}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="contact_email">{{ ui_text.pitch_form_contact_email }}</label>
-                    <input class="form-control {% if errors.contact_email %}is-invalid{% endif %}" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}">
-                    {% if errors.contact_email %}<div class="invalid-feedback">{{ errors.contact_email }}</div>{% endif %}
-                </div>
-            </div>
-
-            <hr class="my-4">
-            <h5 class="mb-3">{{ ui_text.pitch_form_modalities }}</h5>
-            <div class="row g-3">
-                <div class="col-12">
-                    <label class="form-label" for="text">{{ ui_text.pitch_form_pitch_text }}</label>
-                    <textarea class="form-control {% if errors.text %}is-invalid{% endif %}" id="text" name="text" rows="5">{{ form_data.text }}</textarea>
-                    <small class="text-muted">{{ ui_text.pitch_form_pitch_text_help }}</small>
-                    {% if errors.text %}<div class="invalid-feedback">{{ errors.text }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="text_file">{{ ui_text.pitch_form_document }}</label>
-                    <input class="form-control {% if errors.text_file %}is-invalid{% endif %}" type="file" id="text_file" name="text_file" accept=".txt,.md,.csv,.pdf,.docx">
-                    {% if errors.text_file %}<div class="invalid-feedback">{{ errors.text_file }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="youtube_url">{{ ui_text.pitch_form_youtube }}</label>
-                    <input class="form-control {% if errors.youtube_url %}is-invalid{% endif %}" type="url" id="youtube_url" name="youtube_url" value="{{ form_data.youtube_url }}" placeholder="{{ ui_text.pitch_form_youtube_placeholder }}">
-                    {% if errors.youtube_url %}<div class="invalid-feedback">{{ errors.youtube_url }}</div>{% endif %}
-                </div>
-            </div>
-
-            <div class="row g-3 mt-2">
-                <div class="col-lg-6">
-                    <div class="border rounded p-3 {% if errors.audio_file %}border-danger{% endif %}">
-                        <label class="form-label" for="audio">{{ ui_text.pitch_form_audio }}</label>
-                        <input class="form-control mb-2 {% if errors.audio_file %}is-invalid{% endif %}" type="file" id="audio" name="audio" accept="audio/*">
-                        <div class="d-flex gap-2 mb-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="startAudioBtn">{{ ui_text.pitch_form_record_audio }}</button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="stopAudioBtn" disabled>{{ ui_text.pitch_form_stop }}</button>
-                        </div>
-                        <audio id="audioPreview" controls class="w-100"></audio>
-                        {% if errors.audio_file %}<div class="invalid-feedback d-block">{{ errors.audio_file }}</div>{% endif %}
+            <!-- Step 1: Startup info -->
+            <div class="step-panel active" id="step-panel-1">
+                <div class="section-hd mb-4">
+                    <div class="section-hd-icon"><i class="fas fa-building"></i></div>
+                    <div>
+                        <h5>{{ ui_text.pitch_form_startup_info|default:"Informação da Startup" }}</h5>
+                        <small style="color:#64748b;">Passo 1 de 3 — dados básicos de identificação</small>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="border rounded p-3 {% if errors.video_file %}border-danger{% endif %}">
-                        <label class="form-label" for="video">{{ ui_text.pitch_form_video }}</label>
-                        <input class="form-control mb-2 {% if errors.video_file %}is-invalid{% endif %}" type="file" id="video" name="video" accept="video/*">
-                        <div class="d-flex gap-2 mb-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="startVideoBtn">{{ ui_text.pitch_form_record_video }}</button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="stopVideoBtn" disabled>{{ ui_text.pitch_form_stop }}</button>
-                        </div>
-                        <video id="videoPreview" controls class="w-100" style="max-height:220px;"></video>
-                        {% if errors.video_file %}<div class="invalid-feedback d-block">{{ errors.video_file }}</div>{% endif %}
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_startup_name }} <span style="color:#ef4444;">*</span></label>
+                        <input class="form-control {% if errors.startup_name %}is-invalid{% endif %}" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}" placeholder="ex: TechAngola AI" autofocus>
+                        {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_industry }} <span style="color:#ef4444;">*</span></label>
+                        <select class="form-select {% if errors.industry %}is-invalid{% endif %}" id="industry" name="industry">
+                            {% for value, label in industries %}
+                            <option value="{{ value }}" {% if form_data.industry|default:'tech' == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if errors.industry %}<div class="invalid-feedback">{{ errors.industry }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_contact_email }}</label>
+                        <input class="form-control {% if errors.contact_email %}is-invalid{% endif %}" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}" placeholder="email@startup.com">
+                        {% if errors.contact_email %}<div class="invalid-feedback">{{ errors.contact_email }}</div>{% endif %}
                     </div>
                 </div>
-            </div>
 
-            <hr class="my-4">
-            <h5 class="mb-3">{{ ui_text.pitch_form_financial_data }}</h5>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label" for="revenue">{{ ui_text.pitch_form_revenue }}</label>
-                    <input type="number" step="0.01" class="form-control {% if errors.revenue %}is-invalid{% endif %}" id="revenue" name="revenue" value="{{ form_data.revenue|default_if_none:'' }}" required>
-                    {% if errors.revenue %}<div class="invalid-feedback">{{ errors.revenue }}</div>{% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="growth_rate">{{ ui_text.pitch_form_growth_rate }}</label>
-                    <input type="number" step="0.01" class="form-control {% if errors.growth_rate %}is-invalid{% endif %}" id="growth_rate" name="growth_rate" value="{{ form_data.growth_rate|default_if_none:'' }}" required>
-                    {% if errors.growth_rate %}<div class="invalid-feedback">{{ errors.growth_rate }}</div>{% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="profit_margin">{{ ui_text.pitch_form_profit_margin }}</label>
-                    <input type="number" step="0.01" class="form-control {% if errors.profit_margin %}is-invalid{% endif %}" id="profit_margin" name="profit_margin" value="{{ form_data.profit_margin|default_if_none:'' }}" required>
-                    {% if errors.profit_margin %}<div class="invalid-feedback">{{ errors.profit_margin }}</div>{% endif %}
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-primary px-4" onclick="goStep(2)">
+                        {{ ui_text.pitch_form_modalities|default:"Conteúdo" }} <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
                 </div>
             </div>
 
-            <div class="row g-3 mt-2">
-                <div class="col-md-6">
-                    <label class="form-label" for="model_source">{{ ui_text.pitch_form_analysis_engine }}</label>
-                    <select class="form-select {% if errors.model_source %}is-invalid{% endif %}" id="model_source" name="model_source">
-                        <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>{{ ui_text.pitch_form_engine_local }}</option>
-                        <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>{{ ui_text.pitch_form_engine_gpt }}</option>
-                    </select>
-                    {% if errors.model_source %}<div class="invalid-feedback">{{ errors.model_source }}</div>{% endif %}
+            <!-- Step 2: Content -->
+            <div class="step-panel" id="step-panel-2">
+                <div class="section-hd mb-4">
+                    <div class="section-hd-icon"><i class="fas fa-file-lines"></i></div>
+                    <div>
+                        <h5>{{ ui_text.pitch_form_modalities|default:"Conteúdo do Pitch" }}</h5>
+                        <small style="color:#64748b;">Passo 2 de 3 — texto, ficheiros, áudio e vídeo</small>
+                    </div>
                 </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary btn-lg w-100">
+
+                <!-- Pitch text -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_pitch_text }}</label>
+                    <textarea class="form-control {% if errors.text %}is-invalid{% endif %}" id="pitchText" name="text" rows="5" maxlength="8000" placeholder="{{ ui_text.pitch_form_pitch_text_help }}">{{ form_data.text }}</textarea>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small style="color:#64748b;">{{ ui_text.pitch_form_pitch_text_help }}</small>
+                        <div class="char-counter" id="pitchTextCounter">0 / 8000</div>
+                    </div>
+                    {% if errors.text %}<div class="invalid-feedback d-block">{{ errors.text }}</div>{% endif %}
+                </div>
+
+                <!-- Document + YouTube -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_document }}</label>
+                        <div class="upload-zone" id="docZone">
+                            <input type="file" id="text_file" name="text_file" accept=".txt,.md,.csv,.pdf,.docx">
+                            <i class="fas fa-file-arrow-up uz-icon"></i>
+                            <div class="fw-semibold mb-1" style="font-size:.85rem;">Arraste o ficheiro aqui</div>
+                            <div class="uz-text">.txt .md .csv .pdf .docx</div>
+                            <div class="uz-file" id="docFileName"></div>
+                        </div>
+                        {% if errors.text_file %}<div class="text-danger small mt-1">{{ errors.text_file }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_youtube }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background:#0f172a;border-color:#334155;color:#ef4444;"><i class="fab fa-youtube"></i></span>
+                            <input class="form-control {% if errors.youtube_url %}is-invalid{% endif %}" type="url" id="youtube_url" name="youtube_url" value="{{ form_data.youtube_url }}" placeholder="{{ ui_text.pitch_form_youtube_placeholder }}">
+                        </div>
+                        {% if errors.youtube_url %}<div class="invalid-feedback d-block">{{ errors.youtube_url }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Audio + Video -->
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-6">
+                        <div class="section-hd mb-3">
+                            <div class="section-hd-icon" style="background:rgba(16,185,129,.14);color:#34d399;"><i class="fas fa-microphone"></i></div>
+                            <div><h6 style="font-size:.88rem;">{{ ui_text.pitch_form_audio }}</h6></div>
+                        </div>
+                        <div class="upload-zone mb-2" id="audioZone">
+                            <input type="file" id="audio" name="audio" accept="audio/*">
+                            <i class="fas fa-microphone-lines uz-icon"></i>
+                            <div class="fw-semibold mb-1" style="font-size:.85rem;">Carregar áudio</div>
+                            <div class="uz-text">mp3, wav, webm, ogg...</div>
+                            <div class="uz-file" id="audioFileName"></div>
+                        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-success" id="startAudioBtn">
+                                <i class="fas fa-circle-dot me-1"></i>{{ ui_text.pitch_form_record_audio }}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="stopAudioBtn" disabled>
+                                <i class="fas fa-stop me-1"></i>{{ ui_text.pitch_form_stop }}
+                            </button>
+                        </div>
+                        <audio id="audioPreview" controls class="w-100" style="height:36px;"></audio>
+                        {% if errors.audio_file %}<div class="text-danger small mt-1">{{ errors.audio_file }}</div>{% endif %}
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="section-hd mb-3">
+                            <div class="section-hd-icon" style="background:rgba(139,92,246,.14);color:#a78bfa;"><i class="fas fa-video"></i></div>
+                            <div><h6 style="font-size:.88rem;">{{ ui_text.pitch_form_video }}</h6></div>
+                        </div>
+                        <div class="upload-zone mb-2" id="videoZone">
+                            <input type="file" id="video" name="video" accept="video/*">
+                            <i class="fas fa-film uz-icon"></i>
+                            <div class="fw-semibold mb-1" style="font-size:.85rem;">Carregar vídeo</div>
+                            <div class="uz-text">mp4, webm, mov...</div>
+                            <div class="uz-file" id="videoFileName"></div>
+                        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="startVideoBtn">
+                                <i class="fas fa-circle-dot me-1"></i>{{ ui_text.pitch_form_record_video }}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="stopVideoBtn" disabled>
+                                <i class="fas fa-stop me-1"></i>{{ ui_text.pitch_form_stop }}
+                            </button>
+                        </div>
+                        <video id="videoPreview" controls class="w-100" style="max-height:180px;border-radius:8px;"></video>
+                        {% if errors.video_file %}<div class="text-danger small mt-1">{{ errors.video_file }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-light" onclick="goStep(1)">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </button>
+                    <button type="button" class="btn btn-primary px-4" onclick="goStep(3)">
+                        {{ ui_text.pitch_form_financial_data|default:"Financeiro" }} <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Financial -->
+            <div class="step-panel" id="step-panel-3">
+                <div class="section-hd mb-4">
+                    <div class="section-hd-icon" style="background:rgba(16,185,129,.14);color:#34d399;"><i class="fas fa-sack-dollar"></i></div>
+                    <div>
+                        <h5>{{ ui_text.pitch_form_financial_data|default:"Dados Financeiros" }}</h5>
+                        <small style="color:#64748b;">Passo 3 de 3 — métricas e motor de análise</small>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_revenue }} (AOA) <span style="color:#ef4444;">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background:#0f172a;border-color:#334155;color:#34d399;">AOA</span>
+                            <input type="number" step="0.01" class="form-control {% if errors.revenue %}is-invalid{% endif %}" id="revenue" name="revenue" value="{{ form_data.revenue|default_if_none:'' }}" placeholder="0.00" required>
+                        </div>
+                        {% if errors.revenue %}<div class="invalid-feedback d-block">{{ errors.revenue }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_growth_rate }} (%) <span style="color:#ef4444;">*</span></label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control {% if errors.growth_rate %}is-invalid{% endif %}" id="growth_rate" name="growth_rate" value="{{ form_data.growth_rate|default_if_none:'' }}" placeholder="0.00" required>
+                            <span class="input-group-text" style="background:#0f172a;border-color:#334155;color:#60a5fa;">%</span>
+                        </div>
+                        {% if errors.growth_rate %}<div class="invalid-feedback d-block">{{ errors.growth_rate }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_profit_margin }} (%) <span style="color:#ef4444;">*</span></label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control {% if errors.profit_margin %}is-invalid{% endif %}" id="profit_margin" name="profit_margin" value="{{ form_data.profit_margin|default_if_none:'' }}" placeholder="0.00" required>
+                            <span class="input-group-text" style="background:#0f172a;border-color:#334155;color:#a78bfa;">%</span>
+                        </div>
+                        {% if errors.profit_margin %}<div class="invalid-feedback d-block">{{ errors.profit_margin }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Engine selector -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_analysis_engine }}</label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="d-flex align-items-start gap-3 p-3 rounded cursor-pointer engine-opt {% if form_data.model_source|default:'local' == 'local' %}engine-selected{% endif %}" style="border:1px solid #1e2d4a;border-radius:12px;cursor:pointer;transition:all .2s;">
+                                    <input type="radio" name="model_source" value="local" {% if form_data.model_source|default:'local' == 'local' %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#3b82f6;">
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:.88rem;"><i class="fas fa-microchip me-1" style="color:#60a5fa;"></i>{{ ui_text.pitch_form_engine_local }}</div>
+                                        <div class="small" style="color:#64748b;">Rápido, offline, sem custo adicional</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="d-flex align-items-start gap-3 p-3 rounded cursor-pointer engine-opt {% if form_data.model_source == 'gpt' %}engine-selected{% endif %}" style="border:1px solid #1e2d4a;border-radius:12px;cursor:pointer;transition:all .2s;">
+                                    <input type="radio" name="model_source" value="gpt" {% if form_data.model_source == 'gpt' %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#8b5cf6;">
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:.88rem;"><i class="fas fa-sparkles me-1" style="color:#a78bfa;"></i>{{ ui_text.pitch_form_engine_gpt }}</div>
+                                        <div class="small" style="color:#64748b;">Análise mais profunda com GPT-4 — requer plano Pro</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-light" onclick="goStep(2)">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
                         <i class="fas fa-chart-line me-2"></i>{{ ui_text.pitch_form_submit }}
                     </button>
                 </div>
@@ -135,70 +258,138 @@
 
 {% block extra_scripts %}
 <script>
-function setRecordedFileOnInput(input, blob, filename, mimeType) {
-    const file = new File([blob], filename, { type: mimeType });
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
+// Step navigation
+function goStep(n) {
+    for (let i = 1; i <= 3; i++) {
+        const panel = document.getElementById("step-panel-" + i);
+        const ind   = document.getElementById("step-indicator-" + i);
+        if (!panel || !ind) continue;
+        if (i === n) {
+            panel.classList.add("active");
+            ind.classList.add("active");
+            ind.classList.remove("done");
+        } else {
+            panel.classList.remove("active");
+            ind.classList.remove("active");
+            if (i < n) ind.classList.add("done"); else ind.classList.remove("done");
+            // update connector line
+            if (i < n) ind.classList.add("done"); else ind.classList.remove("done");
+        }
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-async function setupRecorder(config) {
-    const { kind, startBtnId, stopBtnId, inputId, previewId } = config;
-    const startBtn = document.getElementById(startBtnId);
-    const stopBtn = document.getElementById(stopBtnId);
+// Engine option highlight
+document.querySelectorAll(".engine-radio").forEach(function (radio) {
+    radio.addEventListener("change", function () {
+        document.querySelectorAll(".engine-opt").forEach(function (lbl) {
+            lbl.style.borderColor = "#1e2d4a";
+            lbl.style.background  = "";
+        });
+        if (radio.checked) {
+            const lbl = radio.closest(".engine-opt");
+            lbl.style.borderColor = "#3b82f6";
+            lbl.style.background  = "rgba(59,130,246,.06)";
+        }
+    });
+});
+// Init selected engine highlight
+document.querySelectorAll(".engine-radio:checked").forEach(function (r) {
+    const lbl = r.closest(".engine-opt");
+    if (lbl) { lbl.style.borderColor = "#3b82f6"; lbl.style.background = "rgba(59,130,246,.06)"; }
+});
+
+// Character counter
+(function () {
+    const ta = document.getElementById("pitchText");
+    const ctr = document.getElementById("pitchTextCounter");
+    if (!ta || !ctr) return;
+    function upd() {
+        const len = ta.value.length;
+        const max = parseInt(ta.maxLength || 8000, 10);
+        ctr.textContent = len + " / " + max;
+        ctr.className = "char-counter" + (len > max * 0.9 ? " cc-warn" : "") + (len >= max ? " cc-over" : "");
+    }
+    ta.addEventListener("input", upd); upd();
+})();
+
+// Upload zone file name feedback
+function setupUploadZone(inputId, nameId) {
     const input = document.getElementById(inputId);
-    const preview = document.getElementById(previewId);
+    const name  = document.getElementById(nameId);
+    if (!input || !name) return;
+    const zone = input.closest(".upload-zone");
+    input.addEventListener("change", function () {
+        if (input.files && input.files[0]) {
+            name.textContent = input.files[0].name;
+            if (zone) zone.style.borderColor = "#10b981";
+        }
+    });
+    if (zone) {
+        zone.addEventListener("dragover",  function (e) { e.preventDefault(); zone.classList.add("drag-over"); });
+        zone.addEventListener("dragleave", function ()   { zone.classList.remove("drag-over"); });
+        zone.addEventListener("drop",      function (e)  { e.preventDefault(); zone.classList.remove("drag-over"); });
+    }
+}
+setupUploadZone("text_file", "docFileName");
+setupUploadZone("audio",     "audioFileName");
+setupUploadZone("video",     "videoFileName");
 
-    let mediaRecorder = null;
-    let stream = null;
-    let chunks = [];
-
-    startBtn.addEventListener("click", async () => {
+// Media recorder
+function setRecordedFile(input, blob, filename, mimeType) {
+    const file = new File([blob], filename, { type: mimeType });
+    const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+}
+async function setupRecorder(cfg) {
+    const { kind, startId, stopId, inputId, previewId } = cfg;
+    const startBtn = document.getElementById(startId);
+    const stopBtn  = document.getElementById(stopId);
+    const input    = document.getElementById(inputId);
+    const preview  = document.getElementById(previewId);
+    if (!startBtn || !stopBtn || !input) return;
+    let recorder = null, stream = null, chunks = [];
+    startBtn.addEventListener("click", async function () {
         const constraints = kind === "audio" ? { audio: true, video: false } : { audio: true, video: true };
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         chunks = [];
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = (evt) => { if (evt.data.size > 0) chunks.push(evt.data); };
-        mediaRecorder.onstop = () => {
-            const mimeType = kind === "audio" ? "audio/webm" : "video/webm";
-            const filename = kind === "audio" ? "gravacao_audio.webm" : "gravacao_video.webm";
-            const blob = new Blob(chunks, { type: mimeType });
-            setRecordedFileOnInput(input, blob, filename, mimeType);
-            const localUrl = URL.createObjectURL(blob);
-            preview.srcObject = null;
-            preview.src = localUrl;
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
+        recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = function () {
+            const mime = kind === "audio" ? "audio/webm" : "video/webm";
+            const blob = new Blob(chunks, { type: mime });
+            setRecordedFile(input, blob, kind === "audio" ? "audio.webm" : "video.webm", mime);
+            if (preview) { preview.srcObject = null; preview.src = URL.createObjectURL(blob); }
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            startBtn.classList.remove("btn-record-live");
+            startBtn.disabled = false; stopBtn.disabled = true;
         };
-
-        if (kind === "video") {
-            preview.srcObject = stream;
-            preview.muted = true;
-            await preview.play().catch(() => {});
-        }
-
-        mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
+        if (kind === "video" && preview) { preview.srcObject = stream; preview.muted = true; await preview.play().catch(() => {}); }
+        recorder.start();
+        startBtn.classList.add("btn-record-live");
+        startBtn.disabled = true; stopBtn.disabled = false;
     });
-
-    stopBtn.addEventListener("click", () => {
-        if (mediaRecorder && mediaRecorder.state !== "inactive") {
-            mediaRecorder.stop();
-        }
+    stopBtn.addEventListener("click", function () {
+        if (recorder && recorder.state !== "inactive") recorder.stop();
     });
 }
+setupRecorder({ kind: "audio", startId: "startAudioBtn", stopId: "stopAudioBtn", inputId: "audio",     previewId: "audioPreview" });
+setupRecorder({ kind: "video", startId: "startVideoBtn", stopId: "stopVideoBtn", inputId: "video",     previewId: "videoPreview" });
 
-setupRecorder({ kind: "audio", startBtnId: "startAudioBtn", stopBtnId: "stopAudioBtn", inputId: "audio", previewId: "audioPreview" });
-setupRecorder({ kind: "video", startBtnId: "startVideoBtn", stopBtnId: "stopVideoBtn", inputId: "video", previewId: "videoPreview" });
-
+// Auto scroll to errors
 (function () {
-    const firstInvalid = document.querySelector(".is-invalid");
-    if (firstInvalid) {
-        firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-        try { firstInvalid.focus(); } catch (_) {}
-    }
+    const first = document.querySelector(".is-invalid");
+    if (first) { first.scrollIntoView({ behavior: "smooth", block: "center" }); try { first.focus(); } catch(_){} }
+})();
+
+// If there are errors, detect which step and go to it
+(function () {
+    {% if errors %}
+    const hasStep1 = {{ "true" if (errors.startup_name or errors.industry or errors.contact_email) else "false" }};
+    const hasStep2 = {{ "true" if (errors.text or errors.text_file or errors.youtube_url or errors.audio_file or errors.video_file) else "false" }};
+    if (hasStep1) { goStep(1); }
+    else if (hasStep2) { goStep(2); }
+    else { goStep(3); }
+    {% endif %}
 })();
 </script>
 {% endblock %}

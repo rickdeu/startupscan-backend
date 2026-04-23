@@ -5,102 +5,108 @@
 {% block topbar_subtitle %}{{ ui_text.public_ideas_subtitle }}{% endblock %}
 
 {% block content %}
-<div class="row g-3 mb-3">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm bg-dark-subtle h-100">
-            <div class="card-body">
-                <form method="get" class="row g-2 align-items-end">
-                    <div class="col-md-9">
-                        <label for="id_q" class="form-label mb-1">{{ ui_text.search_ideas }}</label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="id_q"
-                            name="q"
-                            value="{{ search_query }}"
-                            placeholder="{{ ui_text.search_ideas_placeholder }}"
-                        >
-                    </div>
-                    <div class="col-md-3 d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i>{{ ui_text.search }}
-                        </button>
-                    </div>
-                </form>
-            </div>
+<!-- Hero -->
+<div class="hero-panel p-4 mb-4 animate-fade-up" style="background:linear-gradient(135deg,rgba(99,102,241,.3) 0%,rgba(139,92,246,.15) 100%);border:1px solid rgba(99,102,241,.2);">
+    <div class="d-flex align-items-center gap-3">
+        <div style="width:42px;height:42px;background:rgba(99,102,241,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-globe" style="color:#a78bfa;font-size:1.1rem;"></i>
         </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm bg-dark-subtle h-100">
-            <div class="card-body d-flex flex-column justify-content-center">
-                <div class="small text-muted text-uppercase mb-1">{{ ui_text.total_visible_ideas }}</div>
-                <div class="display-6 fw-bold mb-0">{{ total_ideas }}</div>
-                <div class="small text-muted">{{ ui_text.ranking_updated }}</div>
-            </div>
+        <div class="flex-grow-1">
+            <h2 class="mb-0 fw-bold" style="color:#f1f5f9;font-size:1.35rem;">{{ ui_text.public_ideas_title }}</h2>
+            <p class="mb-0" style="color:#94a3b8;font-size:.88rem;">{{ ui_text.public_ideas_subtitle }}</p>
+        </div>
+        <div class="text-end">
+            <div style="font-size:1.6rem;font-weight:800;color:#a78bfa;line-height:1;">{{ total_ideas }}</div>
+            <div style="font-size:.75rem;color:#64748b;">{{ ui_text.total_visible_ideas }}</div>
         </div>
     </div>
 </div>
 
-<div class="row g-3">
-    {% for idea in ideas %}
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-dark-subtle">
-            <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                    <div>
-                        <div class="small text-muted">Ranking #{{ idea.rank_position }}</div>
-                        <h5 class="mb-1">{{ idea.startup_name }}</h5>
-                        {% if idea.one_liner %}
-                        <p class="mb-1 text-white-50">{{ idea.one_liner }}</p>
-                        {% endif %}
-                    </div>
-                    <div class="text-end">
-                        <div class="badge text-bg-warning mb-1">
-                            <i class="fas fa-star me-1"></i>{{ idea.avg_stars|default:0|floatformat:1 }}/5
-                        </div>
-                        <div class="small text-muted">Pontuação: {{ idea.ranking_points|floatformat:1 }}</div>
-                    </div>
-                </div>
-
-                <div class="row g-2 small mb-3">
-                    <div class="col-md-4">
-                        <div class="p-2 rounded bg-black bg-opacity-25">
-                            <strong>{{ idea.feedback_count|default:0 }}</strong> {{ ui_text.ratings }}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-2 rounded bg-black bg-opacity-25">
-                            <strong>{{ idea.endorsement_count|default:0 }}</strong> {{ ui_text.public_endorsements }}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-2 rounded bg-black bg-opacity-25">
-                            <strong>{{ idea.comments_count|default:0 }}</strong> {{ ui_text.comments }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-comments me-1"></i>{{ ui_text.view_details_comment_rate }}
-                    </a>
-                    {% if idea.my_feedback %}
-                    <span class="badge text-bg-success align-self-center">
-                        {{ ui_text.already_rated }}: {{ idea.my_feedback.stars }} {{ ui_text.stars_label }}{% if idea.my_feedback.endorsed %} + {{ ui_text.support_label }}{% endif %}
-                    </span>
-                    {% endif %}
+<!-- Search -->
+<div class="card mb-4 animate-fade-up animate-delay-1" style="border:1px solid rgba(100,116,139,.18);">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-10">
+                <div style="position:relative;">
+                    <i class="fas fa-search" style="position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:#475569;font-size:.85rem;pointer-events:none;"></i>
+                    <input type="text" class="form-control" id="id_q" name="q" value="{{ search_query }}"
+                        placeholder="{{ ui_text.search_ideas_placeholder }}"
+                        style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;padding-left:2.5rem;">
                 </div>
             </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i>{{ ui_text.search }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Ideas List -->
+<div class="d-flex flex-column gap-3 animate-fade-up animate-delay-2">
+    {% for idea in ideas %}
+    <div style="background:linear-gradient(180deg,#111b2f 0%,#0f182b 100%);border:1px solid rgba(100,116,139,.18);border-radius:14px;padding:1.25rem;transition:border-color .2s,box-shadow .2s;"
+         onmouseenter="this.style.borderColor='#2b3d63';this.style.boxShadow='0 8px 24px rgba(2,6,23,.4)'"
+         onmouseleave="this.style.borderColor='rgba(100,116,139,.18)';this.style.boxShadow=''">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <div style="font-size:.75rem;color:#475569;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em;">
+                    <i class="fas fa-hashtag me-1" style="font-size:.6rem;"></i>{{ idea.rank_position }}
+                </div>
+                <h5 class="mb-1 fw-bold" style="color:#f1f5f9;font-size:1.05rem;">{{ idea.startup_name }}</h5>
+                {% if idea.one_liner %}
+                <p class="mb-0" style="color:#64748b;font-size:.88rem;">{{ idea.one_liner }}</p>
+                {% endif %}
+            </div>
+            <div class="text-end">
+                <div style="font-size:1.5rem;font-weight:800;color:#fcd34d;line-height:1;">
+                    <i class="fas fa-star me-1" style="font-size:1rem;"></i>{{ idea.avg_stars|default:0|floatformat:1 }}<span style="font-size:.9rem;color:#475569;">/5</span>
+                </div>
+                <div style="font-size:.75rem;color:#475569;margin-top:.2rem;">{{ idea.ranking_points|floatformat:1 }} pts</div>
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
+                    <i class="fas fa-star me-1" style="color:#fcd34d;"></i>
+                    <strong style="color:#f1f5f9;">{{ idea.feedback_count|default:0 }}</strong>
+                    <span style="color:#64748b;margin-left:.3rem;">{{ ui_text.ratings }}</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
+                    <i class="fas fa-thumbs-up me-1" style="color:#34d399;"></i>
+                    <strong style="color:#f1f5f9;">{{ idea.endorsement_count|default:0 }}</strong>
+                    <span style="color:#64748b;margin-left:.3rem;">{{ ui_text.public_endorsements }}</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
+                    <i class="fas fa-comment me-1" style="color:#60a5fa;"></i>
+                    <strong style="color:#f1f5f9;">{{ idea.comments_count|default:0 }}</strong>
+                    <span style="color:#64748b;margin-left:.3rem;">{{ ui_text.comments }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-sm" style="background:rgba(99,102,241,.1);color:#a78bfa;border:1px solid rgba(99,102,241,.25);font-size:.82rem;">
+                <i class="fas fa-comments me-1"></i>{{ ui_text.view_details_comment_rate }}
+            </a>
+            {% if idea.my_feedback %}
+            <span class="status-pill sp-connected">
+                <i class="fas fa-check me-1"></i>{{ ui_text.already_rated }}: {{ idea.my_feedback.stars }} {{ ui_text.stars_label }}{% if idea.my_feedback.endorsed %} + {{ ui_text.support_label }}{% endif %}
+            </span>
+            {% endif %}
         </div>
     </div>
     {% empty %}
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-dark-subtle">
-            <div class="card-body">
-                <h5 class="mb-1">{{ ui_text.no_ideas_found }}</h5>
-                <p class="mb-0 text-white-50">{{ ui_text.adjust_filters_for_ideas }}</p>
-            </div>
-        </div>
+    <div class="text-center py-5">
+        <i class="fas fa-lightbulb" style="font-size:3rem;color:#1e293b;display:block;margin-bottom:1rem;"></i>
+        <h5 style="color:#475569;">{{ ui_text.no_ideas_found }}</h5>
+        <p style="color:#334155;font-size:.9rem;">{{ ui_text.adjust_filters_for_ideas }}</p>
     </div>
     {% endfor %}
 </div>

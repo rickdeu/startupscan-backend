@@ -1,178 +1,216 @@
 {% extends "analyzer/base.html" %}
 
 {% block topbar_title %}{{ ui_text.dashboard_topbar_title|default:"Dashboard Operacional" }}{% endblock %}
-{% block topbar_subtitle %}{{ ui_text.dashboard_topbar_subtitle|default:"Monitorizacao de analises, performance e benchmark setorial" }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.dashboard_topbar_subtitle|default:"Monitorização de análises, performance e benchmark setorial" }}{% endblock %}
 
 {% block content %}
-<div class="hero-panel p-4 p-lg-5 mb-4">
+<!-- Hero panel -->
+<div class="hero-panel p-4 p-lg-5 mb-4 animate-fade-up">
     <div class="row align-items-center">
         <div class="col-lg-8">
-            <h1 class="display-6 fw-bold mb-2">{{ ui_text.dashboard_hero_title|default:"Centro Inteligente de Avaliacao de Startups" }}</h1>
-            <p class="lead mb-3">
-                {{ ui_text.dashboard_hero_subtitle|default:"Analise pitches, compare desempenho dos modelos e apresente oportunidades de investimento com um dashboard pronto para investidores." }}
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge" style="background:rgba(255,255,255,.15);font-size:.72rem;letter-spacing:.06em;padding:.3rem .7rem;">
+                    <i class="fas fa-bolt me-1"></i>AI PLATFORM
+                </span>
+            </div>
+            <h1 class="display-6 fw-bold mb-2">{{ ui_text.dashboard_hero_title|default:"Centro Inteligente de Avaliação de Startups" }}</h1>
+            <p class="lead mb-3" style="opacity:.88;">
+                {{ ui_text.dashboard_hero_subtitle|default:"Analise pitches, compare desempenho dos modelos e apresente oportunidades de investimento." }}
             </p>
-            <a class="btn btn-light btn-lg me-2" href="{% url 'pitch_form' %}">
-                <i class="fas fa-rocket me-2"></i>{{ ui_text.new_analysis|default:"Nova Analise" }}
-            </a>
-            <a class="btn btn-outline-light btn-lg" href="{% url 'investor_dashboard' %}">
-                <i class="fas fa-chart-line me-2"></i>{{ ui_text.investor_view|default:"Visao do Investidor" }}
-            </a>
+            <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-light btn-lg" href="{% url 'pitch_form' %}">
+                    <i class="fas fa-rocket me-2"></i>{{ ui_text.new_analysis|default:"Nova Análise" }}
+                </a>
+                <a class="btn btn-outline-light btn-lg" href="{% url 'investor_dashboard' %}">
+                    <i class="fas fa-chart-line me-2"></i>{{ ui_text.investor_view|default:"Visão do Investidor" }}
+                </a>
+            </div>
         </div>
         <div class="col-lg-4 mt-4 mt-lg-0">
             <div class="glass-card p-3">
-                <h6 class="text-uppercase text-muted mb-3">{{ ui_text.active_model|default:"Modelo ativo" }}</h6>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="fas fa-microchip" style="color:#60a5fa;"></i>
+                    <h6 class="text-uppercase mb-0" style="font-size:.72rem;letter-spacing:.08em;color:#94a3b8;">{{ ui_text.active_model|default:"Modelo ativo" }}</h6>
+                </div>
                 {% if active_model %}
-                <h5 class="mb-1">{{ active_model.display_name }}</h5>
-                <p class="mb-1 small text-muted">{{ active_model.name }}</p>
-                <p class="mb-0 small">
-                    {{ ui_text.consistency|default:"Consistencia" }}:
-                    <strong>{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</strong>
-                </p>
+                <h5 class="mb-1 fw-bold">{{ active_model.display_name }}</h5>
+                <p class="mb-1 small" style="color:#94a3b8;">{{ active_model.name }}</p>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <div style="flex:1;height:5px;border-radius:999px;background:#1e2d4a;overflow:hidden;">
+                        <div style="height:100%;width:{{ active_model.consistency_accuracy_pct|default:0 }}%;background:linear-gradient(90deg,#2563eb,#22d3ee);border-radius:999px;"></div>
+                    </div>
+                    <span style="font-size:.8rem;font-weight:700;color:#22d3ee;">{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</span>
+                </div>
                 {% else %}
-                <p class="mb-0">{{ ui_text.no_active_model_detected|default:"Sem modelo ativo detectado." }}</p>
+                <p class="mb-0 small" style="color:#64748b;">{{ ui_text.no_active_model_detected|default:"Sem modelo ativo detectado." }}</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="card mb-4">
+<!-- Filters -->
+<div class="card mb-4 animate-fade-up animate-delay-1">
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label">{{ ui_text.min_score|default:"Score minimo" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.min_score|default:"Score mínimo" }}</label>
                 <input type="number" class="form-control" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label">{{ ui_text.max_score|default:"Score maximo" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.max_score|default:"Score máximo" }}</label>
                 <input type="number" class="form-control" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}">
             </div>
             <div class="col-md-2">
-                <label class="form-label">{{ ui_text.time_window|default:"Janela de tempo" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.time_window|default:"Período" }}</label>
                 <select class="form-select" name="days">
-                    <option value="30" {% if filter_days == 30 %}selected{% endif %}>{{ ui_text.last_30_days|default:"Ultimos 30 dias" }}</option>
-                    <option value="90" {% if filter_days == 90 %}selected{% endif %}>{{ ui_text.last_90_days|default:"Ultimos 90 dias" }}</option>
-                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>{{ ui_text.last_180_days|default:"Ultimos 180 dias" }}</option>
-                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>{{ ui_text.last_12_months|default:"Ultimos 12 meses" }}</option>
-                    <option value="0" {% if filter_days == 0 %}selected{% endif %}>{{ ui_text.all_period|default:"Todo o periodo" }}</option>
+                    <option value="30"  {% if filter_days == 30  %}selected{% endif %}>30 dias</option>
+                    <option value="90"  {% if filter_days == 90  %}selected{% endif %}>90 dias</option>
+                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>180 dias</option>
+                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>12 meses</option>
+                    <option value="0"   {% if filter_days == 0   %}selected{% endif %}>Todo o período</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label">{{ ui_text.engine|default:"Motor" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.engine|default:"Motor" }}</label>
                 <select class="form-select" name="engine">
-                    <option value="all" {% if filter_engine == "all" %}selected{% endif %}>{{ ui_text.all|default:"Todos" }}</option>
+                    <option value="all"   {% if filter_engine == "all"   %}selected{% endif %}>Todos</option>
                     <option value="local" {% if filter_engine == "local" %}selected{% endif %}>Local</option>
-                    <option value="gpt" {% if filter_engine == "gpt" %}selected{% endif %}>GPT</option>
+                    <option value="gpt"   {% if filter_engine == "gpt"   %}selected{% endif %}>GPT</option>
                 </select>
             </div>
             <div class="col-md-2 d-grid">
-                <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i>{{ ui_text.apply_filters|default:"Aplicar filtros" }}</button>
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-filter me-1"></i>{{ ui_text.apply_filters|default:"Aplicar" }}
+                </button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- KPI Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="kpi-card">
-            <span class="kpi-label">{{ ui_text.analyses_in_system|default:"Analises no sistema" }}</span>
-            <h3>{{ global_stats.total|default:0 }}</h3>
+    <div class="col-md-3 animate-fade-up animate-delay-1">
+        <div class="kpi-card kpi-blue p-3">
+            <div class="kpi-icon"><i class="fas fa-chart-bar"></i></div>
+            <span class="kpi-label">{{ ui_text.analyses_in_system|default:"Análises no sistema" }}</span>
+            <h3 class="mb-0 counter" data-target="{{ global_stats.total|default:0 }}">0</h3>
+            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-line"></i> Total acumulado</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="kpi-card">
-            <span class="kpi-label">{{ ui_text.average_score|default:"Score medio" }}</span>
-            <h3>{{ global_stats.avg_score|default:0|floatformat:2 }}/10</h3>
+    <div class="col-md-3 animate-fade-up animate-delay-2">
+        <div class="kpi-card kpi-purple p-3">
+            <div class="kpi-icon"><i class="fas fa-star-half-stroke"></i></div>
+            <span class="kpi-label">{{ ui_text.average_score|default:"Score médio" }}</span>
+            <h3 class="mb-0"><span class="counter-dec" data-target="{{ global_stats.avg_score|default:0 }}">0</span>/10</h3>
+            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-wave-square"></i> Índice geral</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="kpi-card">
+    <div class="col-md-3 animate-fade-up animate-delay-3">
+        <div class="kpi-card kpi-green p-3">
+            <div class="kpi-icon"><i class="fas fa-trophy"></i></div>
             <span class="kpi-label">{{ ui_text.best_score|default:"Melhor score" }}</span>
-            <h3>{{ global_stats.best|default:0|floatformat:1 }}/10</h3>
+            <h3 class="mb-0"><span class="counter-dec" data-target="{{ global_stats.best|default:0 }}">0</span>/10</h3>
+            <div class="kpi-trend" style="color:#34d399;"><i class="fas fa-arrow-up"></i> Recorde da plataforma</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="kpi-card">
-            <span class="kpi-label">{{ ui_text.available_models|default:"Modelos disponiveis" }}</span>
-            <h3>{{ models_count }}</h3>
+    <div class="col-md-3 animate-fade-up animate-delay-4">
+        <div class="kpi-card kpi-amber p-3">
+            <div class="kpi-icon"><i class="fas fa-robot"></i></div>
+            <span class="kpi-label">{{ ui_text.available_models|default:"Modelos disponíveis" }}</span>
+            <h3 class="mb-0 counter" data-target="{{ models_count }}">0</h3>
+            <div class="kpi-trend" style="color:#fbbf24;"><i class="fas fa-microchip"></i> Motores de IA</div>
         </div>
     </div>
 </div>
 
+<!-- Charts row 1 -->
 <div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="card">
+    <div class="col-lg-8 animate-fade-up animate-delay-2">
+        <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ ui_text.comparison_by_sector|default:"Comparacao por Sector" }}</h5>
-                <div class="small text-muted">{{ ui_text.average_score_by_sector|default:"media de score por sector" }}</div>
+                <h5 class="mb-0"><i class="fas fa-industry me-2" style="color:#60a5fa;font-size:.85rem;"></i>{{ ui_text.comparison_by_sector|default:"Comparação por Sector" }}</h5>
+                <span class="badge" style="background:rgba(59,130,246,.15);color:#93c5fd;font-size:.72rem;">{{ ui_text.average_score_by_sector|default:"média por sector" }}</span>
             </div>
-            <div class="card-body">
-                <canvas id="sectorComparisonChart" height="95"></canvas>
-            </div>
+            <div class="card-body"><canvas id="sectorComparisonChart" height="95"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-4 animate-fade-up animate-delay-3">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">{{ ui_text.your_benchmark|default:"Seu Benchmark" }}</h5>
+                <h5 class="mb-0"><i class="fas fa-bullseye me-2" style="color:#a78bfa;font-size:.85rem;"></i>{{ ui_text.your_benchmark|default:"Seu Benchmark" }}</h5>
             </div>
             <div class="card-body">
                 {% if user_sector_comparison %}
-                <p class="mb-2"><strong>{{ ui_text.sector|default:"Sector" }}:</strong> {{ user_sector_comparison.industry_label }}</p>
-                <p class="mb-2"><strong>{{ ui_text.your_last_score|default:"Seu ultimo score" }}:</strong> {{ user_sector_comparison.latest_score }}/10</p>
-                <p class="mb-0"><strong>{{ ui_text.sector_average|default:"Media do sector" }}:</strong> {{ user_sector_comparison.sector_avg }}/10</p>
+                <div class="mb-3 p-3 rounded" style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);">
+                    <div class="small" style="color:#64748b;">Sector</div>
+                    <div class="fw-semibold">{{ user_sector_comparison.industry_label }}</div>
+                </div>
+                <div class="d-flex gap-3">
+                    <div class="flex-1 text-center p-2 rounded" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);">
+                        <div class="small" style="color:#64748b;">Seu Score</div>
+                        <div style="font-size:1.4rem;font-weight:800;color:#34d399;">{{ user_sector_comparison.latest_score }}</div>
+                    </div>
+                    <div class="flex-1 text-center p-2 rounded" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);">
+                        <div class="small" style="color:#64748b;">Média Sector</div>
+                        <div style="font-size:1.4rem;font-weight:800;color:#a78bfa;">{{ user_sector_comparison.sector_avg }}</div>
+                    </div>
+                </div>
                 {% else %}
-                <p class="text-muted mb-0">{{ ui_text.no_benchmark_data|default:"Sem dados suficientes para benchmark sectorial." }}</p>
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-pie" style="font-size:2rem;color:#1e2d4a;"></i>
+                    <p class="small mt-2" style="color:#475569;">{{ ui_text.no_benchmark_data|default:"Sem dados suficientes para benchmark." }}</p>
+                    <a href="{% url 'pitch_form' %}" class="btn btn-sm btn-primary mt-1">
+                        <i class="fas fa-plus me-1"></i>Criar análise
+                    </a>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
+<!-- Charts row 2 -->
 <div class="row g-3 mb-4">
-    <div class="col-lg-8">
+    <div class="col-lg-8 animate-fade-up animate-delay-2">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ ui_text.startup_score_evolution|default:"Evolucao de Score das Startups" }}</h5>
-                <span class="small text-muted">{{ ui_text.latest_analyses|default:"ultimas analises" }}</span>
+                <h5 class="mb-0"><i class="fas fa-trending-up me-2" style="color:#34d399;font-size:.85rem;"></i>{{ ui_text.startup_score_evolution|default:"Evolução de Score" }}</h5>
+                <span class="badge" style="background:rgba(16,185,129,.15);color:#6ee7b7;font-size:.72rem;">{{ ui_text.latest_analyses|default:"últimas análises" }}</span>
             </div>
-            <div class="card-body">
-                <canvas id="scoreTrendChart" height="110"></canvas>
-            </div>
+            <div class="card-body"><canvas id="scoreTrendChart" height="110"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-4 animate-fade-up animate-delay-3">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">{{ ui_text.potential_distribution|default:"Distribuicao de Potencial" }}</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-donut me-2" style="color:#fbbf24;font-size:.85rem;"></i>{{ ui_text.potential_distribution|default:"Distribuição de Potencial" }}</h5>
             </div>
-            <div class="card-body">
-                <canvas id="distributionChart" height="110"></canvas>
-            </div>
+            <div class="card-body"><canvas id="distributionChart" height="110"></canvas></div>
         </div>
     </div>
 </div>
 
+<!-- Financial chart -->
 <div class="row g-3 mb-4">
-    <div class="col-lg-12">
+    <div class="col-12 animate-fade-up animate-delay-2">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ ui_text.financial_traction|default:"Tracao Financeira (Receita vs Crescimento)" }}</h5>
-                <div class="small text-muted">{{ ui_text.financial_traction_hint|default:"ajuda a priorizar deals com melhor momentum" }}</div>
+                <h5 class="mb-0"><i class="fas fa-sack-dollar me-2" style="color:#fbbf24;font-size:.85rem;"></i>{{ ui_text.financial_traction|default:"Tracção Financeira (Receita vs Crescimento)" }}</h5>
+                <span class="badge" style="background:rgba(245,158,11,.15);color:#fcd34d;font-size:.72rem;">{{ ui_text.financial_traction_hint|default:"momentum" }}</span>
             </div>
-            <div class="card-body">
-                <canvas id="financialMomentumChart" height="95"></canvas>
-            </div>
+            <div class="card-body"><canvas id="financialMomentumChart" height="95"></canvas></div>
         </div>
     </div>
 </div>
 
+<!-- Recent analyses -->
 {% if user.is_authenticated %}
-<div class="card mb-4">
+<div class="card mb-4 animate-fade-up animate-delay-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">{{ ui_text.recent_analyses|default:"Analises recentes" }}</h4>
+        <h4 class="mb-0"><i class="fas fa-clock-rotate-left me-2" style="color:#60a5fa;font-size:.85rem;"></i>{{ ui_text.recent_analyses|default:"Análises recentes" }}</h4>
         <a href="{% url 'model_management' %}" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-sliders me-1"></i>{{ ui_text.manage_models|default:"Gerenciar Modelos" }}
+            <i class="fas fa-sliders me-1"></i>{{ ui_text.manage_models|default:"Modelos" }}
         </a>
     </div>
     <div class="card-body p-0">
@@ -181,31 +219,31 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th style="width:60px;">ID</th>
                         <th>{{ ui_text.date|default:"Data" }}</th>
                         <th>Score</th>
-                        <th>{{ ui_text.revenue|default:"Receita" }}</th>
-                        <th>{{ ui_text.growth|default:"Crescimento" }}</th>
-                        <th>{{ ui_text.margin|default:"Margem" }}</th>
-                        <th>{{ ui_text.actions|default:"Acoes" }}</th>
+                        <th class="d-none d-md-table-cell">{{ ui_text.revenue|default:"Receita" }}</th>
+                        <th class="d-none d-md-table-cell">{{ ui_text.growth|default:"Crescimento" }}</th>
+                        <th class="d-none d-lg-table-cell">{{ ui_text.margin|default:"Margem" }}</th>
+                        <th style="width:120px;">{{ ui_text.actions|default:"Ações" }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for analysis in recent_analyses %}
-                    <tr>
-                        <td>#{{ analysis.id }}</td>
-                        <td>{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
+                    <tr style="cursor:pointer;" onclick="window.location='{% url 'pitch_results' analysis.id %}'">
+                        <td><span style="color:#64748b;font-size:.8rem;">#{{ analysis.id }}</span></td>
+                        <td style="font-size:.85rem;">{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
                         <td>
-                            <span class="badge rounded-pill bg-{% if analysis.success_score >= 7.5 %}success{% elif analysis.success_score >= 5 %}warning{% else %}danger{% endif %}">
+                            <span class="badge rounded-pill {% if analysis.success_score >= 7.5 %}bg-success{% elif analysis.success_score >= 5 %}bg-warning{% else %}bg-danger{% endif %}" style="font-size:.8rem;padding:.35rem .65rem;">
                                 {{ analysis.success_score|floatformat:1 }}
                             </span>
                         </td>
-                        <td>AOA {{ analysis.revenue|floatformat:2 }}</td>
-                        <td>{{ analysis.growth_rate|floatformat:2 }}%</td>
-                        <td>{{ analysis.profit_margin|floatformat:2 }}%</td>
-                        <td>
-                            <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-primary">
-                                {{ ui_text.view_analysis|default:"Ver analise" }}
+                        <td class="d-none d-md-table-cell" style="font-size:.85rem;">AOA {{ analysis.revenue|floatformat:0 }}</td>
+                        <td class="d-none d-md-table-cell" style="font-size:.85rem;">{{ analysis.growth_rate|floatformat:1 }}%</td>
+                        <td class="d-none d-lg-table-cell" style="font-size:.85rem;">{{ analysis.profit_margin|floatformat:1 }}%</td>
+                        <td onclick="event.stopPropagation();">
+                            <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-primary" style="font-size:.78rem;">
+                                <i class="fas fa-eye me-1"></i>Ver
                             </a>
                         </td>
                     </tr>
@@ -214,14 +252,24 @@
             </table>
         </div>
         {% else %}
-        <div class="p-4 text-center text-muted">{{ ui_text.no_analyses_yet|default:"Nenhuma analise encontrada ate agora." }}</div>
+        <div class="p-5 text-center">
+            <i class="fas fa-chart-bar" style="font-size:2.5rem;color:#1e2d4a;"></i>
+            <p class="mt-3 mb-3" style="color:#475569;">{{ ui_text.no_analyses_yet|default:"Nenhuma análise encontrada até agora." }}</p>
+            <a href="{% url 'pitch_form' %}" class="btn btn-primary">
+                <i class="fas fa-rocket me-2"></i>{{ ui_text.new_analysis|default:"Nova Análise" }}
+            </a>
+        </div>
         {% endif %}
     </div>
 </div>
 {% else %}
-<div class="card p-4 text-center">
-    <p class="mb-2">{{ ui_text.login_to_track|default:"Faca login para acompanhar analises, modelos e oportunidades." }}</p>
-    <a href="{% url 'login' %}" class="btn btn-primary">{{ ui_text.login|default:"Entrar" }}</a>
+<div class="card p-5 text-center animate-fade-up">
+    <i class="fas fa-lock" style="font-size:2.5rem;color:#1e2d4a;margin-bottom:1rem;"></i>
+    <p class="mb-3">{{ ui_text.login_to_track|default:"Faça login para acompanhar análises, modelos e oportunidades." }}</p>
+    <div class="d-flex gap-2 justify-content-center">
+        <a href="{% url 'login' %}" class="btn btn-primary"><i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}</a>
+        <a href="{% url 'register' %}" class="btn btn-outline-light"><i class="fas fa-user-plus me-1"></i>Criar conta</a>
+    </div>
 </div>
 {% endif %}
 {% endblock %}
@@ -229,141 +277,125 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const labels = {{ chart_labels_json|safe }};
-    const analysisIds = {{ chart_ids_json|safe }};
-    const scores = {{ chart_scores_json|safe }};
-    const revenues = {{ chart_revenues_json|safe }};
-    const growth = {{ chart_growth_json|safe }};
-    const distribution = {{ chart_distribution_json|safe }};
-    const sectorLabels = {{ chart_sector_labels_json|safe }};
-    const sectorAvg = {{ chart_sector_avg_json|safe }};
+const labels        = {{ chart_labels_json|safe }};
+const analysisIds   = {{ chart_ids_json|safe }};
+const scores        = {{ chart_scores_json|safe }};
+const revenues      = {{ chart_revenues_json|safe }};
+const growth        = {{ chart_growth_json|safe }};
+const distribution  = {{ chart_distribution_json|safe }};
+const sectorLabels  = {{ chart_sector_labels_json|safe }};
+const sectorAvg     = {{ chart_sector_avg_json|safe }};
 
-    const commonGrid = { color: "rgba(148,163,184,0.22)" };
+const grid = { color: "rgba(148,163,184,0.14)" };
 
-    const scoreTrendCtx = document.getElementById("scoreTrendChart");
-    if (scoreTrendCtx) {
-        const scoreTrendChart = new Chart(scoreTrendCtx, {
-            type: "line",
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: "{{ ui_text.score|default:'Score' }}",
-                    data: scores,
-                    borderColor: "#2563eb",
-                    backgroundColor: "rgba(37,99,235,0.16)",
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 3
-                }]
+// Animated counters
+document.querySelectorAll(".counter").forEach(function (el) {
+    const target = parseInt(el.dataset.target || "0", 10);
+    if (!target) return;
+    let start = 0;
+    const step = Math.ceil(target / 40);
+    const timer = setInterval(function () {
+        start = Math.min(start + step, target);
+        el.textContent = start.toLocaleString();
+        if (start >= target) clearInterval(timer);
+    }, 30);
+});
+document.querySelectorAll(".counter-dec").forEach(function (el) {
+    const target = parseFloat(el.dataset.target || "0");
+    if (!target) return;
+    let start = 0;
+    const inc = target / 40;
+    const timer = setInterval(function () {
+        start = Math.min(start + inc, target);
+        el.textContent = start.toFixed(2);
+        if (start >= target) clearInterval(timer);
+    }, 30);
+});
+
+const scoreTrendCtx = document.getElementById("scoreTrendChart");
+if (scoreTrendCtx) {
+    const scoreTrendChart = new Chart(scoreTrendCtx, {
+        type: "line",
+        data: {
+            labels,
+            datasets: [{
+                label: "Score",
+                data: scores,
+                borderColor: "#3b82f6",
+                backgroundColor: "rgba(59,130,246,0.12)",
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: "#3b82f6",
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0, max: 10, grid }, x: { grid } },
+            onClick: (e, pts) => { if (pts.length) window.location.href = `/results/${analysisIds[pts[0].index]}/`; }
+        }
+    });
+}
+
+const distributionCtx = document.getElementById("distributionChart");
+if (distributionCtx) {
+    new Chart(distributionCtx, {
+        type: "doughnut",
+        data: {
+            labels: ["Baixo (<5)", "Médio (5-7.4)", "Alto (≥7.5)"],
+            datasets: [{ data: distribution, backgroundColor: ["#ef4444", "#f59e0b", "#10b981"], borderWidth: 0, hoverOffset: 6 }]
+        },
+        options: { plugins: { legend: { position: "bottom", labels: { color: "#94a3b8", padding: 12, boxWidth: 12 } } }, cutout: "68%" }
+    });
+}
+
+const momentumCtx = document.getElementById("financialMomentumChart");
+if (momentumCtx) {
+    const momentumChart = new Chart(momentumCtx, {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [
+                { type: "bar",  label: "Receita (AOA)", data: revenues, yAxisID: "yRevenue", backgroundColor: "rgba(16,185,129,0.4)", borderColor: "#059669", borderWidth: 1, borderRadius: 4 },
+                { type: "line", label: "Crescimento (%)", data: growth, yAxisID: "yGrowth", borderColor: "#8b5cf6", backgroundColor: "rgba(139,92,246,0.12)", tension: 0.4, pointRadius: 3 }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: "index", intersect: false },
+            scales: {
+                yRevenue: { type: "linear", position: "left",  grid },
+                yGrowth:  { type: "linear", position: "right", grid: { display: false } },
+                x: { grid }
             },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { min: 0, max: 10, grid: commonGrid },
-                    x: { grid: commonGrid }
-                }
-            }
-        });
+            onClick: (e, pts) => { if (pts.length) window.location.href = `/results/${analysisIds[pts[0].index]}/`; }
+        }
+    });
+}
 
-        scoreTrendCtx.onclick = (evt) => {
-            const points = scoreTrendChart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
-            if (!points.length) return;
-            const idx = points[0].index;
-            const analysisId = analysisIds[idx];
-            if (analysisId) window.location.href = `/results/${analysisId}/`;
-        };
-    }
-
-    const distributionCtx = document.getElementById("distributionChart");
-    if (distributionCtx) {
-        new Chart(distributionCtx, {
-            type: "doughnut",
-            data: {
-                labels: ["{{ ui_text.low_label|default:'Baixo (<5)' }}", "{{ ui_text.medium_label|default:'Medio (5-7.4)' }}", "{{ ui_text.high_label|default:'Alto (>=7.5)' }}"],
-                datasets: [{
-                    data: distribution,
-                    backgroundColor: ["#ef4444", "#f59e0b", "#10b981"],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                plugins: { legend: { position: "bottom" } }
-            }
-        });
-    }
-
-    const momentumCtx = document.getElementById("financialMomentumChart");
-    if (momentumCtx) {
-        const momentumChart = new Chart(momentumCtx, {
-            type: "bar",
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        type: "bar",
-                        label: "{{ ui_text.revenue_aoa|default:'Receita (AOA)' }}",
-                        data: revenues,
-                        yAxisID: "yRevenue",
-                        backgroundColor: "rgba(16,185,129,0.45)",
-                        borderColor: "#059669",
-                        borderWidth: 1
-                    },
-                    {
-                        type: "line",
-                        label: "{{ ui_text.growth_percent|default:'Crescimento (%)' }}",
-                        data: growth,
-                        yAxisID: "yGrowth",
-                        borderColor: "#7c3aed",
-                        backgroundColor: "rgba(124,58,237,0.15)",
-                        tension: 0.35,
-                        pointRadius: 2
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: { mode: "index", intersect: false },
-                scales: {
-                    yRevenue: { type: "linear", position: "left", grid: commonGrid },
-                    yGrowth: { type: "linear", position: "right", grid: { display: false } },
-                    x: { grid: commonGrid }
-                }
-            }
-        });
-
-        momentumCtx.onclick = (evt) => {
-            const points = momentumChart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
-            if (!points.length) return;
-            const idx = points[0].index;
-            const analysisId = analysisIds[idx];
-            if (analysisId) window.location.href = `/results/${analysisId}/`;
-        };
-    }
-
-    const sectorCtx = document.getElementById("sectorComparisonChart");
-    if (sectorCtx) {
-        new Chart(sectorCtx, {
-            type: "bar",
-            data: {
-                labels: sectorLabels,
-                datasets: [{
-                    label: "{{ ui_text.average_score_by_sector|default:'media de score por sector' }}",
-                    data: sectorAvg,
-                    backgroundColor: "rgba(14,165,233,0.45)",
-                    borderColor: "#0284c7",
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { min: 0, max: 10, grid: commonGrid },
-                    x: { grid: commonGrid }
-                }
-            }
-        });
-    }
+const sectorCtx = document.getElementById("sectorComparisonChart");
+if (sectorCtx) {
+    new Chart(sectorCtx, {
+        type: "bar",
+        data: {
+            labels: sectorLabels,
+            datasets: [{
+                label: "Score médio",
+                data: sectorAvg,
+                backgroundColor: "rgba(14,165,233,0.4)",
+                borderColor: "#0284c7",
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0, max: 10, grid }, x: { grid } }
+        }
+    });
+}
 </script>
 {% endblock %}
