@@ -30,6 +30,7 @@ services:
     command: bash -c "python manage.py migrate && gunicorn startupscan.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - ./backend:/app
+      - ./data:/app/data
       - media_volume:/app/media
       - static_volume:/app/staticfiles
       - ai_models_volume:/app/ai_models
@@ -50,6 +51,7 @@ services:
     command: bash -c "celery -A startupscan worker --loglevel=info"
     volumes:
       - ./backend:/app
+      - ./data:/app/data
       - media_volume:/app/media
       - ai_models_volume:/app/ai_models
     env_file:
@@ -68,6 +70,7 @@ services:
     command: bash -c "celery -A startupscan beat --loglevel=info"
     volumes:
       - ./backend:/app
+      - ./data:/app/data
       - media_volume:/app/media
       - ai_models_volume:/app/ai_models
     env_file:

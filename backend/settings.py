@@ -48,6 +48,27 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
     return list(default or [])
 
 
+def _running_in_docker() -> bool:
+    if _env_bool("RUN_IN_DOCKER", False):
+        return True
+    return Path("/.dockerenv").exists()
+
+
+def _path_under_project_or_env(env_name: str, subdir: str) -> str:
+    """
+    Fora de Docker, caminhos típicos do .env (ex.: /app/data) não existem no host; usa
+    <BASE_DIR>/<subdir>. Dentro de Docker, ou com caminho fora de /app/, usa a variável.
+    """
+    default = BASE_DIR / subdir
+    raw = os.environ.get(env_name)
+    if not raw:
+        return str(default)
+    n = str(raw).replace("\\", "/").rstrip("/")
+    if (n == "/app" or n.startswith("/app/")) and not _running_in_docker():
+        return str(default)
+    return str(Path(raw).expanduser())
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
 _secret_key = os.getenv("SECRET_KEY")
 if not _secret_key:
@@ -281,8 +302,8 @@ if DEBUG:
 else:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-AI_MODELS_DIR = os.environ.get('AI_MODELS_DIR', os.path.join(BASE_DIR, 'ai_models'))
-DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE_DIR, 'data'))
+AI_MODELS_DIR = os.environ.get('AI_MODELS_DIR', str(BASE_DIR / 'ai_models'))
+DATA_DIR = os.environ.get('DATA_DIR', str(BASE_DIR / 'data'))
 
 # Certifique-se que os diretórios existem
 os.makedirs(AI_MODELS_DIR, exist_ok=True)

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Iterable, Optional
 
 import numpy as np
@@ -48,8 +49,8 @@ class Command(BaseCommand):
         pitches_df, financial_df = self._convert_to_training_frames(raw_df)
 
         if combine_with_default:
-            pitches_default = pd.read_csv(os.path.join(settings.DATA_DIR, "pitches_dataset.csv"))
-            financial_default = pd.read_csv(os.path.join(settings.DATA_DIR, "financials_dataset.csv"))
+            pitches_default = pd.read_csv(Path(settings.DATA_DIR) / "pitches_dataset.csv")
+            financial_default = pd.read_csv(Path(settings.DATA_DIR) / "financials_dataset.csv")
             pitches_df = self._concat_frames(
                 pitches_default,
                 pitches_df,
@@ -62,8 +63,8 @@ class Command(BaseCommand):
             )
 
         os.makedirs(settings.DATA_DIR, exist_ok=True)
-        pitches_path = os.path.join(settings.DATA_DIR, f"pitches_dataset_{output_prefix}.csv")
-        financials_path = os.path.join(settings.DATA_DIR, f"financials_dataset_{output_prefix}.csv")
+        pitches_path = Path(settings.DATA_DIR) / f"pitches_dataset_{output_prefix}.csv"
+        financials_path = Path(settings.DATA_DIR) / f"financials_dataset_{output_prefix}.csv"
         pitches_df.to_csv(pitches_path, index=False)
         financial_df.to_csv(financials_path, index=False)
 
