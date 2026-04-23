@@ -113,6 +113,28 @@ Gerado a partir do resultado da análise:
 - Empreendedor vê o interesse no hub de conexões
 - Ciclo de resposta: `pending → reviewing → connected / rejected`
 
+### Sistema de subscrições (Stripe)
+
+- Três tiers: **Trial** (7 dias grátis), **Basic** ($50/mês ou $400/ano), **Pro** ($150/mês ou $1 200/ano)
+- **Multi-moeda**: preços exibidos em USD, EUR e AOA — o utilizador selecciona a moeda preferida na página de planos; o valor é guardado em `localStorage` e não requer qualquer pedido ao servidor
+- Checkout via Stripe Checkout Session com suporte a customer existente
+- Portal de gestão de faturação via Stripe Billing Portal
+- Webhooks Stripe: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_*` → actualizam automaticamente o modelo `Subscription` na BD
+- Fallback para payment links estáticos quando `STRIPE_SECRET_KEY` não está configurado
+
+### Notificações por email
+
+Todos os eventos importantes enviam email ao utilizador **e** ao administrador (`hangaloandre@gmail.com` em BCC):
+
+| Evento | Função |
+|---|---|
+| Conta criada | `send_account_created(user, trial_end)` |
+| Trial activado | `send_trial_started(user, trial_end)` |
+| Subscrição paga activada | `send_subscription_activated(user, plan)` |
+| Plano actualizado | `send_subscription_updated(user, old_plan, new_plan)` |
+| Subscrição cancelada | `send_subscription_canceled(user, plan_name)` |
+| Falha de pagamento | `send_payment_failed(user, plan_name)` |
+
 ### Gestão de modelos de ML
 
 - Upload de datasets personalizados (pitches + financeiros)
@@ -273,6 +295,36 @@ Interesse de um investidor numa startup.
 | `investor_message` | TextField | Mensagem do investidor |
 | `entrepreneur_reply` | TextField | Resposta do empreendedor |
 
+### SubscriptionPlan
+
+Define os planos disponíveis.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `tier` | CharField | `trial` / `basic` / `pro` |
+| `interval` | CharField | `month` / `year` / `once` |
+| `price_usd` | DecimalField | Preço em dólares americanos |
+| `price_eur` | DecimalField | Preço em euros (0 = calculado automaticamente: USD × 0.92) |
+| `price_aoa` | DecimalField | Preço em kwanzas (0 = calculado automaticamente: USD × 912) |
+| `stripe_price_id` | CharField | ID do price no Stripe |
+| `analyses_per_month` | IntegerField | Análises/mês (0 = ilimitado) |
+| `gpt_analysis` | BooleanField | Acesso ao motor GPT |
+| `investor_dashboard` | BooleanField | Acesso ao dashboard de investidores |
+
+### Subscription
+
+Liga utilizadores a planos.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `user` | OneToOneField | Utilizador Django |
+| `plan` | FK SubscriptionPlan | Plano activo |
+| `status` | CharField | `trialing` / `active` / `past_due` / `canceled` / `incomplete` / `inactive` |
+| `stripe_customer_id` | CharField | ID de cliente Stripe |
+| `stripe_subscription_id` | CharField | ID de subscrição Stripe |
+| `trial_end` | DateTimeField | Data de expiração do trial |
+| `cancel_at_period_end` | BooleanField | Marcado para cancelar no fim do período |
+
 ### IdeaPublicFeedback
 
 Avaliação da comunidade sobre ideias públicas.
@@ -405,6 +457,16 @@ python manage.py runserver 0.0.0.0:8000
 
 Acede em: **http://localhost:8000**
 
+### 7.8 (Opcional) Configurar planos de subscrição
+
+```bash
+# Cria / actualiza os planos na BD e sincroniza com Stripe
+python manage.py setup_subscription_plans
+
+# Sem sincronização Stripe (para ambientes sem API key)
+python manage.py setup_subscription_plans --no-sync-stripe
+```
+
 ### Resumo dos comandos
 
 ```bash
@@ -412,9 +474,10 @@ git clone https://github.com/rickdeu/startupscan-backend.git
 cd startupscan-backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# configura o .env
+# configura o .env (incluindo STRIPE_* e DJANGO_DEBUG=1)
 python manage.py migrate
 python manage.py createsuperuser
+python manage.py setup_subscription_plans
 python manage.py collectstatic --noinput
 python manage.py runserver 0.0.0.0:8000
 ```
@@ -458,6 +521,28 @@ Por omissão o sistema usa SQLite. Para usar PostgreSQL em produção:
 |---|---|---|
 | `CELERY_BROKER_URL` | URL do broker Redis para Celery | `redis://localhost:6379/0` |
 | `CELERY_RESULT_BACKEND` | Backend de resultados Celery | `redis://localhost:6379/0` |
+
+### Stripe (subscrições e pagamentos)
+
+| Variável | Descrição | Default |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Chave secreta Stripe (sk_live_* ou sk_test_*) | — |
+| `STRIPE_PUBLISHABLE_KEY` | Chave pública Stripe (pk_live_* ou pk_test_*) | — |
+| `STRIPE_WEBHOOK_SECRET` | Segredo de validação de webhooks (whsec_*) | — |
+| `STRIPE_PAYMENT_LINK_BASIC` | URL de payment link estático para plano Basic | — |
+| `STRIPE_PAYMENT_LINK_PRO` | URL de payment link estático para plano Pro | — |
+
+> **Sem `STRIPE_SECRET_KEY`:** o checkout usa os payment links estáticos se configurados. Sem nenhum dos dois, é exibida uma mensagem de erro ao utilizador.
+
+### Email
+
+| Variável | Descrição | Default |
+|---|---|---|
+| `EMAIL_HOST` | Servidor SMTP | `smtp.gmail.com` |
+| `EMAIL_PORT` | Porta SMTP | `587` |
+| `EMAIL_HOST_USER` | Email remetente | — |
+| `EMAIL_HOST_PASSWORD` | Password do email | — |
+| `SITE_URL` | URL base do site (usado nos emails) | `https://startupscan.io` |
 
 ### Opcionais — IA e APIs externas
 
@@ -691,6 +776,18 @@ Na página de resultados (`/results/<id>/`) encontras:
 | POST | `/investors/interest/<analysis_id>/` | Expressar interesse |
 | GET | `/connections/` | Hub de conexões |
 | POST | `/connections/<interest_id>/update/` | Actualizar estado de conexão |
+
+### Subscrições
+
+| Método | Endpoint | Descrição |
+|---|---|---|
+| GET | `/subscription/plans/` | Página de planos (USD / EUR / AOA) |
+| POST | `/subscription/checkout/` | Iniciar checkout Stripe |
+| GET | `/subscription/checkout/success/` | Página pós-pagamento |
+| GET | `/subscription/checkout/cancel/` | Página de cancelamento do checkout |
+| GET | `/subscription/billing-portal/` | Portal Stripe de gestão de faturação |
+| POST | `/subscription/webhook/stripe/` | Webhook Stripe (CSRF exempt) |
+| GET | `/subscription/status/` | JSON com estado actual da subscrição |
 
 ---
 

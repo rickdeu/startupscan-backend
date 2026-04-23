@@ -22,6 +22,7 @@ from .stripe_sync import (
     create_checkout_session,
     create_portal_session,
     handle_stripe_event,
+    sync_plan_to_stripe,
 )
 
 logger = logging.getLogger(__name__)
@@ -100,10 +101,23 @@ class CheckoutView(LoginRequiredMixin, View):
         try:
             success_url = request.build_absolute_uri(reverse('subscription_success'))
             cancel_url = request.build_absolute_uri(reverse('subscription_cancel'))
+            if not plan.stripe_price_id:
+                sync_plan_to_stripe(plan)
+                plan.refresh_from_db()
             session = create_checkout_session(request.user, plan, success_url, cancel_url)
             return redirect(session.url)
+        except ValueError as exc:
+            logger.warning('Checkout indisponível: %s', exc)
+            messages.error(
+                request,
+                ui.get(
+                    'msg_checkout_unavailable',
+                    'Pagamento indisponível: o plano não está sincronizado com o Stripe ou a chave de API é inválida. Contacte o suporte.',
+                ),
+            )
+            return redirect('subscription_plans')
         except Exception as exc:
-            logger.error('Erro ao criar checkout session: %s', exc)
+            logger.exception('Erro ao criar checkout session')
             messages.error(request, ui.get('msg_checkout_error', 'Erro ao iniciar pagamento. Tente novamente.'))
             return redirect('subscription_plans')
 

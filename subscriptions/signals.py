@@ -2,6 +2,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=User)
@@ -11,13 +14,10 @@ def create_trial_subscription(sender, instance, created, **kwargs):
 
     from .models import Subscription, SubscriptionPlan
 
-    if hasattr(instance, 'subscription'):
+    if Subscription.objects.filter(user=instance).exists():
         return
 
     try:
-        if Subscription.objects.filter(user=instance).exists():
-            return
-
         trial_plan = SubscriptionPlan.objects.filter(
             tier=SubscriptionPlan.TIER_TRIAL, is_active=True,
         ).first()
@@ -34,14 +34,10 @@ def create_trial_subscription(sender, instance, created, **kwargs):
 
         if instance.email:
             try:
-                from .emails import send_trial_started
-                send_trial_started(instance, trial_end)
-            except Exception as exc_email:
-                import logging
-                logging.getLogger(__name__).warning('Falha ao enviar email trial: %s', exc_email)
+                from .emails import send_account_created
+                send_account_created(instance, trial_end)
+            except Exception as exc:
+                logger.warning('Falha ao enviar email de conta criada: %s', exc)
 
     except Exception as exc:
-        import logging
-        logging.getLogger(__name__).error(
-            'Falha ao criar subscrição trial para user %s: %s', instance.pk, exc,
-        )
+        logger.error('Falha ao criar subscrição trial para user %s: %s', instance.pk, exc)

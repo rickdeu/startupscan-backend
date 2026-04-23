@@ -70,7 +70,7 @@ def sync_plan_to_stripe(plan) -> bool:
                     logger.warning('Falha ao arquivar price antigo %s: %s', plan.stripe_price_id, exc)
             plan.stripe_price_id = new_price.id
             plan.save(update_fields=['stripe_price_id'])
-        logger.info('Plano %s sincronizado com Stripe (price=%s)', plan.name, new_price.id)
+        logger.info('Plano %s sincronizado com Stripe (price=%s)', plan.name, plan.stripe_price_id)
         return True
 
     except Exception as exc:
@@ -243,6 +243,8 @@ def _handle_subscription_upsert(stripe_sub):
     if trial_end_ts:
         sub.trial_end = timezone.datetime.fromtimestamp(trial_end_ts, tz=timezone.utc)
 
+    old_plan_name = sub.plan.name if sub.plan else None
+
     if plan_id:
         try:
             sub.plan = SubscriptionPlan.objects.get(pk=plan_id)
@@ -258,6 +260,14 @@ def _handle_subscription_upsert(stripe_sub):
                 sub.plan = plan
 
     sub.save()
+
+    # Notify user when plan changes
+    if old_plan_name and sub.plan and old_plan_name != sub.plan.name:
+        try:
+            from .emails import send_subscription_updated
+            send_subscription_updated(sub.user, old_plan_name, sub.plan)
+        except Exception as exc:
+            logger.warning('Falha ao enviar email de actualização de plano: %s', exc)
 
 
 def _find_subscription(stripe_sub_id=None, customer_id=None):

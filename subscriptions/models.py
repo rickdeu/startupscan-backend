@@ -32,6 +32,14 @@ class SubscriptionPlan(models.Model):
         max_digits=10, decimal_places=2, default=0,
         verbose_name='Preço (USD)',
     )
+    price_eur = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        verbose_name='Preço (EUR)',
+    )
+    price_aoa = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        verbose_name='Preço (AOA)',
+    )
     is_active = models.BooleanField(default=True, verbose_name='Ativo')
     trial_days = models.IntegerField(
         default=7, verbose_name='Dias de trial',
@@ -87,9 +95,27 @@ class SubscriptionPlan(models.Model):
         interval_label = {'month': 'mês', 'year': 'ano', 'once': 'trial'}.get(self.interval, self.interval)
         return f'{self.name} (${self.price_usd}/{interval_label})'
 
+    # Exchange rate fallbacks when EUR/AOA prices are not explicitly set
+    _USD_TO_EUR = '0.92'
+    _USD_TO_AOA = '912'
+
     @property
     def price_cents(self):
         return int(self.price_usd * 100)
+
+    @property
+    def price_eur_display(self):
+        from decimal import Decimal
+        if self.price_eur > 0:
+            return self.price_eur
+        return (self.price_usd * Decimal(self._USD_TO_EUR)).quantize(Decimal('1'))
+
+    @property
+    def price_aoa_display(self):
+        from decimal import Decimal
+        if self.price_aoa > 0:
+            return self.price_aoa
+        return (self.price_usd * Decimal(self._USD_TO_AOA)).quantize(Decimal('1'))
 
     def has_feature(self, feature: str) -> bool:
         return bool(getattr(self, feature, False))
