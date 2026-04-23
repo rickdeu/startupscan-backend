@@ -5,270 +5,237 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block page_title %}Startup Intelligence Hub{% endblock %}</title>
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'analyzer/css/styles.css' %}?v=20260323-04">
+    <link rel="stylesheet" href="{% static 'analyzer/css/styles.css' %}?v=20260423-01">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="app-body">
-    <div class="app-shell">
-        <aside class="app-sidebar" id="appSidebar">
-            <div class="sidebar-brand">
-                <a href="{% url 'landing' %}" class="brand-link">
-                    <span class="brand-icon"><i class="fas fa-rocket"></i></span>
-                    <span class="brand-text">StartupScan</span>
-                </a>
+
+<!-- Mobile sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-shell">
+    <aside class="app-sidebar" id="appSidebar">
+        <div class="sidebar-brand">
+            <a href="{% url 'landing' %}" class="brand-link">
+                <span class="brand-icon"><i class="fas fa-rocket"></i></span>
+                <span class="brand-text">StartupScan</span>
+            </a>
+        </div>
+
+        <div class="sidebar-caption">{{ ui_text.navigation }}</div>
+        <nav class="sidebar-nav">
+            {% if user_role_access.can_dashboard %}
+            <a class="sidebar-link {% if '/dashboard/' in request.path %}active{% endif %}" href="{% url 'dashboard' %}">
+                <i class="fas fa-chart-pie"></i><span>{{ ui_text.nav_dashboard }}</span>
+            </a>
+            {% endif %}
+            {% if user_role_access.can_pitch %}
+            <a class="sidebar-link {% if '/analyze/form/' in request.path %}active{% endif %}" href="{% url 'pitch_form' %}">
+                <i class="fas fa-plus-circle"></i><span>{{ ui_text.nav_new_pitch }}</span>
+            </a>
+            {% endif %}
+            {% if user_role_access.can_idea_builder %}
+            <a class="sidebar-link {% if '/pitch/builder/' in request.path %}active{% endif %}" href="{% url 'idea_pitch_builder' %}">
+                <i class="fas fa-lightbulb"></i><span>{{ ui_text.nav_generate_pitch_pdf }}</span>
+            </a>
+            {% endif %}
+            {% if user_role_access.can_investor %}
+            <a class="sidebar-link {% if '/investors/' in request.path %}active{% endif %}" href="{% url 'investor_dashboard' %}">
+                <i class="fas fa-hand-holding-dollar"></i><span>{{ ui_text.nav_investors }}</span>
+            </a>
+            {% endif %}
+            {% if user.is_authenticated and user_role_access.can_connections %}
+            <a class="sidebar-link {% if '/connections/' in request.path %}active{% endif %}" href="{% url 'connections_hub' %}">
+                <i class="fas fa-link"></i><span>{{ ui_text.nav_connections }}</span>
+            </a>
+            {% endif %}
+            {% if user_role_access.can_public_ideas %}
+            <a class="sidebar-link {% if '/ideas/' in request.path %}active{% endif %}" href="{% url 'public_ideas' %}">
+                <i class="fas fa-globe"></i><span>{{ ui_text.nav_platform_ideas }}</span>
+            </a>
+            {% endif %}
+            {% if user.is_authenticated and user_role_access.can_models %}
+            <a class="sidebar-link {% if '/models/' in request.path %}active{% endif %}" href="{% url 'model_management' %}">
+                <i class="fas fa-sliders"></i><span>{{ ui_text.nav_models }}</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-footer">
+            {% if user.is_authenticated %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="user-avatar">{{ user.first_name|default:user.username|slice:":2"|upper }}</div>
+                <div class="min-width-0">
+                    <div class="fw-semibold text-truncate" style="max-width:140px;">{{ user.first_name|default:user.username }}</div>
+                    <div class="small" style="color:#64748b;font-size:.72rem;">{{ user_role_label }}</div>
+                </div>
             </div>
-            <div class="sidebar-caption">{{ ui_text.navigation }}</div>
-            <nav class="sidebar-nav">
-                {% if user_role_access.can_dashboard %}
-                <a class="sidebar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'dashboard' %}">
-                    <i class="fas fa-chart-pie"></i><span>{{ ui_text.nav_dashboard }}</span>
-                </a>
-                {% endif %}
-                {% if user_role_access.can_pitch %}
-                <a class="sidebar-link {% if '/analyze/form/' in request.path %}active{% endif %}" href="{% url 'pitch_form' %}">
-                    <i class="fas fa-plus-circle"></i><span>{{ ui_text.nav_new_pitch }}</span>
-                </a>
-                {% endif %}
-                {% if user_role_access.can_idea_builder %}
-                <a class="sidebar-link {% if '/pitch/builder/' in request.path %}active{% endif %}" href="{% url 'idea_pitch_builder' %}">
-                    <i class="fas fa-lightbulb"></i><span>{{ ui_text.nav_generate_pitch_pdf }}</span>
-                </a>
-                {% endif %}
-                {% if user_role_access.can_investor %}
-                <a class="sidebar-link {% if '/investors/' in request.path %}active{% endif %}" href="{% url 'investor_dashboard' %}">
-                    <i class="fas fa-hand-holding-dollar"></i><span>{{ ui_text.nav_investors }}</span>
-                </a>
-                {% endif %}
-                {% if user.is_authenticated and user_role_access.can_connections %}
-                <a class="sidebar-link {% if '/connections/' in request.path %}active{% endif %}" href="{% url 'connections_hub' %}">
-                    <i class="fas fa-link"></i><span>{{ ui_text.nav_connections }}</span>
-                </a>
-                {% endif %}
-                {% if user_role_access.can_public_ideas %}
-                <a class="sidebar-link {% if '/ideas/' in request.path %}active{% endif %}" href="{% url 'public_ideas' %}">
-                    <i class="fas fa-lightbulb"></i><span>{{ ui_text.nav_platform_ideas }}</span>
-                </a>
-                {% endif %}
-                {% if user.is_authenticated and user_role_access.can_models %}
-                <a class="sidebar-link {% if '/models/' in request.path %}active{% endif %}" href="{% url 'model_management' %}">
-                    <i class="fas fa-sliders"></i><span>{{ ui_text.nav_models }}</span>
-                </a>
-                {% endif %}
-            </nav>
 
-            <div class="sidebar-footer">
-                {% if user.is_authenticated %}
-                <div class="small text-muted mb-2">{{ ui_text.session_active }}</div>
-                <div class="fw-semibold mb-2">{{ user.first_name|default:user.username }}</div>
-                <div class="small text-muted mb-2">{{ ui_text.profile }}: {{ user_role_label }}</div>
+            {% if user_plan_tier == 'trial' %}
+            <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
+                <span class="badge w-100 py-1" style="background:rgba(245,158,11,0.2);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);">
+                    <i class="fas fa-clock me-1"></i>Trial — {{ subscription_trial_days_left }} dia(s)
+                </span>
+            </a>
+            {% elif user_plan_tier == 'basic' %}
+            <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
+                <span class="badge w-100 py-1" style="background:rgba(59,130,246,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">
+                    <i class="fas fa-star me-1"></i>Plano Basic
+                </span>
+            </a>
+            {% elif user_plan_tier == 'pro' %}
+            <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
+                <span class="badge w-100 py-1" style="background:rgba(139,92,246,0.2);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);">
+                    <i class="fas fa-gem me-1"></i>Plano Pro
+                </span>
+            </a>
+            {% endif %}
 
-                {% if user_plan_tier == 'trial' %}
-                <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
-                    <span class="badge bg-warning text-dark w-100">
-                        Trial — {{ subscription_trial_days_left }} dia(s)
-                    </span>
-                </a>
-                {% elif user_plan_tier == 'basic' %}
-                <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
-                    <span class="badge bg-info text-dark w-100">Plano Basic</span>
-                </a>
-                {% elif user_plan_tier == 'pro' %}
-                <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
-                    <span class="badge w-100" style="background:#7c3aed;">Plano Pro</span>
-                </a>
-                {% endif %}
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-light w-100" style="font-size:.8rem;">
+                    <i class="fas fa-right-from-bracket me-1"></i>{{ ui_text.logout }}
+                </button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100 mb-2">
+                <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login }}
+            </a>
+            <a href="{% url 'register' %}" class="btn btn-sm btn-outline-light w-100">
+                <i class="fas fa-user-plus me-1"></i>{{ ui_text.create_account }}
+            </a>
+            {% endif %}
+        </div>
+    </aside>
 
-                <form action="{% url 'logout' %}" method="post">
+    <div class="app-main">
+        <header class="app-topbar">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-light d-lg-none" id="sidebarToggleBtn" type="button">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <div class="topbar-title">{% block topbar_title %}{{ ui_text.default_topbar_title }}{% endblock %}</div>
+                    <div class="topbar-subtitle">{% block topbar_subtitle %}{{ ui_text.default_topbar_subtitle }}{% endblock %}</div>
+                </div>
+            </div>
+            <div class="topbar-meta d-flex align-items-center gap-3">
+                <form method="post" action="{% url 'set_ui_language' %}" class="d-inline-flex align-items-center gap-2" data-no-progress="true">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-light w-100">{{ ui_text.logout }}</button>
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <select id="uiLanguageSelect" name="language" class="form-select form-select-sm" style="min-width:90px;" onchange="this.form.submit()">
+                        {% for code, label in ui_languages %}
+                        <option value="{{ code }}" {% if code == current_ui_language %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </form>
-                {% else %}
-                <a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100 mb-2">{{ ui_text.login }}</a>
-                <a href="{% url 'register' %}" class="btn btn-sm btn-outline-light w-100">{{ ui_text.create_account }}</a>
-                {% endif %}
+                <span class="d-none d-sm-inline"><i class="fas fa-circle-dot me-1 text-success" style="font-size:.6rem;"></i>{{ ui_text.online }}</span>
             </div>
-        </aside>
+        </header>
 
-        <div class="app-main">
-            <header class="app-topbar">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-outline-light d-lg-none" id="sidebarToggleBtn" type="button">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <div>
-                        <div class="topbar-title">{% block topbar_title %}{{ ui_text.default_topbar_title }}{% endblock %}</div>
-                        <div class="topbar-subtitle">{% block topbar_subtitle %}{{ ui_text.default_topbar_subtitle }}{% endblock %}</div>
-                    </div>
+        <main class="app-content">
+            {% if messages %}
+            <div class="mb-3" id="djangoMessages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} d-flex align-items-center gap-2 shadow-sm mb-2 animate-fade-up" role="alert">
+                    <i class="fas {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'danger' or message.tags == 'error' %}fa-circle-xmark{% elif message.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                    <span>{{ message }}</span>
                 </div>
-                <div class="topbar-meta">
-                    <form method="post" action="{% url 'set_ui_language' %}" class="d-inline-flex align-items-center gap-2 me-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <label for="uiLanguageSelect" class="small text-muted mb-0">{{ ui_text.language }}</label>
-                        <select id="uiLanguageSelect" name="language" class="form-select form-select-sm" onchange="this.form.submit()">
-                            {% for code, label in ui_languages %}
-                            <option value="{{ code }}" {% if code == current_ui_language %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                    <span><i class="fas fa-circle-dot me-1 text-success"></i> {{ ui_text.online }}</span>
-                </div>
-            </header>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
 
-            <main class="app-content">
-                {% if messages %}
-                <div class="mb-3">
-                    {% for message in messages %}
-                    <div class="alert alert-{{ message.tags|default:'info' }} shadow-sm mb-2" role="alert">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% block content %}{% endblock %}
-            </main>
+        <footer class="app-footer py-3">
+            <p class="mb-0 text-center" style="font-size:.8rem;color:#334155;">{{ ui_text.footer }} &copy; {% now "Y" %} — StartupScan.AI</p>
+        </footer>
+    </div>
+</div>
 
-            <footer class="app-footer py-3">
-                <p class="mb-0 text-center">{{ ui_text.footer }} &copy; {% now "Y" %}</p>
-            </footer>
+<!-- Progress overlay -->
+<div id="submitProgressOverlay" class="submit-progress-overlay" aria-live="polite" aria-hidden="true">
+    <div class="submit-progress-card">
+        <div class="submit-progress-title">
+            <i class="fas fa-cloud-upload-alt me-2"></i>{{ ui_text.processing_form }}
+        </div>
+        <div class="submit-progress-track">
+            <div id="submitProgressBar" class="submit-progress-bar" style="width:0%;"></div>
+        </div>
+        <div class="submit-progress-meta">
+            <span>{{ ui_text.processing_wait }}</span>
+            <strong id="submitProgressPct">0%</strong>
         </div>
     </div>
+</div>
 
-    <div id="submitProgressOverlay" class="submit-progress-overlay" aria-live="polite" aria-hidden="true">
-        <div class="submit-progress-card">
-            <div class="submit-progress-title">
-                <i class="fas fa-cloud-upload-alt me-2"></i>{{ ui_text.processing_form }}
-            </div>
-            <div class="submit-progress-track">
-                <div id="submitProgressBar" class="submit-progress-bar" style="width: 0%;"></div>
-            </div>
-            <div class="submit-progress-meta">
-                <span>{{ ui_text.processing_wait }}</span>
-                <strong id="submitProgressPct">0%</strong>
-            </div>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        (function () {
-            const toggle = document.getElementById("sidebarToggleBtn");
-            const sidebar = document.getElementById("appSidebar");
-            if (!toggle || !sidebar) return;
-            toggle.addEventListener("click", function () {
-                sidebar.classList.toggle("open");
+<!-- Toast stack -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    const toggle  = document.getElementById("sidebarToggleBtn");
+    const sidebar = document.getElementById("appSidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    function close() { sidebar.classList.remove("open"); overlay.classList.remove("visible"); }
+    if (toggle) toggle.addEventListener("click", function () {
+        const isOpen = sidebar.classList.toggle("open");
+        overlay.classList.toggle("visible", isOpen);
+    });
+    if (overlay) overlay.addEventListener("click", close);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+})();
+
+(function () {
+    const overlay = document.getElementById("submitProgressOverlay");
+    const bar     = document.getElementById("submitProgressBar");
+    const pct     = document.getElementById("submitProgressPct");
+    if (!overlay || !bar || !pct) return;
+    let timer = null, watchdog = null, current = 0, lockedBtns = [];
+
+    function setP(v) { current = Math.max(0, Math.min(100, v)); bar.style.width = current + "%"; pct.textContent = current + "%"; }
+    function reset() { clearInterval(timer); clearTimeout(watchdog); timer = watchdog = null; overlay.classList.remove("active"); overlay.setAttribute("aria-hidden","true"); setP(0); lockedBtns.forEach(b => { try { b.disabled = false; } catch(_){} }); lockedBtns = []; }
+    function start() {
+        if (overlay.classList.contains("active")) return;
+        overlay.classList.add("active"); overlay.setAttribute("aria-hidden","false"); setP(8);
+        timer = setInterval(function () {
+            if (current < 45) setP(current + 7);
+            else if (current < 75) setP(current + 3);
+            else if (current < 92) setP(current + 1);
+        }, 180);
+        watchdog = setTimeout(reset, 25000);
+    }
+    function end() { clearInterval(timer); clearTimeout(watchdog); setP(100); setTimeout(reset, 180); }
+    reset();
+    window.addEventListener("load", reset);
+    document.querySelectorAll("form").forEach(function (form) {
+        if (form.dataset.noProgress === "true") return;
+        if ((form.getAttribute("method") || "get").toLowerCase() !== "post" && form.dataset.progressMode !== "always") return;
+        form.addEventListener("submit", function () {
+            start();
+            form.querySelectorAll('button[type="submit"],input[type="submit"]').forEach(function (btn) {
+                if (!btn.disabled) { btn.disabled = true; lockedBtns.push(btn); }
             });
-        })();
+        });
+    });
+    window.addEventListener("pageshow", function () { if (overlay.classList.contains("active")) end(); });
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && overlay.classList.contains("active")) end(); });
+})();
 
-        (function () {
-            const overlay = document.getElementById("submitProgressOverlay");
-            const bar = document.getElementById("submitProgressBar");
-            const pct = document.getElementById("submitProgressPct");
-            if (!overlay || !bar || !pct) return;
-
-            let timer = null;
-            let watchdog = null;
-            let current = 0;
-            let lockedButtons = [];
-
-            function setProgress(value) {
-                current = Math.max(0, Math.min(100, value));
-                bar.style.width = current + "%";
-                pct.textContent = current + "%";
-            }
-
-            function stopTimer() {
-                if (timer) {
-                    clearInterval(timer);
-                    timer = null;
-                }
-            }
-
-            function stopWatchdog() {
-                if (watchdog) {
-                    clearTimeout(watchdog);
-                    watchdog = null;
-                }
-            }
-
-            function unlockButtons() {
-                lockedButtons.forEach(function (btn) {
-                    try {
-                        btn.disabled = false;
-                    } catch (_) {}
-                });
-                lockedButtons = [];
-            }
-
-            function resetProgressUI() {
-                stopTimer();
-                stopWatchdog();
-                overlay.classList.remove("active");
-                overlay.setAttribute("aria-hidden", "true");
-                setProgress(0);
-                unlockButtons();
-            }
-
-            function startProgress() {
-                if (overlay.classList.contains("active")) return;
-                overlay.classList.add("active");
-                overlay.setAttribute("aria-hidden", "false");
-                setProgress(8);
-                stopTimer();
-                timer = setInterval(function () {
-                    if (current < 45) setProgress(current + 7);
-                    else if (current < 75) setProgress(current + 3);
-                    else if (current < 92) setProgress(current + 1);
-                }, 180);
-                stopWatchdog();
-                watchdog = setTimeout(function () {
-                    // Evita overlay preso quando não há navegação (ex: download)
-                    resetProgressUI();
-                }, 25000);
-            }
-
-            function endProgress() {
-                stopTimer();
-                stopWatchdog();
-                setProgress(100);
-                setTimeout(function () {
-                    resetProgressUI();
-                }, 180);
-            }
-
-            // Garante estado limpo ao carregar/voltar página.
-            resetProgressUI();
-            window.addEventListener("load", resetProgressUI);
-            document.addEventListener("DOMContentLoaded", resetProgressUI);
-
-            document.querySelectorAll("form").forEach(function (form) {
-                if (form.dataset.noProgress === "true") return;
-                const method = (form.getAttribute("method") || "get").toLowerCase();
-                const forceProgress = form.dataset.progressMode === "always";
-                if (method !== "post" && !forceProgress) return;
-                form.addEventListener("submit", function () {
-                    startProgress();
-                    lockedButtons = [];
-                    form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
-                        if (!btn.disabled) btn.disabled = true;
-                        lockedButtons.push(btn);
-                    });
-                });
-            });
-
-            window.addEventListener("pageshow", function () {
-                if (overlay.classList.contains("active")) endProgress();
-            });
-            document.addEventListener("visibilitychange", function () {
-                if (document.visibilityState === "visible" && overlay.classList.contains("active")) {
-                    endProgress();
-                }
-            });
-        })();
-    </script>
-    {% block extra_scripts %}{% endblock %}
+// Global toast helper
+window.showToast = function (msg, type) {
+    const stack = document.getElementById("toastStack");
+    if (!stack) return;
+    const pill = document.createElement("div");
+    pill.className = "toast-pill" + (type === "success" ? " tp-success" : type === "error" ? " tp-error" : type === "warning" ? " tp-warning" : "");
+    pill.innerHTML = '<i class="fas ' + (type === "success" ? "fa-circle-check" : type === "error" ? "fa-circle-xmark" : type === "warning" ? "fa-triangle-exclamation" : "fa-circle-info") + '"></i><span>' + msg + '</span>';
+    stack.appendChild(pill);
+    setTimeout(function () { pill.style.opacity = "0"; pill.style.transition = "opacity .3s"; setTimeout(function () { pill.remove(); }, 320); }, 3800);
+};
+</script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -16,6 +16,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from .models import Subscription, SubscriptionPlan
 from .stripe_sync import (
     create_checkout_session,
@@ -24,6 +25,11 @@ from .stripe_sync import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _get_ui_text(request):
+    lang = getattr(request, 'ui_language', None) or request.session.get('ui_language')
+    return build_ui_text(normalize_ui_language(lang))
 
 
 class PlansView(View):
@@ -58,6 +64,7 @@ class PlansView(View):
             'pro_annual': pro_annual,
             'user_subscription': user_subscription,
             'user_plan_tier': user_plan_tier,
+            'ui_text': _get_ui_text(request),
         })
 
 
@@ -65,23 +72,24 @@ class CheckoutView(LoginRequiredMixin, View):
     """Inicia o fluxo de pagamento Stripe Checkout."""
 
     def post(self, request):
+        ui = _get_ui_text(request)
         plan_id = request.POST.get('plan_id')
         if not plan_id:
-            messages.error(request, 'Plano inválido.')
+            messages.error(request, ui.get('msg_invalid_plan', 'Plano inválido.'))
             return redirect('subscription_plans')
 
         try:
             plan = SubscriptionPlan.objects.get(pk=plan_id, is_active=True)
         except SubscriptionPlan.DoesNotExist:
-            messages.error(request, 'Plano não encontrado.')
+            messages.error(request, ui.get('msg_plan_not_found', 'Plano não encontrado.'))
             return redirect('subscription_plans')
 
         if plan.tier == SubscriptionPlan.TIER_TRIAL:
-            messages.info(request, 'O trial é ativado automaticamente no registo.')
+            messages.info(request, ui.get('msg_trial_auto_activated', 'O trial é ativado automaticamente no registo.'))
             return redirect('subscription_plans')
 
         if not getattr(settings, 'STRIPE_SECRET_KEY', ''):
-            messages.error(request, 'Pagamentos não configurados. Contacte o suporte.')
+            messages.error(request, ui.get('msg_payments_not_configured', 'Pagamentos não configurados. Contacte o suporte.'))
             return redirect('subscription_plans')
 
         try:
@@ -91,26 +99,27 @@ class CheckoutView(LoginRequiredMixin, View):
             return redirect(session.url)
         except Exception as exc:
             logger.error('Erro ao criar checkout session: %s', exc)
-            messages.error(request, 'Erro ao iniciar pagamento. Tente novamente.')
+            messages.error(request, ui.get('msg_checkout_error', 'Erro ao iniciar pagamento. Tente novamente.'))
             return redirect('subscription_plans')
 
 
 class CheckoutSuccessView(LoginRequiredMixin, View):
     def get(self, request):
-        return render(request, 'subscriptions/checkout_success.html')
+        return render(request, 'subscriptions/checkout_success.html', {'ui_text': _get_ui_text(request)})
 
 
 class CheckoutCancelView(View):
     def get(self, request):
-        return render(request, 'subscriptions/checkout_cancel.html')
+        return render(request, 'subscriptions/checkout_cancel.html', {'ui_text': _get_ui_text(request)})
 
 
 class BillingPortalView(LoginRequiredMixin, View):
     """Redireciona para o Stripe Billing Portal."""
 
     def get(self, request):
+        ui = _get_ui_text(request)
         if not getattr(settings, 'STRIPE_SECRET_KEY', ''):
-            messages.error(request, 'Portal de faturação não disponível.')
+            messages.error(request, ui.get('msg_portal_unavailable', 'Portal de faturação não disponível.'))
             return redirect('subscription_plans')
 
         try:
@@ -122,7 +131,7 @@ class BillingPortalView(LoginRequiredMixin, View):
             return redirect('subscription_plans')
         except Exception as exc:
             logger.error('Erro ao criar portal session: %s', exc)
-            messages.error(request, 'Erro ao aceder ao portal. Tente novamente.')
+            messages.error(request, ui.get('msg_portal_error', 'Erro ao aceder ao portal. Tente novamente.'))
             return redirect('subscription_plans')
 
 

@@ -4,198 +4,332 @@
 {% block topbar_subtitle %}{{ ui_text.result_topbar_subtitle }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-        <h3 class="mb-0">{{ ui_text.result_analysis_label }} #{{ analysis.id }}</h3>
-        <span class="badge rounded-pill bg-light text-dark px-3 py-2">{{ ui_text.score|default:"Score" }} {{ analysis.success_score|floatformat:1 }}/10</span>
+{% with score=analysis.success_score|default:0 %}
+
+<!-- Action bar -->
+<div class="action-bar animate-fade-up">
+    <a href="{% url 'pitch_form' %}" class="btn btn-sm btn-primary">
+        <i class="fas fa-plus me-1"></i>{{ ui_text.new_analysis|default:"Nova Análise" }}
+    </a>
+    <a href="{% url 'pitch_report_pdf' analysis.id %}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-file-pdf me-1"></i>{{ ui_text.download_report_pdf|default:"PDF Relatório" }}
+    </a>
+    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-light">
+        <i class="fas fa-home me-1"></i>{{ ui_text.back_to_dashboard|default:"Dashboard" }}
+    </a>
+    <div class="ms-auto d-flex align-items-center gap-2">
+        <span style="color:#64748b;font-size:.8rem;">{{ ui_text.result_analysis_label }} #{{ analysis.id }}</span>
+        <span class="badge rounded-pill {% if score >= 7.5 %}bg-success{% elif score >= 5 %}bg-warning{% else %}bg-danger{% endif %}" style="font-size:.85rem;padding:.4rem .75rem;">
+            {{ score|floatformat:1 }}/10
+        </span>
     </div>
-    <div class="card-body">
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <h5 class="mb-3">{{ ui_text.executive_summary|default:"Resumo executivo" }}</h5>
-                <div class="p-3 rounded border bg-light">
-                    {{ analysis.report.summary|default:ui_text.report_unavailable|default:"Relatorio indisponivel." }}
-                </div>
+</div>
 
-                {% if analysis.report.strengths %}
-                <div class="mt-4">
-                    <h6>{{ ui_text.strengths|default:"Pontos fortes" }}</h6>
-                    <ul class="list-group">
-                        {% for strength in analysis.report.strengths %}
-                        <li class="list-group-item">{{ strength }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-
-                {% if analysis.report.category_scores %}
-                <div class="mt-4">
-                    <h6>{{ ui_text.category_score_0_10 }}</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped">
-                            <thead>
-                                <tr>
-                                    <th>{{ ui_text.category }}</th>
-                                    <th>{{ ui_text.score_note }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for key, value in analysis.report.category_scores.items %}
-                                <tr>
-                                    <td>{{ key|title|cut:"_" }}</td>
-                                    <td>{{ value }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+<!-- Main layout -->
+<div class="row g-3">
+    <!-- Left: Tabs content -->
+    <div class="col-lg-8">
+        <!-- Score + tabs header card -->
+        <div class="card mb-3 animate-fade-up animate-delay-1">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-4 mb-3">
+                    <!-- Score Gauge -->
+                    <div class="score-gauge-wrap">
+                        <div class="score-gauge">
+                            <svg viewBox="0 0 120 120">
+                                <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
+                                <circle class="gauge-fill {% if score >= 7.5 %}gf-high{% elif score >= 5 %}gf-mid{% else %}gf-low{% endif %}"
+                                    cx="60" cy="60" r="50"
+                                    stroke-dasharray="314.16"
+                                    stroke-dashoffset="314.16"
+                                    id="gaugeFill">
+                                </circle>
+                            </svg>
+                            <div class="score-gauge-center">
+                                <div class="score-gauge-value {% if score >= 7.5 %}text-success{% elif score >= 5 %}text-warning{% else %}text-danger{% endif %}">{{ score|floatformat:1 }}</div>
+                                <div class="score-gauge-sub">/ 10</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-1 fw-bold">{{ analysis.startup_name|default:"Startup" }}</h4>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge" style="background:rgba(59,130,246,.15);color:#93c5fd;">{{ analysis.industry|default:"—" }}</span>
+                            <span class="badge" style="background:rgba(16,185,129,.15);color:#6ee7b7;"><i class="fas fa-calendar me-1"></i>{{ analysis.created_at|date:"d/m/Y" }}</span>
+                            <span class="badge" style="background:rgba(139,92,246,.15);color:#c4b5fd;"><i class="fas fa-microchip me-1"></i>{{ analysis.metadata.analysis_engine_used|default:"local" }}</span>
+                        </div>
+                        <div class="small" style="color:#64748b;">
+                            <i class="fas fa-envelope me-1"></i>{{ analysis.contact_email|default:"—" }}
+                        </div>
                     </div>
                 </div>
-                {% endif %}
 
-                {% if analysis.report.weaknesses %}
-                <div class="mt-4">
-                    <h6>{{ ui_text.risks_and_gaps|default:"Riscos e lacunas" }}</h6>
-                    <ul class="list-group">
-                        {% for weakness in analysis.report.weaknesses %}
-                        <li class="list-group-item">{{ weakness }}</li>
-                        {% endfor %}
-                    </ul>
+                <!-- Tab nav -->
+                <ul class="nav result-nav gap-1 flex-wrap" id="resultTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#tab-summary"   data-tab="summary">
+                            <i class="fas fa-list-check"></i>{{ ui_text.executive_summary|default:"Resumo" }}
+                        </a>
+                    </li>
+                    {% if analysis.report.category_scores %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#tab-scores" data-tab="scores">
+                            <i class="fas fa-chart-bar"></i>{{ ui_text.category_score_0_10|default:"Categorias" }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if analysis.report.investor_pitch %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#tab-investor" data-tab="investor">
+                            <i class="fas fa-hand-holding-dollar"></i>{{ ui_text.investor_thesis_title|default:"Investidor" }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if can_send_interest_on_pitch or can_view_received_interests %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#tab-connections" data-tab="connections">
+                            <i class="fas fa-handshake"></i>Conexões
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab: Summary -->
+        <div class="tab-pane-result active" id="tab-summary">
+            <div class="card mb-3 animate-fade-up">
+                <div class="card-body">
+                    <div class="section-hd mb-3">
+                        <div class="section-hd-icon"><i class="fas fa-align-left"></i></div>
+                        <h5>{{ ui_text.executive_summary|default:"Resumo executivo" }}</h5>
+                    </div>
+                    <div class="p-3 rounded" style="background:rgba(15,23,42,.7);border:1px solid #1e2d4a;line-height:1.7;">
+                        {{ analysis.report.summary|default:ui_text.report_unavailable|default:"Relatório indisponível." }}
+                    </div>
+
+                    {% if analysis.report.strengths %}
+                    <div class="mt-4">
+                        <div class="section-hd mb-3">
+                            <div class="section-hd-icon" style="background:rgba(16,185,129,.14);color:#34d399;"><i class="fas fa-circle-check"></i></div>
+                            <h6>{{ ui_text.strengths|default:"Pontos fortes" }}</h6>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for strength in analysis.report.strengths %}
+                            <li class="list-group-item d-flex gap-2">
+                                <i class="fas fa-check-circle mt-1" style="color:#10b981;flex-shrink:0;"></i>
+                                <span>{{ strength }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if analysis.report.weaknesses %}
+                    <div class="mt-4">
+                        <div class="section-hd mb-3">
+                            <div class="section-hd-icon" style="background:rgba(239,68,68,.14);color:#f87171;"><i class="fas fa-triangle-exclamation"></i></div>
+                            <h6>{{ ui_text.risks_and_gaps|default:"Riscos e lacunas" }}</h6>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for weakness in analysis.report.weaknesses %}
+                            <li class="list-group-item d-flex gap-2">
+                                <i class="fas fa-exclamation-circle mt-1" style="color:#ef4444;flex-shrink:0;"></i>
+                                <span>{{ weakness }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if analysis.report.recommendations %}
+                    <div class="mt-4">
+                        <div class="section-hd mb-3">
+                            <div class="section-hd-icon" style="background:rgba(59,130,246,.14);color:#60a5fa;"><i class="fas fa-lightbulb"></i></div>
+                            <h6>{{ ui_text.recommended_action_plan|default:"Plano de ação recomendado" }}</h6>
+                        </div>
+                        <ol class="list-group list-group-numbered">
+                            {% for rec in analysis.report.recommendations %}
+                            <li class="list-group-item">{{ rec }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
+            </div>
+        </div>
 
-                {% if analysis.report.recommendations %}
-                <div class="mt-4">
-                    <h6>{{ ui_text.recommended_action_plan|default:"Plano de acao recomendado" }}</h6>
-                    <ol class="list-group list-group-numbered">
-                        {% for recommendation in analysis.report.recommendations %}
-                        <li class="list-group-item">{{ recommendation }}</li>
-                        {% endfor %}
-                    </ol>
+        <!-- Tab: Category scores -->
+        {% if analysis.report.category_scores %}
+        <div class="tab-pane-result" id="tab-scores">
+            <div class="card mb-3 animate-fade-up">
+                <div class="card-body">
+                    <div class="section-hd mb-4">
+                        <div class="section-hd-icon"><i class="fas fa-chart-bar"></i></div>
+                        <h5>{{ ui_text.category_score_0_10|default:"Scores por Categoria (0–10)" }}</h5>
+                    </div>
+                    {% for key, value in analysis.report.category_scores.items %}
+                    {% with pct=value|default:0 %}
+                    <div class="score-bar-row">
+                        <div class="score-bar-label">{{ key|title|cut:"_" }}</div>
+                        <div class="score-bar-track">
+                            <div class="score-bar-fill {% if pct >= 7.5 %}sbf-green{% elif pct >= 5 %}{% else %}sbf-red{% endif %} score-bar-anim"
+                                 data-pct="{{ pct }}" style="width:0;"></div>
+                        </div>
+                        <div class="score-bar-pct {% if pct >= 7.5 %}text-success{% elif pct >= 5 %}text-warning{% else %}text-danger{% endif %}">{{ pct|floatformat:1 }}</div>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
                 </div>
-                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
-                {% if analysis.report.investor_pitch %}
-                <div class="mt-4 p-3 border rounded investor-thesis">
-                    <h5 class="mb-2"><i class="fas fa-hand-holding-dollar me-2"></i>{{ ui_text.investor_thesis_title }}</h5>
-                    <p class="mb-2"><strong>{{ ui_text.thesis_label }}:</strong> {{ analysis.report.investor_pitch.investment_thesis }}</p>
-                    <p class="mb-2"><strong>{{ ui_text.readiness_label }}:</strong> {{ analysis.report.investor_pitch.funding_readiness }}</p>
-                    <p class="mb-3"><strong>{{ ui_text.suggested_ticket }}:</strong> {{ analysis.report.investor_pitch.suggested_ticket }}</p>
-                    <div class="row">
+        <!-- Tab: Investor pitch -->
+        {% if analysis.report.investor_pitch %}
+        <div class="tab-pane-result" id="tab-investor">
+            <div class="card mb-3 animate-fade-up">
+                <div class="card-body">
+                    <div class="section-hd mb-4">
+                        <div class="section-hd-icon" style="background:rgba(37,99,235,.14);color:#60a5fa;"><i class="fas fa-hand-holding-dollar"></i></div>
+                        <h5>{{ ui_text.investor_thesis_title|default:"Tese do Investidor" }}</h5>
+                    </div>
+                    <div class="thesis-box mb-4">
+                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.thesis_label|default:"Tese" }}:</span> {{ analysis.report.investor_pitch.investment_thesis }}</div>
+                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.readiness_label|default:"Prontidão" }}:</span> {{ analysis.report.investor_pitch.funding_readiness }}</div>
+                        <div><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.suggested_ticket|default:"Ticket" }}:</span> {{ analysis.report.investor_pitch.suggested_ticket }}</div>
+                    </div>
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <h6>{{ ui_text.capital_use }}</h6>
-                            <ul>
+                            <div class="section-hd mb-2">
+                                <div class="section-hd-icon" style="background:rgba(16,185,129,.14);color:#34d399;"><i class="fas fa-piggy-bank"></i></div>
+                                <h6>{{ ui_text.capital_use|default:"Uso do Capital" }}</h6>
+                            </div>
+                            <ul class="list-group list-group-flush">
                                 {% for item in analysis.report.investor_pitch.capital_use_plan %}
-                                <li>{{ item }}</li>
+                                <li class="list-group-item d-flex gap-2"><i class="fas fa-circle-dot mt-1" style="color:#10b981;flex-shrink:0;font-size:.65rem;"></i><span>{{ item }}</span></li>
                                 {% endfor %}
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6>{{ ui_text.risk_mitigation }}</h6>
-                            <ul>
+                            <div class="section-hd mb-2">
+                                <div class="section-hd-icon" style="background:rgba(239,68,68,.14);color:#f87171;"><i class="fas fa-shield-halved"></i></div>
+                                <h6>{{ ui_text.risk_mitigation|default:"Mitigação de Riscos" }}</h6>
+                            </div>
+                            <ul class="list-group list-group-flush">
                                 {% for item in analysis.report.investor_pitch.risk_mitigation %}
-                                <li>{{ item }}</li>
+                                <li class="list-group-item d-flex gap-2"><i class="fas fa-circle-dot mt-1" style="color:#ef4444;flex-shrink:0;font-size:.65rem;"></i><span>{{ item }}</span></li>
                                 {% endfor %}
                             </ul>
                         </div>
                     </div>
-                </div>
-                {% endif %}
 
-                {% if can_send_interest_on_pitch %}
-                <div class="mt-4 p-3 border rounded">
-                    <h5 class="mb-2"><i class="fas fa-handshake me-2"></i>{{ ui_text.interest_in_this_pitch }}</h5>
+                    <!-- Pitch PDF generator -->
+                    <div class="mt-4 pt-3" style="border-top:1px solid #1e2d4a;">
+                        <div class="section-hd mb-3">
+                            <div class="section-hd-icon" style="background:rgba(245,158,11,.14);color:#fbbf24;"><i class="fas fa-file-powerpoint"></i></div>
+                            <h6>{{ ui_text.pitch_pdf_slides_with_design|default:"Pitch PDF com Design" }}</h6>
+                        </div>
+                        <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label" style="font-size:.8rem;">{{ ui_text.design_mode|default:"Modo de design" }}</label>
+                                <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
+                                    {% for value, label in pitch_design_mode_choices %}
+                                    <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:.8rem;">{{ ui_text.premium_manual_template|default:"Template" }}</label>
+                                <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate">
+                                    {% for value, label in pitch_design_template_choices %}
+                                    <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                                    <i class="fas fa-download me-1"></i>{{ ui_text.generate_pitch_pdf|default:"Gerar PDF" }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tab: Connections -->
+        {% if can_send_interest_on_pitch or can_view_received_interests %}
+        <div class="tab-pane-result" id="tab-connections">
+            {% if can_send_interest_on_pitch %}
+            <div class="card mb-3 animate-fade-up">
+                <div class="card-body">
+                    <div class="section-hd mb-3">
+                        <div class="section-hd-icon" style="background:rgba(16,185,129,.14);color:#34d399;"><i class="fas fa-handshake"></i></div>
+                        <h5>{{ ui_text.interest_in_this_pitch|default:"Interesse neste Pitch" }}</h5>
+                    </div>
                     {% if my_interest %}
-                    <div class="small mb-2">
-                        <strong>{{ ui_text.your_interest }}:</strong>
-                        <span class="badge bg-info">{{ my_interest.get_status_display }}</span>
+                    <div class="mb-3 d-flex align-items-center gap-2">
+                        <span class="fw-semibold" style="font-size:.88rem;">{{ ui_text.your_interest|default:"Seu interesse" }}:</span>
+                        <span class="status-pill sp-{{ my_interest.status }}">{{ my_interest.get_status_display }}</span>
                     </div>
                     <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
                         {% csrf_token %}
-                        <label class="form-label">{{ ui_text.update_message_to_entrepreneur }}</label>
-                        <textarea
-                            class="form-control form-control-sm mb-2"
-                            name="investor_message"
-                            rows="2"
-                            placeholder="{{ ui_text.interest_context_placeholder|default:'Contexto de interesse, ticket, timing...' }}"
-                        >{{ my_interest.investor_message }}</textarea>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button class="btn btn-sm btn-success" type="submit">
-                                <i class="fas fa-paper-plane me-1"></i>{{ ui_text.update_interest }}
-                            </button>
+                        <textarea class="form-control form-control-sm mb-2" name="investor_message" rows="2" placeholder="{{ ui_text.interest_context_placeholder|default:'Contexto...' }}">{{ my_interest.investor_message }}</textarea>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success" type="submit"><i class="fas fa-paper-plane me-1"></i>{{ ui_text.update_interest|default:"Atualizar interesse" }}</button>
                         </div>
                     </form>
                     <form method="post" action="{% url 'connection_interest_update' my_interest.id %}" class="mt-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="withdraw">
-                        <button class="btn btn-sm btn-outline-danger" type="submit">
-                            <i class="fas fa-ban me-1"></i>{{ ui_text.withdraw_interest }}
-                        </button>
+                        {% csrf_token %}<input type="hidden" name="action" value="withdraw">
+                        <button class="btn btn-sm btn-outline-danger"><i class="fas fa-ban me-1"></i>{{ ui_text.withdraw_interest|default:"Retirar" }}</button>
                     </form>
                     {% else %}
-                    <p class="small text-muted mb-2">{{ ui_text.interest_lead_direct_note }}</p>
+                    <p class="small mb-3" style="color:#64748b;">{{ ui_text.interest_lead_direct_note|default:"Demonstre interesse directo no empreendedor desta startup." }}</p>
                     <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
                         {% csrf_token %}
-                        <label class="form-label">{{ ui_text.message_to_entrepreneur_optional }}</label>
-                        <textarea
-                            class="form-control form-control-sm mb-2"
-                            name="investor_message"
-                            rows="2"
-                            placeholder="{{ ui_text.interest_message_example_placeholder }}"
-                        ></textarea>
-                        <button class="btn btn-sm btn-success" type="submit">
-                            <i class="fas fa-handshake me-1"></i>{{ ui_text.show_interest_this_pitch }}
-                        </button>
+                        <textarea class="form-control form-control-sm mb-2" name="investor_message" rows="2" placeholder="{{ ui_text.interest_message_example_placeholder|default:'Mensagem opcional...' }}"></textarea>
+                        <button class="btn btn-sm btn-success" type="submit"><i class="fas fa-handshake me-1"></i>{{ ui_text.show_interest_this_pitch|default:"Demonstrar interesse" }}</button>
                     </form>
                     {% endif %}
                 </div>
-                {% endif %}
+            </div>
+            {% endif %}
 
-                {% if can_view_received_interests %}
-                <div class="mt-4 p-3 border rounded">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>{{ ui_text.investors_interested_in_pitch }}</h5>
-                        <span class="badge bg-primary">{{ received_interests|length }}</span>
-                    </div>
+            {% if can_view_received_interests %}
+            <div class="card mb-3 animate-fade-up">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-users me-2" style="color:#60a5fa;"></i>{{ ui_text.investors_interested_in_pitch|default:"Investidores interessados" }}</h5>
+                    <span class="badge bg-primary">{{ received_interests|length }}</span>
+                </div>
+                <div class="card-body">
                     {% if received_interests %}
-                    <div class="d-flex flex-column gap-2">
+                    <div class="d-flex flex-column gap-3">
                         {% for interest in received_interests %}
-                        <div class="border rounded p-2 bg-black bg-opacity-25">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <div>
-                                    <strong>
-                                        {% if interest.investor %}
-                                            {{ interest.investor.first_name|default:interest.investor.username }}
-                                        {% else %}
-                                            {{ ui_text.investor_not_identified }}
-                                        {% endif %}
-                                    </strong>
-                                    <span class="small text-muted ms-2">{{ interest.created_at|date:"d/m/Y H:i" }}</span>
+                        <div class="connection-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="user-avatar" style="width:32px;height:32px;font-size:.75rem;">
+                                        {{ interest.investor.first_name|default:interest.investor.username|slice:":2"|upper }}
+                                    </div>
+                                    <div>
+                                        <strong style="font-size:.88rem;">{{ interest.investor.first_name|default:interest.investor.username }}</strong>
+                                        <div class="small" style="color:#64748b;">{{ interest.created_at|date:"d/m/Y H:i" }}</div>
+                                    </div>
                                 </div>
-                                <span class="badge bg-info">{{ interest.get_status_display }}</span>
+                                <span class="status-pill sp-{{ interest.status }}">{{ interest.get_status_display }}</span>
                             </div>
-                            {% if interest.investor_message %}
-                            <div class="small mt-2"><strong>{{ ui_text.message_label }}:</strong> {{ interest.investor_message }}</div>
-                            {% endif %}
-                            {% if interest.entrepreneur_reply %}
-                            <div class="small mt-1"><strong>{{ ui_text.your_reply }}:</strong> {{ interest.entrepreneur_reply }}</div>
-                            {% endif %}
+                            {% if interest.investor_message %}<p class="small mb-2"><strong>{{ ui_text.message_label|default:"Mensagem" }}:</strong> {{ interest.investor_message }}</p>{% endif %}
+                            {% if interest.entrepreneur_reply %}<p class="small mb-2" style="color:#6ee7b7;"><strong>{{ ui_text.your_reply|default:"Resposta" }}:</strong> {{ interest.entrepreneur_reply }}</p>{% endif %}
                             {% if user_role == 'empreendedor' or user_role == 'analista' or user_role == 'admin' %}
                             <form method="post" action="{% url 'connection_interest_update' interest.id %}" class="mt-2">
                                 {% csrf_token %}
-                                <div class="row g-2">
-                                    <div class="col-md-7">
-                                        <textarea
-                                            class="form-control form-control-sm"
-                                            name="entrepreneur_reply"
-                                            rows="2"
-                                            placeholder="{{ ui_text.reply_to_investor_optional }}"
-                                        ></textarea>
-                                    </div>
-                                    <div class="col-md-5 d-flex flex-wrap gap-1 align-items-start">
-                                        <button class="btn btn-sm btn-outline-primary" type="submit" name="action" value="reviewing">{{ ui_text.mark_reviewing }}</button>
-                                        <button class="btn btn-sm btn-outline-success" type="submit" name="action" value="connected">{{ ui_text.start_connection }}</button>
-                                        <button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="rejected">{{ ui_text.reject }}</button>
-                                    </div>
+                                <textarea class="form-control form-control-sm mb-2" name="entrepreneur_reply" rows="2" placeholder="{{ ui_text.reply_to_investor_optional|default:'Resposta opcional...' }}"></textarea>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button class="btn btn-sm btn-outline-primary"  type="submit" name="action" value="reviewing">{{ ui_text.mark_reviewing|default:"Em revisão" }}</button>
+                                    <button class="btn btn-sm btn-outline-success"  type="submit" name="action" value="connected">{{ ui_text.start_connection|default:"Conectar" }}</button>
+                                    <button class="btn btn-sm btn-outline-danger"   type="submit" name="action" value="rejected">{{ ui_text.reject|default:"Rejeitar" }}</button>
                                 </div>
                             </form>
                             {% endif %}
@@ -203,518 +337,312 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="small text-muted mb-0">{{ ui_text.no_interest_registered_pitch }}</p>
+                    <p class="small mb-0" style="color:#475569;">{{ ui_text.no_interest_registered_pitch|default:"Sem interesses registados." }}</p>
                     {% endif %}
                 </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right sidebar -->
+    <div class="col-lg-4">
+        <!-- Financial indicators -->
+        <div class="card mb-3 animate-fade-up animate-delay-2">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-sack-dollar me-2" style="color:#34d399;"></i>{{ ui_text.financial_indicators|default:"Indicadores financeiros" }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <div class="p-2 rounded d-flex justify-content-between" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);">
+                            <span class="small" style="color:#64748b;">{{ ui_text.revenue|default:"Receita" }}</span>
+                            <strong style="color:#34d399;">AOA {{ analysis.revenue|floatformat:0 }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded text-center" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);">
+                            <div class="small" style="color:#64748b;">{{ ui_text.growth|default:"Crescimento" }}</div>
+                            <div class="fw-bold" style="color:#60a5fa;">{{ analysis.growth_rate|floatformat:1 }}%</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded text-center" style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);">
+                            <div class="small" style="color:#64748b;">{{ ui_text.margin|default:"Margem" }}</div>
+                            <div class="fw-bold" style="color:#a78bfa;">{{ analysis.profit_margin|floatformat:1 }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Execution info -->
+        <div class="card mb-3 animate-fade-up animate-delay-2">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-circle-info me-2" style="color:#60a5fa;"></i>{{ ui_text.execution_information|default:"Informações" }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-column gap-2" style="font-size:.85rem;">
+                    <div class="d-flex justify-content-between"><span style="color:#64748b;">{{ ui_text.date|default:"Data" }}</span><span>{{ analysis.created_at|date:"d/m/Y H:i" }}</span></div>
+                    <div class="d-flex justify-content-between"><span style="color:#64748b;">{{ ui_text.status|default:"Status" }}</span><span>{{ analysis.report.status|default:"OK" }}</span></div>
+                    <div class="d-flex justify-content-between"><span style="color:#64748b;">{{ ui_text.engine|default:"Motor" }}</span><span>{{ analysis.metadata.analysis_engine_used|default:"local" }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="card mb-3 animate-fade-up animate-delay-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-paperclip me-2" style="color:#fbbf24;"></i>{{ ui_text.attachments|default:"Anexos" }}</h6>
+            </div>
+            <div class="card-body">
+                {% if analysis.audio_file %}
+                <div class="mb-3">
+                    <div class="small mb-1" style="color:#64748b;">{{ ui_text.audio_label|default:"Áudio" }}</div>
+                    <audio controls class="w-100" style="height:36px;"><source src="{{ analysis.audio_file.url }}"></audio>
+                    <a href="{{ analysis.audio_file.url }}" class="btn btn-sm btn-outline-primary mt-2 w-100" target="_blank"><i class="fas fa-download me-1"></i>{{ ui_text.download_audio|default:"Baixar" }}</a>
+                </div>
+                {% endif %}
+
+                {% if analysis.video_file %}
+                <div class="mb-3">
+                    <div class="small mb-1" style="color:#64748b;">{{ ui_text.video_label|default:"Vídeo" }}</div>
+                    <video controls class="w-100" style="max-height:160px;border-radius:8px;"><source src="{{ analysis.video_file.url }}"></video>
+                    <a href="{{ analysis.video_file.url }}" class="btn btn-sm btn-outline-primary mt-2 w-100" target="_blank"><i class="fas fa-download me-1"></i>{{ ui_text.download_video|default:"Baixar" }}</a>
+                </div>
+                {% endif %}
+
+                {% if analysis.document_file %}
+                <div>
+                    <div class="small mb-1" style="color:#64748b;">{{ ui_text.submitted_file|default:"Documento" }}</div>
+                    <a href="{{ analysis.document_file.url }}" class="btn btn-sm btn-outline-primary w-100" target="_blank"><i class="fas fa-file-arrow-down me-1"></i>{{ ui_text.download_file|default:"Baixar ficheiro" }}</a>
+                </div>
+                {% endif %}
+
+                {% if not analysis.audio_file and not analysis.video_file and not analysis.document_file %}
+                <p class="small mb-0" style="color:#475569;">Sem anexos nesta análise.</p>
                 {% endif %}
             </div>
+        </div>
 
-            <div class="col-lg-4">
-                <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>{{ ui_text.ai_potential_video|default:"Video IA de Potencial" }}</span>
-                        <span class="badge bg-primary">{{ analysis.startup_name|default:ui_text.startup_label|default:"Startup" }}</span>
-                    </div>
-                    <div class="card-body">
-                        {% url 'pitch_explainer_video_progress' analysis.id '__JOB_ID__' as video_progress_url_template %}
-                        {% if active_video_job and active_video_job.status %}
-                        <div
-                            id="videoGenerationStatusCard"
-                            class="border rounded p-3 mb-3 bg-transparent {% if active_video_job.status == 'FAILED' %}border-danger{% elif active_video_job.status == 'COMPLETED' %}border-success{% else %}border-info{% endif %}"
-                            data-job-id="{{ active_video_job_id }}"
-                            data-progress-url-template="{{ video_progress_url_template }}"
-                            data-analysis-id="{{ analysis.id }}"
-                            data-status="{{ active_video_job.status }}"
-                            data-phase="{{ active_video_job.phase|default:'fila' }}"
-                        >
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <strong>{{ ui_text.generation_status|default:"Status da geracao" }}:</strong>
-                                <span id="videoJobStatusText">{{ active_video_job.status }}</span>
-                            </div>
-                            <div class="progress mb-2" style="height: 8px;">
-                                <div
-                                    id="videoJobProgressBar"
-                                    class="progress-bar {% if active_video_job.status == 'FAILED' %}bg-danger{% elif active_video_job.status == 'COMPLETED' %}bg-success{% else %}bg-info progress-bar-striped progress-bar-animated{% endif %}"
-                                    role="progressbar"
-                                    style="width: {{ active_video_job.progress|default:0 }}%;"
-                                    aria-valuemin="0"
-                                    aria-valuemax="100"
-                                    aria-valuenow="{{ active_video_job.progress|default:0 }}"
-                                ></div>
-                            </div>
-                            <div class="small mb-1">
-                                <strong>{{ ui_text.phase|default:"Fase" }}:</strong>
-                                <span id="videoJobPhaseText">{{ active_video_job.phase|default:"fila" }}</span>
-                            </div>
-                            <div class="small">
-                                <span id="videoJobMessage">{{ active_video_job.message|default:ui_text.waiting_for_update|default:"Aguardando atualizacao..." }}</span>
-                                <span id="videoJobProgressPct" class="float-end">{{ active_video_job.progress|default:0 }}%</span>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if analysis.metadata.explainer_video_job_status == 'FAILED' and analysis.metadata.explainer_video_job_error %}
-                        <div class="alert alert-danger small mb-3">
-                            <div class="fw-semibold mb-1">{{ ui_text.video_generation_failed|default:"Falha na geracao do video" }}</div>
-                            <div>{{ analysis.metadata.explainer_video_job_error }}</div>
-                            {% if analysis.metadata.explainer_video.did_error %}
-                            <div class="mt-2">
-                                <strong>{{ ui_text.error_realistic_did|default:"Erro no cenario realista (D-ID)" }}:</strong>
-                                <span>{{ analysis.metadata.explainer_video.did_error }}</span>
-                            </div>
-                            {% endif %}
-                            {% if analysis.metadata.explainer_video.local_error %}
-                            <div class="mt-1">
-                                <strong>{{ ui_text.error_local_scenario|default:"Erro no cenario local" }}:</strong>
-                                <span>{{ analysis.metadata.explainer_video.local_error }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        {% if analysis.explainer_video_file %}
-                        <video controls class="w-100 mb-2" style="max-height: 220px;">
-                            <source src="{{ analysis.explainer_video_file.url }}" type="video/mp4">
-                            {{ ui_text.browser_no_video_support|default:"Seu navegador nao suporta reproducao de video." }}
-                        </video>
-                        <a href="{{ analysis.explainer_video_file.url }}" class="btn btn-sm btn-outline-primary mb-2" target="_blank" rel="noopener">
-                            <i class="fas fa-download me-1"></i>{{ ui_text.download_ai_video|default:"Baixar Video IA" }}
-                        </a>
-                        {% else %}
-                        <p class="mb-2">{{ ui_text.no_explainer_video_yet|default:"Ainda nao foi gerado video explicativo para esta analise." }}</p>
-                        {% endif %}
-                        <form id="videoExplainerForm" method="post" enctype="multipart/form-data" action="{% url 'pitch_explainer_video_generate' analysis.id %}">
-                            {% csrf_token %}
-                            <label class="form-label mt-2">{{ ui_text.video_generation_mode|default:"Modo de geracao do video" }}</label>
-                            <select class="form-select form-select-sm mb-2" name="video_mode">
-                                <option value="auto" {% if selected_video_mode == 'auto' %}selected{% endif %}>{{ ui_text.video_mode_auto|default:"D-ID + fallback local (recomendado)" }}</option>
-                                <option value="did_only" {% if selected_video_mode == 'did_only' %}selected{% endif %}>{{ ui_text.video_mode_did_only|default:"Apenas D-ID (imagem real a falar, sem fundo/cenario)" }}</option>
-                                <option value="local_only" {% if selected_video_mode == 'local_only' %}selected{% endif %}>{{ ui_text.video_mode_local_only|default:"Apenas geracao local" }}</option>
-                                <option value="canva_capcut" {% if selected_video_mode == 'canva_capcut' %}selected{% endif %}>{{ ui_text.video_mode_canva_capcut|default:"Canva + CapCut Auto (roteiro + video)" }}</option>
-                            </select>
-                            <label class="form-label mt-2">{{ ui_text.presenter_real_image_face|default:"Imagem real do apresentador (rosto)" }}</label>
-                            <input id="presenterImageInput" type="file" class="form-control form-control-sm mb-2" name="presenter_image" accept="image/*">
-                            <div id="presenterGenderDetectBox" class="border rounded p-2 mb-2 d-none">
-                                <div class="small fw-semibold mb-1">{{ ui_text.auto_gender_detection|default:"Deteccao automatica de genero" }}</div>
-                                <div id="presenterGenderDetectText" class="small text-muted">{{ ui_text.waiting_image_detection|default:"Aguardando imagem para detectar..." }}</div>
-                            </div>
-                            <label class="form-label mt-1">{{ ui_text.gender_confirmation_for_voice|default:"Confirmacao de genero para voz" }}</label>
-                            <select id="presenterGenderChoice" class="form-select form-select-sm mb-2" name="presenter_gender_choice">
-                                <option value="auto" {% if selected_presenter_gender_choice == 'auto' %}selected{% endif %}>{{ ui_text.auto_use_detection|default:"Auto (usar deteccao)" }}</option>
-                                <option value="male" {% if selected_presenter_gender_choice == 'male' %}selected{% endif %}>{{ ui_text.male|default:"Homem" }}</option>
-                                <option value="female" {% if selected_presenter_gender_choice == 'female' %}selected{% endif %}>{{ ui_text.female|default:"Mulher" }}</option>
-                            </select>
-                            <small class="text-muted d-block mb-2">
-                                {{ ui_text.presenter_image_internal_use_note|default:"A IA usa esta imagem internamente para gerar o video; o rosto nao e exibido na interface." }}
-                                {{ ui_text.did_only_no_background_note|default:"No modo did_only, o sistema usa somente a imagem real a falar (sem fundo/cenario artificial)." }}
-                            </small>
-                            <small class="text-muted d-block mb-2">
-                                {{ ui_text.video_duration_standard_note|default:"Duracao padrao do video: minimo 1 minuto e maximo 3 minutos, sempre com conclusao no final." }}
-                            </small>
-                            <small class="text-muted d-block mb-2">
-                                {{ ui_text.canva_capcut_manual_guide_note|default:"No modo Canva + CapCut, o sistema gera um roteiro guiado para producao manual (sem renderizar video no servidor)." }}
-                            </small>
-                            <button
-                                class="btn btn-sm btn-primary w-100"
-                                type="submit"
-                                {% if active_video_job.status == 'RUNNING' or active_video_job.status == 'PENDING' %}disabled{% endif %}
-                            >
-                                <i class="fas fa-video me-1"></i>{% if analysis.explainer_video_file %}{{ ui_text.regenerate|default:"Regenerar" }}{% else %}{{ ui_text.generate|default:"Gerar" }}{% endif %} {{ ui_text.explainer_video|default:"video explicativo" }}
-                            </button>
-                        </form>
-                        {% if analysis.metadata.explainer_video.engine_used %}
-                        <small class="d-block mt-2 text-muted">
-                            {{ ui_text.creative_engine|default:"Motor criativo" }}: {{ analysis.metadata.explainer_video.engine_used }} |
-                            {{ ui_text.character|default:"Personagem" }}: {{ analysis.metadata.explainer_video.character_name|default:analysis.startup_name }} |
-                            {{ ui_text.voice|default:"Voz" }}: {{ analysis.metadata.explainer_video.voice_engine|default:"auto" }}
-                        </small>
-                        {% if analysis.metadata.explainer_video.generation_mode %}
-                        <small class="d-block mt-1 text-muted">
-                            {{ ui_text.selected_mode|default:"Modo selecionado" }}: {{ analysis.metadata.explainer_video.generation_mode }}
-                        </small>
-                        {% endif %}
-                        {% if analysis.metadata.explainer_video.realistic_style_mode %}
-                        <small class="d-block mt-1 text-muted">
-                            {{ ui_text.premium_style|default:"Estilo premium" }}: {{ analysis.metadata.explainer_video.realistic_style_mode }} |
-                            {{ ui_text.segments|default:"Segmentos" }}: {{ analysis.metadata.explainer_video.realistic_segment_count|default:"1" }} |
-                            {{ ui_text.visual_sources|default:"Fontes visuais" }}: {{ analysis.metadata.explainer_video.realistic_source_count|default:analysis.metadata.explainer_video_source_images|default:"1" }}
-                        </small>
-                        {% endif %}
-                        {% endif %}
-                        {% if analysis.metadata.explainer_video.mode == 'canva_capcut' and analysis.metadata.explainer_video.generation_mode == 'canva_capcut' and not analysis.explainer_video_file %}
-                        <div class="border rounded p-2 mt-3">
-                            <div class="fw-semibold mb-2">{{ analysis.metadata.explainer_video.title|default:ui_text.canva_capcut_guide_title|default:"Guia Canva + CapCut" }}</div>
-                            <div class="small mb-2">
-                                <strong>{{ ui_text.theme|default:"Tema" }}:</strong> {{ analysis.metadata.explainer_video.script_theme|default:"Motivacao" }}
-                            </div>
-                            {% for step in analysis.metadata.explainer_video.steps %}
-                            <div class="mb-2">
-                                <div class="small fw-semibold">{{ step.title }}</div>
-                                <ul class="small mb-1">
-                                    {% for item in step.details %}
-                                    <li>{{ item }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            {% endfor %}
-                            <div class="small mt-2">
-                                <strong>{{ ui_text.suggested_script_contextual|default:"Roteiro sugerido (contextual)" }}:</strong>
-                                <div>{{ analysis.metadata.explainer_video.script_text }}</div>
-                            </div>
-                            <div class="small mt-2">
-                                <strong>{{ ui_text.quick_example_copy_use|default:"Exemplo rapido (copia e usa)" }}:</strong>
-                                <div>{{ analysis.metadata.explainer_video.script_example }}</div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card mb-3">
-                    <div class="card-header">{{ ui_text.attachments|default:"Anexos" }}</div>
-                    <div class="card-body">
-                        <div class="small text-muted mb-1">{{ ui_text.audio_label|default:"Audio" }}</div>
-                        {% if analysis.audio_file %}
-                        <div class="mb-3">
-                            <audio controls class="w-100">
-                                <source src="{{ analysis.audio_file.url }}">
-                                {{ ui_text.browser_no_audio_support|default:"Seu navegador nao suporta reproducao de audio." }}
-                            </audio>
-                            <a href="{{ analysis.audio_file.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank" rel="noopener">
-                                <i class="fas fa-download me-1"></i>{{ ui_text.download_audio|default:"Baixar Audio" }}
-                            </a>
-                        </div>
-                        {% elif analysis.metadata.sources.has_audio %}
-                        <p class="mb-3"><strong>{{ ui_text.audio_label|default:"Audio" }}:</strong> {{ ui_text.submitted_file_unavailable|default:"submetido (ficheiro nao disponivel para download)." }}</p>
-                        {% else %}
-                        <p class="mb-3 text-muted">{{ ui_text.no_audio_attached|default:"Sem audio anexado." }}</p>
-                        {% endif %}
-
-                        <div class="small text-muted mb-1">{{ ui_text.video_label|default:"Video" }}</div>
-                        {% if analysis.video_file %}
-                        <div class="mb-3">
-                            <video controls class="w-100" style="max-height: 180px;">
-                                <source src="{{ analysis.video_file.url }}">
-                                {{ ui_text.browser_no_video_support|default:"Seu navegador nao suporta reproducao de video." }}
-                            </video>
-                            <a href="{{ analysis.video_file.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank" rel="noopener">
-                                <i class="fas fa-download me-1"></i>{{ ui_text.download_video|default:"Baixar Video" }}
-                            </a>
-                        </div>
-                        {% elif analysis.metadata.sources.has_video %}
-                        <p class="mb-3"><strong>{{ ui_text.video_label|default:"Video" }}:</strong> {{ ui_text.submitted_file_unavailable|default:"submetido (ficheiro nao disponivel para download)." }}</p>
-                        {% else %}
-                        <p class="mb-3 text-muted">{{ ui_text.no_video_attached|default:"Sem video anexado." }}</p>
-                        {% endif %}
-
-                        <div>
-                            <div class="small text-muted mb-1">{{ ui_text.submitted_file|default:"Ficheiro submetido" }}</div>
-                            {% if analysis.document_file %}
-                            <a href="{{ analysis.document_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
-                                <i class="fas fa-file-arrow-down me-1"></i>{{ ui_text.download_file|default:"Baixar Ficheiro" }}
-                            </a>
-                            {% elif analysis.metadata.sources.text_file_name %}
-                            <p class="mb-0">{{ analysis.metadata.sources.text_file_name }} ({{ ui_text.registered_name|default:"nome registado" }})</p>
-                            {% else %}
-                            <p class="mb-0 text-muted">{{ ui_text.no_document_file_attached|default:"Sem ficheiro de documento anexado." }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-3">
-                    <div class="card-header">{{ ui_text.financial_indicators|default:"Indicadores financeiros" }}</div>
-                    <div class="card-body">
-                        <p><strong>{{ ui_text.revenue|default:"Receita" }}:</strong> AOA {{ analysis.revenue|floatformat:2 }}</p>
-                        <p><strong>{{ ui_text.growth|default:"Crescimento" }}:</strong> {{ analysis.growth_rate|floatformat:2 }}%</p>
-                        <p class="mb-0"><strong>{{ ui_text.margin|default:"Margem" }}:</strong> {{ analysis.profit_margin|floatformat:2 }}%</p>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">{{ ui_text.execution_information|default:"Informacoes da execucao" }}</div>
-                    <div class="card-body">
-                        <p><strong>{{ ui_text.date|default:"Data" }}:</strong> {{ analysis.created_at|date:"d/m/Y H:i" }}</p>
-                        <p><strong>{{ ui_text.status|default:"Status" }}:</strong> {{ analysis.report.status|default:"N/A" }}</p>
-                        <p class="mb-0"><strong>{{ ui_text.engine|default:"Motor" }}:</strong> {{ analysis.metadata.analysis_engine_used|default:"local" }}</p>
-                    </div>
-                </div>
+        <!-- AI video card -->
+        <div class="card animate-fade-up animate-delay-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-video me-2" style="color:#a78bfa;"></i>{{ ui_text.ai_potential_video|default:"Vídeo IA" }}</h6>
+                <span class="badge" style="background:rgba(139,92,246,.2);color:#c4b5fd;font-size:.7rem;">{{ analysis.startup_name|default:"Startup"|truncatechars:18 }}</span>
             </div>
-        </div>
-
-        <div class="mt-4 text-center">
-            <a href="{% url 'pitch_form' %}" class="btn btn-primary me-2">
-                <i class="fas fa-plus me-1"></i>{{ ui_text.new_analysis|default:"Nova Analise" }}
-            </a>
-            <a href="{% url 'pitch_report_pdf' analysis.id %}" class="btn btn-outline-primary me-2">
-                <i class="fas fa-file-pdf me-1"></i>{{ ui_text.download_report_pdf|default:"Baixar Relatorio PDF" }}
-            </a>
-            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-home me-1"></i>{{ ui_text.back_to_dashboard|default:"Voltar ao Painel" }}
-            </a>
-        </div>
-        <div class="card mt-3">
-            <div class="card-header">{{ ui_text.pitch_pdf_slides_with_design|default:"Pitch PDF (Slides) com Design" }}</div>
             <div class="card-body">
-                <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end">
-                    <div class="col-md-5">
-                        <label class="form-label mb-1">{{ ui_text.design_mode|default:"Modo de design" }}</label>
-                        <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
-                            {% for value, label in pitch_design_mode_choices %}
-                            <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
+                {% url 'pitch_explainer_video_progress' analysis.id '__JOB_ID__' as video_progress_url_template %}
+                {% if active_video_job and active_video_job.status %}
+                <div id="videoGenerationStatusCard" class="rounded p-3 mb-3 border {% if active_video_job.status == 'FAILED' %}border-danger{% elif active_video_job.status == 'COMPLETED' %}border-success{% else %}border-info{% endif %}"
+                     data-job-id="{{ active_video_job_id }}"
+                     data-progress-url-template="{{ video_progress_url_template }}"
+                     data-analysis-id="{{ analysis.id }}"
+                     data-status="{{ active_video_job.status }}"
+                     data-phase="{{ active_video_job.phase|default:'fila' }}"
+                     style="background:rgba(15,23,42,.6);">
+                    <div class="d-flex justify-content-between mb-2" style="font-size:.83rem;">
+                        <span style="color:#64748b;">Status:</span>
+                        <strong id="videoJobStatusText">{{ active_video_job.status }}</strong>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label mb-1">{{ ui_text.premium_manual_template|default:"Template premium manual" }}</label>
-                        <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate">
-                            {% for value, label in pitch_design_template_choices %}
-                            <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="progress mb-2" style="height:6px;">
+                        <div id="videoJobProgressBar" class="progress-bar {% if active_video_job.status == 'FAILED' %}bg-danger{% elif active_video_job.status == 'COMPLETED' %}bg-success{% else %}bg-info progress-bar-striped progress-bar-animated{% endif %}"
+                             style="width:{{ active_video_job.progress|default:0 }}%;"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ active_video_job.progress|default:0 }}"></div>
                     </div>
-                    <div class="col-md-3 d-grid">
-                        <button type="submit" class="btn btn-outline-success">
-                            <i class="fas fa-file-powerpoint me-1"></i>{{ ui_text.generate_pitch_pdf|default:"Gerar Pitch PDF" }}
-                        </button>
+                    <div class="d-flex justify-content-between" style="font-size:.78rem;color:#64748b;">
+                        <span id="videoJobPhaseText">{{ active_video_job.phase|default:"fila" }}</span>
+                        <span id="videoJobProgressPct">{{ active_video_job.progress|default:0 }}%</span>
                     </div>
+                    <div class="small mt-1" style="color:#94a3b8;" id="videoJobMessage">{{ active_video_job.message|default:"A processar..." }}</div>
+                </div>
+                {% endif %}
+
+                {% if analysis.explainer_video_file %}
+                <video controls class="w-100 mb-2" style="max-height:180px;border-radius:8px;">
+                    <source src="{{ analysis.explainer_video_file.url }}" type="video/mp4">
+                </video>
+                <a href="{{ analysis.explainer_video_file.url }}" class="btn btn-sm btn-outline-primary w-100 mb-3" target="_blank">
+                    <i class="fas fa-download me-1"></i>{{ ui_text.download_ai_video|default:"Baixar Vídeo IA" }}
+                </a>
+                {% else %}
+                <p class="small mb-3" style="color:#475569;">{{ ui_text.no_explainer_video_yet|default:"Ainda não foi gerado vídeo para esta análise." }}</p>
+                {% endif %}
+
+                <form id="videoExplainerForm" method="post" enctype="multipart/form-data" action="{% url 'pitch_explainer_video_generate' analysis.id %}">
+                    {% csrf_token %}
+                    <select class="form-select form-select-sm mb-2" name="video_mode">
+                        <option value="auto"        {% if selected_video_mode == 'auto'        %}selected{% endif %}>{{ ui_text.video_mode_auto|default:"Auto (recomendado)" }}</option>
+                        <option value="did_only"    {% if selected_video_mode == 'did_only'    %}selected{% endif %}>{{ ui_text.video_mode_did_only|default:"Apenas D-ID" }}</option>
+                        <option value="local_only"  {% if selected_video_mode == 'local_only'  %}selected{% endif %}>{{ ui_text.video_mode_local_only|default:"Apenas local" }}</option>
+                        <option value="canva_capcut" {% if selected_video_mode == 'canva_capcut' %}selected{% endif %}>{{ ui_text.video_mode_canva_capcut|default:"Canva + CapCut" }}</option>
+                    </select>
+                    <div class="upload-zone mb-2" style="padding:.75rem;">
+                        <input id="presenterImageInput" type="file" name="presenter_image" accept="image/*">
+                        <i class="fas fa-user-circle uz-icon" style="font-size:1.3rem;"></i>
+                        <div class="uz-text" style="font-size:.78rem;">{{ ui_text.presenter_real_image_face|default:"Imagem do apresentador" }}</div>
+                        <div class="uz-file" id="presenterImgName"></div>
+                    </div>
+                    <div id="presenterGenderDetectBox" class="d-none rounded p-2 mb-2 border border-info" style="font-size:.8rem;background:rgba(14,165,233,.07);">
+                        <div class="fw-semibold mb-1">{{ ui_text.auto_gender_detection|default:"Detecção de género" }}</div>
+                        <div id="presenterGenderDetectText" style="color:#94a3b8;">{{ ui_text.waiting_image_detection|default:"Aguardando imagem..." }}</div>
+                    </div>
+                    <select id="presenterGenderChoice" class="form-select form-select-sm mb-2" name="presenter_gender_choice">
+                        <option value="auto"   {% if selected_presenter_gender_choice == 'auto'   %}selected{% endif %}>{{ ui_text.auto_use_detection|default:"Auto" }}</option>
+                        <option value="male"   {% if selected_presenter_gender_choice == 'male'   %}selected{% endif %}>{{ ui_text.male|default:"Homem" }}</option>
+                        <option value="female" {% if selected_presenter_gender_choice == 'female' %}selected{% endif %}>{{ ui_text.female|default:"Mulher" }}</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary w-100" type="submit"
+                            {% if active_video_job.status == 'RUNNING' or active_video_job.status == 'PENDING' %}disabled{% endif %}>
+                        <i class="fas fa-video me-1"></i>
+                        {% if analysis.explainer_video_file %}{{ ui_text.regenerate|default:"Regenerar" }}{% else %}{{ ui_text.generate|default:"Gerar" }}{% endif %} vídeo IA
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endwith %}
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    (function () {
-        const card = document.getElementById("videoGenerationStatusCard");
-        if (!card) return;
+// Tab switching
+document.querySelectorAll("#resultTabs .nav-link").forEach(function (link) {
+    link.addEventListener("click", function (e) {
+        e.preventDefault();
+        document.querySelectorAll("#resultTabs .nav-link").forEach(l => l.classList.remove("active"));
+        document.querySelectorAll(".tab-pane-result").forEach(p => p.style.display = "none");
+        link.classList.add("active");
+        const target = link.getAttribute("href").replace("#", "");
+        const pane = document.getElementById("tab-" + target.replace("tab-", ""));
+        if (pane) { pane.style.display = "block"; animateBars(pane); }
+    });
+});
+// Init: hide all non-active panes
+document.querySelectorAll(".tab-pane-result").forEach(function (p) {
+    if (!p.classList.contains("active")) p.style.display = "none";
+});
 
-        const jobId = card.getAttribute("data-job-id");
-        const initialStatus = (card.getAttribute("data-status") || "").toUpperCase();
-        const template = card.getAttribute("data-progress-url-template") || "";
-        if (!jobId || !template) return;
+// Score gauge animation
+(function () {
+    const fill = document.getElementById("gaugeFill");
+    if (!fill) return;
+    const score = {{ analysis.success_score|default:0 }};
+    const r = 50;
+    const circ = 2 * Math.PI * r; // ~314.16
+    const offset = circ - (score / 10) * circ;
+    setTimeout(function () { fill.style.strokeDashoffset = offset; }, 180);
+})();
 
-        if (initialStatus === "COMPLETED" || initialStatus === "FAILED") return;
+// Animated score bars
+function animateBars(container) {
+    (container || document).querySelectorAll(".score-bar-anim").forEach(function (bar) {
+        const pct = parseFloat(bar.dataset.pct || 0);
+        const width = (pct / 10) * 100;
+        setTimeout(function () { bar.style.width = width + "%"; }, 100);
+    });
+}
+animateBars(document.getElementById("tab-scores"));
 
-        const progressUrl = template.replace("__JOB_ID__", jobId);
-        const bar = document.getElementById("videoJobProgressBar");
-        const statusText = document.getElementById("videoJobStatusText");
-        const phaseText = document.getElementById("videoJobPhaseText");
-        const messageEl = document.getElementById("videoJobMessage");
-        const pctEl = document.getElementById("videoJobProgressPct");
+// Video job polling
+(function () {
+    const card = document.getElementById("videoGenerationStatusCard");
+    if (!card) return;
+    const jobId = card.getAttribute("data-job-id");
+    const initStatus = (card.getAttribute("data-status") || "").toUpperCase();
+    const template = card.getAttribute("data-progress-url-template") || "";
+    if (!jobId || !template || initStatus === "COMPLETED" || initStatus === "FAILED") return;
 
-        let serverProgress = Math.max(0, Math.min(100, parseInt(bar?.getAttribute("aria-valuenow") || "0", 10)));
-        let visualProgress = serverProgress;
-        let targetProgress = serverProgress;
-        let currentStatus = initialStatus || "RUNNING";
-        let currentPhase = (card.getAttribute("data-phase") || "fila").toLowerCase();
+    const progressUrl = template.replace("__JOB_ID__", jobId);
+    const bar = document.getElementById("videoJobProgressBar");
+    const statusText = document.getElementById("videoJobStatusText");
+    const phaseText  = document.getElementById("videoJobPhaseText");
+    const msgEl      = document.getElementById("videoJobMessage");
+    const pctEl      = document.getElementById("videoJobProgressPct");
 
-        function phaseLabel(phase) {
-            const p = String(phase || "").toLowerCase();
-            if (p === "fila") return "{{ ui_text.phase_queue|default:"Fila"|escapejs }}";
-            if (p === "inicializacao") return "{{ ui_text.phase_initialization|default:"Inicializacao"|escapejs }}";
-            if (p === "preparacao") return "{{ ui_text.phase_preparation|default:"Preparacao"|escapejs }}";
-            if (p === "renderizacao") return "{{ ui_text.phase_rendering|default:"Renderizacao"|escapejs }}";
-            if (p === "persistencia") return "{{ ui_text.phase_persistence|default:"Persistencia"|escapejs }}";
-            if (p === "concluido") return "{{ ui_text.phase_completed|default:"Concluido"|escapejs }}";
-            if (p === "falha") return "{{ ui_text.phase_failed|default:"Falha"|escapejs }}";
-            return p || "{{ ui_text.phase_processing|default:"Processando"|escapejs }}";
-        }
+    let vis = 0, tgt = 0, curStatus = initStatus, stopped = false;
 
-        function phaseCap(status, phase) {
-            if (status === "COMPLETED" || status === "FAILED") return 100;
-            const p = String(phase || "").toLowerCase();
-            if (p === "fila") return 12;
-            if (p === "inicializacao") return 22;
-            if (p === "preparacao") return 36;
-            if (p === "renderizacao") return 74;
-            if (p === "persistencia") return 94;
-            return 88;
-        }
+    function applyVis(v) {
+        vis = Math.max(0, Math.min(100, v));
+        if (bar) { bar.style.width = vis.toFixed(1) + "%"; bar.setAttribute("aria-valuenow", Math.round(vis)); }
+        if (pctEl) pctEl.textContent = Math.round(vis) + "%";
+    }
+    const smooth = setInterval(function () {
+        if (vis < tgt) { vis = Math.min(tgt, vis + (tgt - vis > 10 ? 1.2 : 0.4)); applyVis(vis); }
+    }, 140);
 
-        function applyVisualProgress(value) {
-            const bounded = Math.max(0, Math.min(100, value));
-            const rounded = Math.round(bounded);
-            if (pctEl) pctEl.textContent = rounded + "%";
-            if (bar) {
-                bar.style.width = bounded.toFixed(2) + "%";
-                bar.setAttribute("aria-valuenow", String(rounded));
-            }
-        }
-
-        function updateState(state) {
-            currentStatus = String(state.status || "RUNNING").toUpperCase();
-            currentPhase = String(state.phase || currentPhase || "renderizacao").toLowerCase();
-            serverProgress = Math.max(0, Math.min(100, parseInt(state.progress || 0, 10)));
-            const message = state.message || "{{ ui_text.phase_processing|default:"Processando"|escapejs }}...";
-
-            if (statusText) statusText.textContent = currentStatus;
-            if (phaseText) phaseText.textContent = phaseLabel(currentPhase);
-            if (messageEl) messageEl.textContent = message;
-            targetProgress = Math.max(targetProgress, serverProgress);
-            if (currentStatus === "COMPLETED" || currentStatus === "FAILED") {
-                targetProgress = serverProgress;
-            }
-
-            if (bar) {
-                bar.classList.remove("bg-info", "bg-success", "bg-danger", "progress-bar-striped", "progress-bar-animated");
-                if (currentStatus === "FAILED") bar.classList.add("bg-danger");
-                else if (currentStatus === "COMPLETED") bar.classList.add("bg-success");
-                else bar.classList.add("bg-info", "progress-bar-striped", "progress-bar-animated");
-            }
-            card.classList.remove("border-info", "border-success", "border-danger");
-            card.classList.add(currentStatus === "FAILED" ? "border-danger" : currentStatus === "COMPLETED" ? "border-success" : "border-info");
-
-            if (currentStatus === "COMPLETED") {
-                // Remove imediatamente o bloco de status ao concluir.
-                card.style.display = "none";
-                setTimeout(function () {
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete("video_job_id");
-                    window.location.href = url.toString();
-                }, 120);
-                return true;
-            }
-            if (currentStatus === "FAILED") {
-                return true;
-            }
-            return false;
-        }
-
-        const smoothTimer = setInterval(function () {
-            if (currentStatus !== "COMPLETED" && currentStatus !== "FAILED") {
-                const cap = phaseCap(currentStatus, currentPhase);
-                if (targetProgress < cap) {
-                    targetProgress = Math.min(cap, targetProgress + 0.22);
+    function poll() {
+        if (stopped) return;
+        fetch(progressUrl, { credentials: "same-origin" })
+            .then(r => r.json())
+            .then(function (state) {
+                curStatus = (state.status || "RUNNING").toUpperCase();
+                tgt = Math.max(tgt, parseInt(state.progress || 0, 10));
+                if (statusText) statusText.textContent = curStatus;
+                if (phaseText)  phaseText.textContent  = state.phase  || "—";
+                if (msgEl)      msgEl.textContent       = state.message || "A processar...";
+                if (curStatus === "COMPLETED") {
+                    stopped = true; clearInterval(smooth); applyVis(100);
+                    card.style.display = "none";
+                    setTimeout(function () {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("video_job_id");
+                        window.location.href = url.toString();
+                    }, 200);
+                    return;
                 }
-            }
-
-            if (visualProgress < targetProgress) {
-                const gap = targetProgress - visualProgress;
-                const step = gap > 18 ? 1.35 : gap > 9 ? 0.85 : gap > 3 ? 0.45 : 0.2;
-                visualProgress = Math.min(targetProgress, visualProgress + step);
-                applyVisualProgress(visualProgress);
-                return;
-            }
-            if (visualProgress > targetProgress) {
-                visualProgress = targetProgress;
-                applyVisualProgress(visualProgress);
-            }
-        }, 140);
-
-        let stopped = false;
-        const poll = function () {
-            if (stopped) return;
-            fetch(progressUrl, { credentials: "same-origin" })
-                .then(function (resp) {
-                    if (!resp.ok) throw new Error("{{ ui_text.failed_check_progress|default:"Falha ao consultar progresso"|escapejs }}");
-                    return resp.json();
-                })
-                .then(function (state) {
-                    const done = updateState(state || {});
-                    if (done) {
-                        stopped = true;
-                        clearInterval(smoothTimer);
-                        return;
-                    }
-                    setTimeout(poll, 2000);
-                })
-                .catch(function () {
-                    if (messageEl) messageEl.textContent = "{{ ui_text.waiting_connection_update_progress|default:"Aguardando conexao para atualizar o progresso..."|escapejs }}";
-                    setTimeout(poll, 3000);
-                });
-        };
-
-        applyVisualProgress(visualProgress);
-        if (phaseText) phaseText.textContent = phaseLabel(currentPhase);
-        setTimeout(poll, 1000);
-    })();
-
-    (function () {
-        const modeSelect = document.getElementById("resultPitchDesignMode");
-        const templateSelect = document.getElementById("resultPitchDesignTemplate");
-        if (!modeSelect || !templateSelect) return;
-
-        function syncTemplateState() {
-            const manual = (modeSelect.value || "") === "manual_premium";
-            templateSelect.disabled = !manual;
-            if (!manual) {
-                templateSelect.classList.add("opacity-75");
-            } else {
-                templateSelect.classList.remove("opacity-75");
-            }
-        }
-
-        modeSelect.addEventListener("change", syncTemplateState);
-        syncTemplateState();
-    })();
-
-    (function () {
-        const form = document.getElementById("videoExplainerForm");
-        const imageInput = document.getElementById("presenterImageInput");
-        const genderChoice = document.getElementById("presenterGenderChoice");
-        const detectBox = document.getElementById("presenterGenderDetectBox");
-        const detectText = document.getElementById("presenterGenderDetectText");
-        if (!form || !imageInput || !genderChoice || !detectBox || !detectText) return;
-
-        const detectUrl = "{% url 'pitch_presenter_gender_detect' analysis.id %}";
-        const csrfToken = (form.querySelector("input[name='csrfmiddlewaretoken']") || {}).value || "";
-        let userChangedChoice = false;
-
-        genderChoice.addEventListener("change", function () {
-            userChangedChoice = true;
-        });
-
-        function showDetectMessage(message, isError) {
-            detectBox.classList.remove("d-none", "border-danger", "border-info");
-            detectBox.classList.add(isError ? "border-danger" : "border-info");
-            detectText.classList.remove("text-danger", "text-muted");
-            detectText.classList.add(isError ? "text-danger" : "text-muted");
-            detectText.textContent = message;
-        }
-
-        imageInput.addEventListener("change", function () {
-            const file = imageInput.files && imageInput.files[0];
-            if (!file) {
-                detectBox.classList.add("d-none");
-                return;
-            }
-
-            showDetectMessage("{{ ui_text.detecting_image_gender|default:"A detetar genero da imagem..."|escapejs }}", false);
-            const formData = new FormData();
-            formData.append("presenter_image", file);
-
-            fetch(detectUrl, {
-                method: "POST",
-                credentials: "same-origin",
-                headers: csrfToken ? { "X-CSRFToken": csrfToken } : {},
-                body: formData,
+                if (curStatus === "FAILED") { stopped = true; clearInterval(smooth); return; }
+                setTimeout(poll, 2200);
             })
-                .then(function (resp) {
-                    return resp.json().then(function (data) {
-                        return { ok: resp.ok, data: data || {} };
-                    });
-                })
-                .then(function (result) {
-                    if (!result.ok || !result.data.ok) {
-                        throw new Error(result.data.error || "{{ ui_text.unable_detect_gender|default:"Nao foi possivel detectar o genero."|escapejs }}");
-                    }
-                    const detected = result.data.detected_gender || "unknown";
-                    const label = result.data.detected_gender_label || "{{ ui_text.not_identified|default:"Nao identificado"|escapejs }}";
-                    const confidence = result.data.confidence_pct;
-                    const method = result.data.method || "unknown";
-                    const confidenceText = confidence !== null && confidence !== undefined ? ` ({{ ui_text.confidence|default:"confianca"|escapejs }} ${confidence}%)` : "";
-                    showDetectMessage(`{{ ui_text.detected|default:"Detetado"|escapejs }}: ${label}${confidenceText}. {{ ui_text.method|default:"Metodo"|escapejs }}: ${method}. {{ ui_text.confirm_or_correct_below|default:"Confirme ou corrija no campo abaixo."|escapejs }}`, false);
+            .catch(function () { setTimeout(poll, 3500); });
+    }
+    setTimeout(poll, 1200);
+})();
 
-                    if ((!userChangedChoice || genderChoice.value === "auto") && (detected === "male" || detected === "female")) {
-                        genderChoice.value = detected;
-                    }
-                })
-                .catch(function (error) {
-                    showDetectMessage(error.message || "{{ ui_text.failed_detect_image_gender|default:"Falha ao detetar genero da imagem."|escapejs }}", true);
-                });
-        });
-    })();
+// Design mode / template sync
+(function () {
+    const mode = document.getElementById("resultPitchDesignMode");
+    const tmpl = document.getElementById("resultPitchDesignTemplate");
+    if (!mode || !tmpl) return;
+    function sync() { const m = (mode.value || "") === "manual_premium"; tmpl.disabled = !m; tmpl.style.opacity = m ? "1" : ".5"; }
+    mode.addEventListener("change", sync); sync();
+})();
+
+// Presenter gender detection
+(function () {
+    const form    = document.getElementById("videoExplainerForm");
+    const imgInp  = document.getElementById("presenterImageInput");
+    const choice  = document.getElementById("presenterGenderChoice");
+    const detBox  = document.getElementById("presenterGenderDetectBox");
+    const detText = document.getElementById("presenterGenderDetectText");
+    const imgName = document.getElementById("presenterImgName");
+    if (!form || !imgInp || !detBox) return;
+    const csrf = (form.querySelector("input[name='csrfmiddlewaretoken']") || {}).value || "";
+    const url  = "{% url 'pitch_presenter_gender_detect' analysis.id %}";
+    let userChanged = false;
+    if (choice) choice.addEventListener("change", () => userChanged = true);
+    imgInp.addEventListener("change", function () {
+        const file = imgInp.files && imgInp.files[0];
+        if (imgName) imgName.textContent = file ? file.name : "";
+        if (!file) { detBox.classList.add("d-none"); return; }
+        detBox.classList.remove("d-none");
+        detText.textContent = "A detetar género da imagem...";
+        const fd = new FormData(); fd.append("presenter_image", file);
+        fetch(url, { method: "POST", credentials: "same-origin", headers: csrf ? { "X-CSRFToken": csrf } : {}, body: fd })
+            .then(r => r.json())
+            .then(function (data) {
+                if (!data.ok) { detText.textContent = data.error || "Erro ao detetar."; return; }
+                const lbl = data.detected_gender_label || "Não identificado";
+                const conf = data.confidence_pct != null ? ` (${data.confidence_pct}%)` : "";
+                detText.textContent = `Detetado: ${lbl}${conf}. Confirme abaixo.`;
+                if ((!userChanged || choice.value === "auto") && (data.detected_gender === "male" || data.detected_gender === "female")) {
+                    if (choice) choice.value = data.detected_gender;
+                }
+            })
+            .catch(() => { detText.textContent = "Erro ao detetar género."; });
+    });
+})();
 </script>
 {% endblock %}

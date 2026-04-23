@@ -4,99 +4,215 @@
 {% block topbar_subtitle %}{{ ui_text.idea_form_topbar_subtitle }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0"><i class="fas fa-file-lines me-2"></i>{{ ui_text.idea_form_title }}</h4>
-        <span class="badge bg-primary">{{ ui_text.idea_form_output_pdf }}</span>
-    </div>
-    <div class="card-body">
-        <form method="post" class="row g-3">
-            {% csrf_token %}
-            <div class="col-12">
-                <div class="alert alert-info mb-0">
-                    <i class="fas fa-circle-info me-2"></i>
-                    {{ ui_text.idea_form_info_before }} <strong>{{ ui_text.idea_form_generate_full_pitch }}</strong>.
-                </div>
-            </div>
-
-            <div class="col-md-8">
-                <label class="form-label">{{ ui_text.idea_form_startup_name }} *</label>
-                <input type="text" class="form-control {% if errors.startup_name %}is-invalid{% endif %}" name="startup_name" value="{{ form_data.startup_name }}">
-                {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">{{ ui_text.idea_form_generation_engine }}</label>
-                <select class="form-select" name="model_source">
-                    <option value="local" {% if form_data.model_source|default:'local' == 'local' %}selected{% endif %}>{{ ui_text.idea_form_engine_local }}</option>
-                    <option value="gpt" {% if form_data.model_source == 'gpt' %}selected{% endif %}>{{ ui_text.idea_form_engine_gpt }}</option>
-                </select>
-            </div>
-
-            <div class="col-12">
-                <label class="form-label">{{ ui_text.idea_form_one_liner }}</label>
-                <input type="text" class="form-control" name="one_liner" value="{{ form_data.one_liner }}" placeholder="{{ ui_text.idea_form_one_liner_placeholder }}">
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_problem }} *</label>
-                <textarea class="form-control {% if errors.problem %}is-invalid{% endif %}" name="problem" rows="4">{{ form_data.problem }}</textarea>
-                {% if errors.problem %}<div class="invalid-feedback">{{ errors.problem }}</div>{% endif %}
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_solution }} *</label>
-                <textarea class="form-control {% if errors.solution %}is-invalid{% endif %}" name="solution" rows="4">{{ form_data.solution }}</textarea>
-                {% if errors.solution %}<div class="invalid-feedback">{{ errors.solution }}</div>{% endif %}
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_target_customer }} *</label>
-                <textarea class="form-control {% if errors.target_customer %}is-invalid{% endif %}" name="target_customer" rows="3">{{ form_data.target_customer }}</textarea>
-                {% if errors.target_customer %}<div class="invalid-feedback">{{ errors.target_customer }}</div>{% endif %}
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_market_size }}</label>
-                <textarea class="form-control" name="market_size" rows="3">{{ form_data.market_size }}</textarea>
-            </div>
-
-            <div class="col-12">
-                <label class="form-label">{{ ui_text.idea_form_business_model }} *</label>
-                <textarea class="form-control {% if errors.business_model %}is-invalid{% endif %}" name="business_model" rows="3">{{ form_data.business_model }}</textarea>
-                {% if errors.business_model %}<div class="invalid-feedback">{{ errors.business_model }}</div>{% endif %}
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_competitive_advantage }}</label>
-                <textarea class="form-control" name="competitive_advantage" rows="3">{{ form_data.competitive_advantage }}</textarea>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_traction }}</label>
-                <textarea class="form-control" name="traction" rows="3">{{ form_data.traction }}</textarea>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_team }}</label>
-                <textarea class="form-control" name="team" rows="3">{{ form_data.team }}</textarea>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_funding_goal }}</label>
-                <textarea class="form-control" name="funding_goal" rows="3">{{ form_data.funding_goal }}</textarea>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_use_of_funds }}</label>
-                <textarea class="form-control" name="use_of_funds" rows="3">{{ form_data.use_of_funds }}</textarea>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">{{ ui_text.idea_form_call_to_action }}</label>
-                <textarea class="form-control" name="call_to_action" rows="3">{{ form_data.call_to_action }}</textarea>
-            </div>
-
-            <div class="col-12 d-grid d-md-flex justify-content-md-end">
-                <button class="btn btn-primary btn-lg px-4" type="submit">
-                    <i class="fas fa-floppy-disk me-2"></i>{{ ui_text.idea_form_save_button }}
-                </button>
-            </div>
-        </form>
+<!-- Header -->
+<div class="hero-panel p-4 mb-4 animate-fade-up" style="background:linear-gradient(135deg,rgba(59,130,246,.3) 0%,rgba(99,102,241,.15) 100%);border:1px solid rgba(99,102,241,.2);">
+    <div class="d-flex align-items-center gap-3">
+        <div style="width:42px;height:42px;background:rgba(99,102,241,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-file-lines" style="color:#a78bfa;font-size:1.1rem;"></i>
+        </div>
+        <div>
+            <h2 class="mb-0 fw-bold" style="color:#f1f5f9;font-size:1.35rem;">{{ ui_text.idea_form_title }}</h2>
+            <p class="mb-0" style="color:#94a3b8;font-size:.88rem;">{{ ui_text.idea_form_info_before }} <strong style="color:#a78bfa;">{{ ui_text.idea_form_generate_full_pitch }}</strong></p>
+        </div>
+        <span class="ms-auto badge" style="background:rgba(99,102,241,.12);color:#a78bfa;border:1px solid rgba(99,102,241,.25);font-size:.75rem;">
+            <i class="fas fa-file-pdf me-1"></i>{{ ui_text.idea_form_output_pdf }}
+        </span>
     </div>
 </div>
+
+<form method="post" class="animate-fade-up animate-delay-1">
+    {% csrf_token %}
+
+    {% if errors %}
+    <div class="alert alert-danger mb-4 animate-fade-up" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);">
+        <i class="fas fa-circle-xmark me-2" style="color:#f87171;"></i>
+        <span style="color:#fca5a5;">{{ ui_text.idea_form_fix_errors|default:"Corrija os erros abaixo." }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Section: Identity -->
+    <div class="idea-section mb-4">
+        <div class="idea-section-header">
+            <i class="fas fa-id-card me-2" style="color:#60a5fa;"></i>
+            <span>{{ ui_text.idea_section_identity|default:"Identidade da Startup" }}</span>
+        </div>
+        <div class="idea-section-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_startup_name }} <span style="color:#f87171;">*</span></label>
+                    <input type="text" class="form-control {% if errors.startup_name %}is-invalid{% endif %}"
+                           name="startup_name" value="{{ form_data.startup_name }}"
+                           placeholder="Ex: TechVenture AI"
+                           style="background:#0f172a;border-color:{% if errors.startup_name %}rgba(239,68,68,.5){% else %}rgba(100,116,139,.3){% endif %};color:#e2e8f0;">
+                    {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_generation_engine }}</label>
+                    <div class="d-flex gap-2 mt-1">
+                        <label class="engine-radio-card flex-fill" style="cursor:pointer;">
+                            <input type="radio" name="model_source" value="local" {% if form_data.model_source|default:'local' == 'local' %}checked{% endif %} style="display:none;" class="engine-radio">
+                            <div class="engine-label" style="border:1px solid rgba(100,116,139,.3);border-radius:8px;padding:.5rem .75rem;text-align:center;transition:all .2s;">
+                                <i class="fas fa-microchip" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
+                                <span style="font-size:.78rem;font-weight:600;">{{ ui_text.idea_form_engine_local }}</span>
+                            </div>
+                        </label>
+                        <label class="engine-radio-card flex-fill" style="cursor:pointer;">
+                            <input type="radio" name="model_source" value="gpt" {% if form_data.model_source == 'gpt' %}checked{% endif %} style="display:none;" class="engine-radio">
+                            <div class="engine-label" style="border:1px solid rgba(100,116,139,.3);border-radius:8px;padding:.5rem .75rem;text-align:center;transition:all .2s;">
+                                <i class="fas fa-brain" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
+                                <span style="font-size:.78rem;font-weight:600;">GPT</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_one_liner }}</label>
+                    <input type="text" class="form-control" name="one_liner" value="{{ form_data.one_liner }}"
+                           placeholder="{{ ui_text.idea_form_one_liner_placeholder }}"
+                           style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Problem & Solution -->
+    <div class="idea-section mb-4">
+        <div class="idea-section-header">
+            <i class="fas fa-lightbulb me-2" style="color:#fcd34d;"></i>
+            <span>{{ ui_text.idea_section_problem_solution|default:"Problema & Solução" }}</span>
+        </div>
+        <div class="idea-section-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_problem }} <span style="color:#f87171;">*</span></label>
+                    <textarea class="form-control {% if errors.problem %}is-invalid{% endif %}" name="problem" rows="4"
+                              style="background:#0f172a;border-color:{% if errors.problem %}rgba(239,68,68,.5){% else %}rgba(100,116,139,.3){% endif %};color:#e2e8f0;resize:vertical;">{{ form_data.problem }}</textarea>
+                    {% if errors.problem %}<div class="invalid-feedback">{{ errors.problem }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_solution }} <span style="color:#f87171;">*</span></label>
+                    <textarea class="form-control {% if errors.solution %}is-invalid{% endif %}" name="solution" rows="4"
+                              style="background:#0f172a;border-color:{% if errors.solution %}rgba(239,68,68,.5){% else %}rgba(100,116,139,.3){% endif %};color:#e2e8f0;resize:vertical;">{{ form_data.solution }}</textarea>
+                    {% if errors.solution %}<div class="invalid-feedback">{{ errors.solution }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Market & Customer -->
+    <div class="idea-section mb-4">
+        <div class="idea-section-header">
+            <i class="fas fa-users me-2" style="color:#34d399;"></i>
+            <span>{{ ui_text.idea_section_market|default:"Mercado & Clientes" }}</span>
+        </div>
+        <div class="idea-section-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_target_customer }} <span style="color:#f87171;">*</span></label>
+                    <textarea class="form-control {% if errors.target_customer %}is-invalid{% endif %}" name="target_customer" rows="3"
+                              style="background:#0f172a;border-color:{% if errors.target_customer %}rgba(239,68,68,.5){% else %}rgba(100,116,139,.3){% endif %};color:#e2e8f0;resize:vertical;">{{ form_data.target_customer }}</textarea>
+                    {% if errors.target_customer %}<div class="invalid-feedback">{{ errors.target_customer }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_market_size }}</label>
+                    <textarea class="form-control" name="market_size" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.market_size }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_business_model }} <span style="color:#f87171;">*</span></label>
+                    <textarea class="form-control {% if errors.business_model %}is-invalid{% endif %}" name="business_model" rows="3"
+                              style="background:#0f172a;border-color:{% if errors.business_model %}rgba(239,68,68,.5){% else %}rgba(100,116,139,.3){% endif %};color:#e2e8f0;resize:vertical;">{{ form_data.business_model }}</textarea>
+                    {% if errors.business_model %}<div class="invalid-feedback">{{ errors.business_model }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Competitive & Traction -->
+    <div class="idea-section mb-4">
+        <div class="idea-section-header">
+            <i class="fas fa-trophy me-2" style="color:#fcd34d;"></i>
+            <span>{{ ui_text.idea_section_competitive|default:"Vantagem Competitiva & Tração" }}</span>
+        </div>
+        <div class="idea-section-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_competitive_advantage }}</label>
+                    <textarea class="form-control" name="competitive_advantage" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.competitive_advantage }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_traction }}</label>
+                    <textarea class="form-control" name="traction" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.traction }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Funding -->
+    <div class="idea-section mb-4">
+        <div class="idea-section-header">
+            <i class="fas fa-coins me-2" style="color:#a78bfa;"></i>
+            <span>{{ ui_text.idea_section_funding|default:"Equipa & Financiamento" }}</span>
+        </div>
+        <div class="idea-section-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_team }}</label>
+                    <textarea class="form-control" name="team" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.team }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_funding_goal }}</label>
+                    <textarea class="form-control" name="funding_goal" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.funding_goal }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_use_of_funds }}</label>
+                    <textarea class="form-control" name="use_of_funds" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.use_of_funds }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_call_to_action }}</label>
+                    <textarea class="form-control" name="call_to_action" rows="3"
+                              style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;resize:vertical;">{{ form_data.call_to_action }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="d-flex justify-content-end gap-3 animate-fade-up animate-delay-3">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary px-4">
+            <i class="fas fa-xmark me-2"></i>{{ ui_text.cancel|default:"Cancelar" }}
+        </a>
+        <button class="btn btn-primary px-5 py-2 fw-semibold" type="submit">
+            <i class="fas fa-floppy-disk me-2"></i>{{ ui_text.idea_form_save_button }}
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Engine radio card highlight
+function syncEngineCards() {
+    document.querySelectorAll('.engine-radio-card').forEach(card => {
+        const radio = card.querySelector('.engine-radio');
+        const label = card.querySelector('.engine-label');
+        if (radio.checked) {
+            label.style.borderColor = 'rgba(99,102,241,.6)';
+            label.style.background = 'rgba(99,102,241,.12)';
+            label.style.color = '#a78bfa';
+        } else {
+            label.style.borderColor = 'rgba(100,116,139,.3)';
+            label.style.background = 'transparent';
+            label.style.color = '#94a3b8';
+        }
+    });
+}
+document.querySelectorAll('.engine-radio').forEach(r => r.addEventListener('change', syncEngineCards));
+syncEngineCards();
+</script>
 {% endblock %}
