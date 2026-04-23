@@ -149,48 +149,227 @@ REGRAS CRÍTICAS:
 
 
 def _local_pitch_fallback(idea_data: dict) -> dict:
-    startup_name = idea_data.get("startup_name", "Startup")
-    one_liner = idea_data.get("one_liner", "").strip() or (
-        f"{startup_name} resolve um problema real com uma solucao escalável."
+    s = idea_data
+    startup_name = s.get("startup_name", "Startup")
+    one_liner = (s.get("one_liner", "") or "").strip() or f"{startup_name}: solução escalável para um problema real de mercado."
+    problem = (s.get("problem", "") or "").strip() or "Lacuna de eficiência operacional com impacto direto em custo e experiência do cliente."
+    solution = (s.get("solution", "") or "").strip() or "Plataforma orientada por dados que automatiza processos críticos e entrega resultado mensurável."
+    target_customer = (s.get("target_customer", "") or "").strip() or "Empresas de médio porte com necessidade de escalar operações sem aumentar headcount."
+    market_size = (s.get("market_size", "") or "").strip() or "Mercado em expansão com crescimento acelerado e baixa penetração de soluções digitais."
+    business_model = (s.get("business_model", "") or "").strip() or "SaaS com receita recorrente mensal, expansão por upsell e modelo de precificação por uso."
+    competitive_advantage = (s.get("competitive_advantage", "") or "").strip() or "Combinação de dados proprietários, integração nativa com sistemas existentes e time especializado no setor."
+    traction = (s.get("traction", "") or "").strip() or "Primeiros clientes ativos, feedbacks positivos e métricas de engajamento em crescimento consistente."
+    team = (s.get("team", "") or "").strip() or "Equipe fundadora com experiência combinada em produto, tecnologia e desenvolvimento de negócios."
+    funding_goal = (s.get("funding_goal", "") or "").strip() or "Não informado"
+    use_of_funds = (s.get("use_of_funds", "") or "").strip() or "Desenvolvimento de produto, expansão comercial e fortalecimento da estrutura operacional."
+    call_to_action = (s.get("call_to_action", "") or "").strip() or "Reunião para aprofundar a tese de investimento e alinhar próximos passos da rodada."
+
+    elevator_pitch = (
+        f"{startup_name} atua em um mercado onde {problem.lower().rstrip('.')} afeta diretamente a eficiência e "
+        f"o crescimento das organizações. Nossa solução — {solution.lower().rstrip('.')} — foi desenvolvida "
+        f"especificamente para {target_customer.lower().rstrip('.')}, entregando resultados concretos desde os "
+        f"primeiros ciclos de uso. Operamos em {market_size.lower().rstrip('.')}, com {business_model.lower().rstrip('.')}, "
+        f"o que nos posiciona para escalar com previsibilidade de receita e eficiência de aquisição. "
+        f"{traction} Buscamos parceiros que compartilhem a visão de construir um negócio líder neste segmento."
     )
-    problem = idea_data.get("problem", "Dor latente com impacto direto no mercado-alvo.")
-    solution = idea_data.get("solution", "Solucao orientada por dados e validada com usuarios reais.")
-    target_customer = idea_data.get("target_customer", "Empresas ou consumidores com necessidade especifica.")
-    market_size = idea_data.get("market_size", "Mercado em expansao com espaco para lideranca vertical.")
-    business_model = idea_data.get("business_model", "Modelo de receita recorrente com margens crescentes.")
-    competitive_advantage = idea_data.get("competitive_advantage", "Diferenciais tecnicos e operacionais claros.")
-    traction = idea_data.get("traction", "Primeiras validacoes e metricas de engajamento em evolucao.")
-    team = idea_data.get("team", "Equipe com expertise combinada em produto, tecnologia e go-to-market.")
-    funding_goal = idea_data.get("funding_goal", "Nao informado")
-    use_of_funds = idea_data.get("use_of_funds", "Produto, comercial e operacoes.")
+
+    sections = [
+        {
+            "title": "Problema e Oportunidade",
+            "content": (
+                f"{problem} Esta dor afeta diretamente {target_customer.lower()}, gerando custos operacionais, "
+                f"ineficiências e perda de competitividade. O mercado atual carece de soluções que combinem "
+                f"simplicidade de adoção com profundidade técnica para resolver este desafio de forma definitiva. "
+                f"O momento é propício: a digitalização acelerada do setor amplia a janela de oportunidade para "
+                f"quem chega com proposta de valor clara e capacidade de execução comprovada."
+            ),
+        },
+        {
+            "title": "Solução e Diferencial",
+            "content": (
+                f"{solution} A abordagem da {startup_name} se diferencia pela combinação de {competitive_advantage.lower().rstrip('.')}. "
+                f"Diferente das alternativas existentes, a solução foi construída com foco em resultado mensurável "
+                f"desde o primeiro uso, reduzindo o tempo de implementação e o custo de mudança para o cliente. "
+                f"A arquitetura técnica permite escalar sem perda de qualidade ou aumento proporcional de custo, "
+                f"criando vantagem estrutural sustentável no longo prazo."
+            ),
+        },
+        {
+            "title": "Mercado e Segmentação",
+            "content": (
+                f"{market_size} O segmento inicial de foco — {target_customer.lower().rstrip('.')} — representa "
+                f"o ponto de entrada com maior densidade de problema e menor resistência de adoção. "
+                f"A partir desta base, a {startup_name} planeja expansão para segmentos adjacentes, "
+                f"ampliando o TAM endereçável sem abandonar o núcleo de competência já validado. "
+                f"A dinâmica do setor favorece soluções que combinem especialização vertical com integração horizontal, "
+                f"criando oportunidade para uma empresa definir o padrão do mercado."
+            ),
+        },
+        {
+            "title": "Modelo de Negócio e Unit Economics",
+            "content": (
+                f"{business_model} Este modelo foi escolhido pela previsibilidade de receita, baixo churn potencial "
+                f"e capacidade de expansão de receita por conta sem aumento proporcional de CAC. "
+                f"À medida que a base de clientes cresce, os efeitos de dados e rede ampliam o moat competitivo "
+                f"e melhoram os indicadores de LTV/CAC, tornando o negócio mais robusto a cada ciclo de crescimento. "
+                f"O caminho para margem positiva é claro e não depende de volumes extremos para ser viável."
+            ),
+        },
+        {
+            "title": "Tração e Validação",
+            "content": (
+                f"{traction} Estes indicadores validam não apenas a proposta de valor, mas também a capacidade "
+                f"de execução do time em condições reais de mercado. O ritmo de crescimento atual evidencia que "
+                f"o fit produto-mercado está sendo alcançado, e os feedbacks qualitativos dos primeiros clientes "
+                f"confirmam a relevância do problema e a eficácia da solução. "
+                f"O próximo ciclo de crescimento será acelerado com o capital desta rodada, transformando "
+                f"validações iniciais em crescimento sustentado e previsível."
+            ),
+        },
+        {
+            "title": "Time e Capacidade de Execução",
+            "content": (
+                f"{team} A composição do time foi pensada para cobrir os pilares críticos desta fase: "
+                f"desenvolvimento de produto, expansão comercial e gestão operacional. "
+                f"A experiência combinada dos fundadores neste setor específico reduz o risco de execução "
+                f"e acelera a curva de aprendizado frente a desafios que times genéricos levariam mais tempo para superar. "
+                f"O time tem disciplina de métricas, cultura de iteração rápida e o comprometimento necessário "
+                f"para navegar os desafios de crescimento desta fase."
+            ),
+        },
+        {
+            "title": "Estratégia de Go-to-Market",
+            "content": (
+                f"A estratégia GTM da {startup_name} prioriza canais com menor CAC e maior potencial de expansão orgânica. "
+                f"O foco inicial em {target_customer.lower().rstrip('.')} permite construir casos de uso robustos, "
+                f"referências comerciais e uma base de dados que alimenta tanto o produto quanto a argumentação de vendas. "
+                f"Parcerias estratégicas com players estabelecidos no setor reduzem o custo de entrada e aceleram "
+                f"o ciclo de vendas nos primeiros 12 meses. O playbook de expansão é replicável e escala "
+                f"sem dependência de headcount proporcional."
+            ),
+        },
+        {
+            "title": "Vantagem Competitiva e Moat",
+            "content": (
+                f"{competitive_advantage} Esta vantagem se torna mais difícil de replicar à medida que a base "
+                f"de clientes cresce, pois cada novo cliente enriquece os dados proprietários, melhora o produto "
+                f"e fortalece os efeitos de rede. A {startup_name} está construindo um moat baseado em "
+                f"conhecimento setorial profundo, integração técnica com fluxos críticos do cliente e uma "
+                f"experiência de produto que gera dependência funcional positiva. "
+                f"A barreira de entrada para novos competidores aumenta a cada trimestre de operação."
+            ),
+        },
+    ]
+
+    script_3min = [
+        f"Passo 1 — Abertura (0-20s): Imagine perder receita e eficiência todos os dias por causa de {problem.lower().rstrip('.')}. É exatamente isso que acontece com {target_customer.lower().rstrip('.')} hoje — e ninguém resolveu isso de forma definitiva ainda.",
+        f"Passo 2 — Problema (20-45s): {problem} Este problema custa às empresas tempo, dinheiro e competitividade. As soluções atuais são fragmentadas, caras de implementar ou foram construídas para outros segmentos — e por isso falham na entrega de resultado real.",
+        f"Passo 3 — Solução (45-75s): {startup_name} resolve isso com {solution.lower().rstrip('.')}. O diferencial está em {competitive_advantage.lower().rstrip('.')} — o que nos permite entregar resultado desde o primeiro ciclo de uso, com adoção simples e sem meses de implementação.",
+        f"Passo 4 — Mercado e Tração (75-110s): Estamos em {market_size.lower().rstrip('.')}. {traction} Estes números mostram que o mercado valida nossa abordagem e que estamos no ritmo certo para capturar uma posição relevante neste segmento.",
+        f"Passo 5 — Time e Execução (110-140s): {team} Temos o conhecimento setorial, a disciplina de execução e o network para escalar com velocidade. Cada membro do time foi escolhido para cobrir os riscos críticos desta fase de crescimento.",
+        f"Passo 6 — Ask e Próximos Passos (140-180s): Estamos captando {funding_goal} para {use_of_funds.lower().rstrip('.')}. Este capital nos leva aos milestones necessários para a próxima rodada em posição de força. {call_to_action}",
+    ]
+
+    pitch_deck = [
+        {"slide": 1, "title": "Capa", "bullets": [
+            one_liner,
+            startup_name,
+            "Pitch de Investimento — Rodada Seed",
+        ]},
+        {"slide": 2, "title": "O Problema", "bullets": [
+            problem,
+            f"Afeta diretamente: {target_customer}",
+            "Soluções existentes são fragmentadas, caras ou foram construídas para outros contextos",
+            "A janela de oportunidade está aberta — o mercado precisa de uma solução definitiva agora",
+        ]},
+        {"slide": 3, "title": "Nossa Solução", "bullets": [
+            solution,
+            f"Construída especificamente para {target_customer.lower()}",
+            competitive_advantage,
+            "Resultado mensurável desde o primeiro ciclo de uso — sem meses de implementação",
+        ]},
+        {"slide": 4, "title": "Mercado Endereçável", "bullets": [
+            market_size,
+            f"Segmento inicial de foco: {target_customer}",
+            "Expansão para verticais adjacentes após consolidação da base inicial",
+            "Dinâmica do setor favorece novos entrantes com produto superior e execução disciplinada",
+        ]},
+        {"slide": 5, "title": "Modelo de Negócio", "bullets": [
+            business_model,
+            "Receita previsível com potencial de expansão via upsell e cross-sell por conta",
+            "LTV/CAC favorável com melhoria contínua à medida que a base de clientes cresce",
+            "Margens crescentes com escala — estrutura de custo não cresce proporcionalmente à receita",
+        ]},
+        {"slide": 6, "title": "Tração e Validação", "bullets": [
+            traction,
+            "Feedback qualitativo confirma product-market fit em construção",
+            "Métricas de engajamento e retenção acima da média do setor",
+            "Primeiros clientes geram casos de uso, referências e dados para melhorar o produto",
+        ]},
+        {"slide": 7, "title": "Estratégia GTM", "bullets": [
+            f"Canal principal: abordagem direta e consultiva a {target_customer.lower()}",
+            "Parcerias estratégicas para reduzir CAC e acelerar o ciclo de vendas",
+            "Playbook de expansão replicável após validação do segmento inicial",
+            "Expansão geográfica e vertical planejada para 18-36 meses",
+        ]},
+        {"slide": 8, "title": "Vantagem Competitiva", "bullets": [
+            competitive_advantage,
+            "Moat crescente: dados proprietários e efeitos de rede com cada novo cliente",
+            "Switching cost alto após integração com fluxos críticos do cliente",
+            "Barreira técnica e de conhecimento setorial que aumenta com o tempo de operação",
+        ]},
+        {"slide": 9, "title": "Time", "bullets": [
+            team,
+            "Experiência setorial específica reduz risco de execução nesta fase",
+            "Cultura de métricas, iteração rápida e foco implacável em resultado",
+            "Network e advisory estratégico para abertura de portas e aceleração comercial",
+        ]},
+        {"slide": 10, "title": "Captação e Uso do Capital", "bullets": [
+            f"Meta desta rodada: {funding_goal}",
+            f"Alocação estratégica: {use_of_funds}",
+            "Milestones claros e mensuráveis associados a cada frente de investimento",
+            "Runway de 18-24 meses para alcançar métricas que suportam a próxima rodada",
+        ]},
+        {"slide": 11, "title": "Visão e Roadmap", "bullets": [
+            f"{startup_name}: referência no segmento em 36 meses",
+            "Expansão de produto guiada por dados e feedback dos primeiros clientes",
+            "Internacionalização planejada após consolidação e domínio do mercado doméstico",
+            "Próxima rodada preparada com KPIs comprovados e base sólida de crescimento",
+        ]},
+        {"slide": 12, "title": "Conclusão e Call to Action", "bullets": [
+            f"{startup_name} — {one_liner}",
+            "Mercado validado, time comprometido e solução com diferencial defensável",
+            f"{call_to_action}",
+            "O momento ideal para entrar é agora — antes da curva de aceleração",
+        ]},
+    ]
+
+    closing = (
+        f"{startup_name} representa uma tese clara: problema real e urgente, solução diferenciada com moat crescente, "
+        f"mercado em expansão e time com capacidade de execução comprovada. "
+        f"{traction} Este momento — antes da aceleração de crescimento — é a janela ideal para entrar com o maior upside potencial. "
+        f"Propomos o próximo passo: {call_to_action.lower().rstrip('.')}, para que possamos aprofundar a diligência, "
+        f"alinhar os termos da rodada e construir juntos um negócio de referência neste mercado."
+    )
 
     return {
-        "title": f"Pitch de Negócio - {startup_name}",
+        "title": f"{startup_name} — {one_liner[:70]}{'...' if len(one_liner) > 70 else ''}",
         "slogan": one_liner,
-        "sections": [
-            {"title": "Problema", "content": problem},
-            {"title": "Solucao", "content": solution},
-            {"title": "Cliente-Alvo", "content": target_customer},
-            {"title": "Tamanho de Mercado", "content": market_size},
-            {"title": "Modelo de Negocio", "content": business_model},
-            {"title": "Vantagem Competitiva", "content": competitive_advantage},
-            {"title": "Tracao", "content": traction},
-            {"title": "Time", "content": team},
-        ],
+        "sections": sections,
         "investment": {
             "funding_goal": funding_goal,
             "use_of_funds": use_of_funds,
+            "runway_months": "18-24 meses",
+            "key_milestones": (
+                f"(1) Escalar base de clientes com métricas de retenção sólidas; "
+                f"(2) Atingir break-even operacional ou receita recorrente que justifica próxima rodada; "
+                f"(3) Consolidar o playbook de vendas replicável para expansão acelerada."
+            ),
         },
-        "elevator_pitch": (
-            f"{startup_name} resolve {problem} entregando {solution} para {target_customer}, "
-            f"operando em {market_size} com {business_model}."
-        ),
-        "script_3min": [],
-        "pitch_deck": [],
-        "closing": (
-            f"Obrigado pela atencao. {startup_name} esta pronta para escalar com o suporte certo. "
-            "Propomos o proximo passo: uma reuniao para revisar a tese e os milestones da rodada."
-        ),
+        "elevator_pitch": elevator_pitch,
+        "script_3min": script_3min,
+        "pitch_deck": pitch_deck,
+        "closing": closing,
         "narrative_uniqueness_key": _build_pitch_uniqueness_key(idea_data),
         "engine_used": "local",
     }
