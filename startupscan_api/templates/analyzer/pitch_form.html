@@ -265,14 +265,14 @@ function goStep(n) {
         const ind   = document.getElementById("step-indicator-" + i);
         if (!panel || !ind) continue;
         if (i === n) {
+            panel.style.display = "block";
             panel.classList.add("active");
             ind.classList.add("active");
             ind.classList.remove("done");
         } else {
+            panel.style.display = "none";
             panel.classList.remove("active");
             ind.classList.remove("active");
-            if (i < n) ind.classList.add("done"); else ind.classList.remove("done");
-            // update connector line
             if (i < n) ind.classList.add("done"); else ind.classList.remove("done");
         }
     }
