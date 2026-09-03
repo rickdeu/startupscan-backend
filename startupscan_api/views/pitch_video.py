@@ -9,8 +9,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
 
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.models import PitchAnalysis
-from startupscan_api.roles import ROLE_ADMIN, ROLE_ANALISTA, ROLE_EMPREENDEDOR, get_user_role
+from startupscan_api.roles import ROLE_ADMIN, ROLE_ANALYST, ROLE_ENTREPRENEUR, get_user_role
 from .helpers import (
     _build_did_presenter_sources_lazy,
     _detect_presenter_gender_lazy,
@@ -23,8 +24,13 @@ from subscriptions.mixins import SubscriptionGate
 logger = logging.getLogger(__name__)
 
 
+def _ui_text_for_request(request):
+    language = normalize_ui_language(getattr(request, "ui_language", None))
+    return build_ui_text(language)
+
+
 class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
     required_feature = 'video_generation'
     required_counter = 'videos_per_month'
     usage_field = 'videos_count'
@@ -32,7 +38,7 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
         if (
-            get_user_role(request.user) != ROLE_ADMIN
+            get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST)
             and analysis.user
             and request.user.is_authenticated
             and analysis.user_id != request.user.id
@@ -54,7 +60,10 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
                 existing_state = cache.get(_video_generation_cache_key(existing_job_id))
                 if existing_state and existing_state.get("status") in {"PENDING", "RUNNING"}:
                     from django.contrib import messages
-                    messages.info(request, "Já existe uma geração de vídeo em andamento para esta análise.")
+                    messages.info(request, _ui_text_for_request(request).get(
+                        "msg_video_already_generating",
+                        "A video generation is already in progress for this analysis.",
+                    ))
                     return redirect(
                         f"{reverse('pitch_results', kwargs={'analysis_id': analysis.id})}?video_job_id={existing_job_id}"
                     )
@@ -98,7 +107,10 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
 
             if video_mode == "did_only" and not presenter_url:
                 from django.contrib import messages
-                messages.error(request, "No modo D-ID, envie uma imagem real do apresentador antes de gerar o vídeo.")
+                messages.error(request, _ui_text_for_request(request).get(
+                    "msg_did_mode_requires_presenter_image",
+                    "In D-ID mode, upload a real presenter photo before generating the video.",
+                ))
                 return redirect("pitch_results", analysis_id=analysis.id)
 
             if (
@@ -110,7 +122,10 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
                 from django.contrib import messages
                 messages.error(
                     request,
-                    "No modo D-ID, a imagem precisa de URL pública HTTPS. Abra o sistema pelo link externo e tente novamente.",
+                    _ui_text_for_request(request).get(
+                        "msg_did_requires_public_https_image",
+                        "In D-ID mode, the image needs a public HTTPS URL. Open the system via the external link and try again.",
+                    ),
                 )
                 return redirect("pitch_results", analysis_id=analysis.id)
 
@@ -123,7 +138,7 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
                 generation_mode=video_mode,
             )
 
-            if request.user.is_authenticated and get_user_role(request.user) != ROLE_ADMIN:
+            if request.user.is_authenticated and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
                 from subscriptions.models import MonthlyUsage
                 MonthlyUsage.increment(request.user, 'videos_count')
 
@@ -138,7 +153,10 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
             analysis.save(update_fields=["metadata", "updated_at"])
 
             from django.contrib import messages
-            messages.success(request, "Geração de vídeo iniciada. Acompanhe o progresso nesta página.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_video_generation_started",
+                "Video generation started. Track the progress on this page.",
+            ))
             return redirect(
                 f"{reverse('pitch_results', kwargs={'analysis_id': analysis.id})}?video_job_id={job_id}"
             )
@@ -146,18 +164,21 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
         except Exception as exc:
             logger.error("Falha ao gerar vídeo explicativo: %s", str(exc), exc_info=True)
             from django.contrib import messages
-            messages.error(request, "Não foi possível gerar o vídeo explicativo agora. Tente novamente em instantes.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_video_generation_failed",
+                "Could not generate the explainer video right now. Please try again shortly.",
+            ))
 
         return redirect("pitch_results", analysis_id=analysis.id)
 
 
 class PitchPresenterGenderDetectView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
         if (
-            get_user_role(request.user) != ROLE_ADMIN
+            get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST)
             and analysis.user
             and request.user.is_authenticated
             and analysis.user_id != request.user.id
@@ -206,12 +227,12 @@ class PitchPresenterGenderDetectView(RoleRequiredMixin, View):
 
 
 class PitchExplainerVideoProgressView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request, analysis_id, job_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
         if (
-            get_user_role(request.user) != ROLE_ADMIN
+            get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST)
             and analysis.user
             and request.user.is_authenticated
             and analysis.user_id != request.user.id

@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 from pathlib import Path
 from datetime import datetime
 
@@ -35,6 +36,35 @@ def _detect_presenter_gender_lazy(*args, **kwargs):
 def _generate_explainer_video_lazy(*args, **kwargs):
     from startupscan_api.services.pitch_video import generate_explainer_video
     return generate_explainer_video(*args, **kwargs)
+
+
+def _is_meaningful_pitch_text(text: str) -> bool:
+    """
+    Rejects low-effort/gibberish submissions (e.g. a single character or
+    word repeated hundreds of times) that would otherwise pass a simple
+    minimum-length check.
+    """
+    cleaned = (text or "").strip()
+    if len(cleaned) < 100:
+        return False
+
+    words = re.findall(r"\S+", cleaned.lower())
+    if len(words) < 15:
+        return False
+
+    unique_words = set(words)
+    if len(unique_words) < 8:
+        return False
+
+    most_common_count = max(words.count(w) for w in unique_words)
+    if most_common_count / len(words) > 0.5:
+        return False
+
+    letters_only = re.sub(r"[^a-zà-öø-ÿ]", "", cleaned.lower())
+    if len(letters_only) > 40 and len(set(letters_only)) <= 3:
+        return False
+
+    return True
 
 
 def _safe_exception_message(exc: Exception, max_len: int = 280) -> str:

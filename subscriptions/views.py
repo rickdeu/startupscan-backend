@@ -34,7 +34,7 @@ def _get_ui_text(request):
 
 
 class PlansView(View):
-    """Página pública com os planos disponíveis."""
+    """Public page listing the available plans."""
 
     def get(self, request):
         all_plans = list(SubscriptionPlan.objects.filter(is_active=True).order_by('price_usd'))
@@ -70,7 +70,7 @@ class PlansView(View):
 
 
 class CheckoutView(LoginRequiredMixin, View):
-    """Inicia o fluxo de pagamento Stripe Checkout."""
+    """Starts the Stripe Checkout payment flow."""
 
     def post(self, request):
         ui = _get_ui_text(request)
@@ -133,7 +133,7 @@ class CheckoutCancelView(View):
 
 
 class BillingPortalView(LoginRequiredMixin, View):
-    """Redireciona para o Stripe Billing Portal."""
+    """Redirects to the Stripe Billing Portal."""
 
     def get(self, request):
         ui = _get_ui_text(request)
@@ -156,7 +156,7 @@ class BillingPortalView(LoginRequiredMixin, View):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(View):
-    """Recebe e processa webhooks do Stripe."""
+    """Receives and processes Stripe webhooks."""
 
     def post(self, request):
         stripe_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
@@ -188,7 +188,7 @@ class StripeWebhookView(View):
 
 
 class SubscriptionStatusView(LoginRequiredMixin, View):
-    """API JSON com o status da subscrição do utilizador."""
+    """JSON API with the user's subscription status."""
 
     def get(self, request):
         sub = getattr(request.user, 'subscription', None)

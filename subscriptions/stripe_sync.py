@@ -25,7 +25,7 @@ def _get_stripe():
 
 
 def sync_plan_to_stripe(plan) -> bool:
-    """Cria ou atualiza produto+preço no Stripe para o plano dado."""
+    """Creates or updates the product+price in Stripe for the given plan."""
     stripe = _get_stripe()
     if not stripe or plan.tier == 'trial' or plan.price_usd == 0:
         return False
@@ -46,7 +46,7 @@ def sync_plan_to_stripe(plan) -> bool:
             plan.stripe_product_id = product.id
             plan.save(update_fields=['stripe_product_id'])
 
-        # Preços no Stripe são imutáveis — só cria um novo se o valor mudou
+        # Prices in Stripe are immutable — only create a new one if the value changed
         needs_new_price = not plan.stripe_price_id
         if not needs_new_price:
             try:
@@ -79,7 +79,7 @@ def sync_plan_to_stripe(plan) -> bool:
 
 
 def create_checkout_session(user, plan, success_url: str, cancel_url: str):
-    """Cria uma Stripe Checkout Session para o utilizador assinar o plano."""
+    """Creates a Stripe Checkout Session for the user to subscribe to the plan."""
     stripe = _get_stripe()
     if not stripe or not plan.stripe_price_id:
         raise ValueError('Stripe não configurado ou plano sem price_id.')
@@ -106,7 +106,7 @@ def create_checkout_session(user, plan, success_url: str, cancel_url: str):
 
 
 def create_portal_session(user, return_url: str):
-    """Cria uma Stripe Billing Portal Session para gerir subscrição."""
+    """Creates a Stripe Billing Portal Session to manage the subscription."""
     stripe = _get_stripe()
     if not stripe:
         raise ValueError('Stripe não configurado.')
@@ -124,7 +124,7 @@ def create_portal_session(user, return_url: str):
 
 
 def handle_stripe_event(event) -> bool:
-    """Processa um evento Stripe e atualiza a BD."""
+    """Processes a Stripe event and updates the DB."""
     event_type = event.get('type', '')
     data_obj = event.get('data', {}).get('object', {})
 

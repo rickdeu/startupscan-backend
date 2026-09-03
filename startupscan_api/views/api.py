@@ -27,6 +27,7 @@ except Exception:
         def successful(self):
             return False
 
+from startupscan_api.i18n import normalize_ui_language
 from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.serializers import BatchAnalysisSerializer
 from startupscan_api.services.model_training import ensure_model_exists, predict_pitch_score, train_model_task
@@ -34,7 +35,7 @@ from startupscan_api.services.pitch_input import extract_text_from_uploaded_file
 from startupscan_api.tasks import process_batch_analysis
 from startupscan_api.util.file_management import TempFileManager
 from startupscan_api.utils import generate_interpretable_report, prepare_features
-from .helpers import _safe_exception_message
+from .helpers import _is_meaningful_pitch_text, _safe_exception_message
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,17 @@ class StartupPitchAnalyzer(APIView):
                     {"error": "Pitch text not provided. Send text or upload a document."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            if len(text) < 100:
+                return Response(
+                    {"error": "The pitch text must be at least 100 characters long."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not _is_meaningful_pitch_text(text):
+                return Response(
+                    {"error": "The pitch text doesn't look like a real description of the startup. "
+                              "Please provide a meaningful description, without repetition or random text."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             with TempFileManager(audio_file, video_file) as file_paths:
                 audio_path, video_path = file_paths
@@ -79,9 +91,12 @@ class StartupPitchAnalyzer(APIView):
                 prediction = None
                 report = None
                 engine_used = model_source
+                report_language = normalize_ui_language(getattr(request, "ui_language", None))
 
                 if model_source == "gpt":
-                    prediction, report, engine_used = analyze_with_gpt(text, financial_data, metadata)
+                    prediction, report, engine_used = analyze_with_gpt(
+                        text, financial_data, metadata, language=report_language,
+                    )
 
                 if prediction is None:
                     model = ensure_model_exists()
@@ -96,7 +111,7 @@ class StartupPitchAnalyzer(APIView):
                         financial_data=financial_data,
                         precomputed_features=features,
                     )
-                    report = generate_interpretable_report(prediction, metadata)
+                    report = generate_interpretable_report(prediction, metadata, language=report_language)
                     engine_used = "local"
 
                 report = ensure_report_dict(report, prediction)
@@ -173,8 +188,8 @@ class BatchAnalysisView(APIView):
         try:
             if request.user.is_authenticated:
                 from subscriptions.mixins import check_feature_access
-                from startupscan_api.roles import ROLE_ADMIN, get_user_role
-                if get_user_role(request.user) != ROLE_ADMIN:
+                from startupscan_api.roles import ROLE_ADMIN, ROLE_ANALYST, get_user_role
+                if get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
                     allowed, _ = check_feature_access(request.user, 'batch_analysis')
                     if not allowed:
                         return Response(

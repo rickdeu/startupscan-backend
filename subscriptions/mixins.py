@@ -4,11 +4,19 @@ from functools import wraps
 from django.contrib import messages
 from django.shortcuts import redirect
 
-from startupscan_api.roles import ROLE_ADMIN, get_user_role
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
+from startupscan_api.roles import ROLE_ADMIN, ROLE_ANALYST, get_user_role
 
 logger = logging.getLogger(__name__)
 
 _REDIRECT_PLANS = 'subscription_plans'
+
+
+def _ui_text_for_request(request):
+    language = normalize_ui_language(
+        getattr(request, "ui_language", None) or request.session.get("ui_language")
+    )
+    return build_ui_text(language)
 
 
 def _get_user_subscription(user):
@@ -26,7 +34,7 @@ def _get_active_plan(user):
 
 
 def _is_admin(user):
-    return get_user_role(user) == ROLE_ADMIN
+    return get_user_role(user) in (ROLE_ADMIN, ROLE_ANALYST)
 
 
 def _gate_check(user, feature=None, counter=None, usage_field=None):
@@ -78,9 +86,14 @@ class SubscriptionGate:
         if _is_admin(request.user):
             return super().dispatch(request, *args, **kwargs)
 
+        ui_text = _ui_text_for_request(request)
+
         sub = _get_user_subscription(request.user)
         if sub is None or not sub.is_active:
-            messages.warning(request, 'A sua subscrição está inativa. Escolha um plano para continuar.')
+            messages.warning(request, ui_text.get(
+                'subscription_inactive_choose_plan',
+                'Your subscription is inactive. Choose a plan to continue.',
+            ))
             return redirect(_REDIRECT_PLANS)
 
         allowed, _ = _gate_check(
@@ -90,14 +103,17 @@ class SubscriptionGate:
             usage_field=self.usage_field,
         )
         if not allowed:
-            messages.warning(request, 'Esta funcionalidade requer um plano superior. Faça upgrade para aceder.')
+            messages.warning(request, ui_text.get(
+                'feature_requires_upgrade',
+                'This feature requires a higher plan. Upgrade to access it.',
+            ))
             return redirect(_REDIRECT_PLANS)
 
         return super().dispatch(request, *args, **kwargs)
 
 
 def subscription_required(feature: str | None = None, counter: str | None = None, usage_field: str | None = None):
-    """Decorador para function-based views."""
+    """Decorator for function-based views."""
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped(request, *args, **kwargs):
@@ -106,7 +122,13 @@ def subscription_required(feature: str | None = None, counter: str | None = None
 
             allowed, reason = _gate_check(request.user, feature=feature, counter=counter, usage_field=usage_field)
             if not allowed:
-                msg = 'Subscrição inativa.' if 'subscription' in reason else 'Limite mensal atingido.' if 'limit' in reason else 'Funcionalidade não disponível no seu plano.'
+                ui_text = _ui_text_for_request(request)
+                if 'subscription' in reason:
+                    msg = ui_text.get('subscription_inactive_short', 'Inactive subscription.')
+                elif 'limit' in reason:
+                    msg = ui_text.get('monthly_limit_reached', 'Monthly limit reached.')
+                else:
+                    msg = ui_text.get('feature_not_in_plan_short', 'Feature not available on your plan.')
                 messages.warning(request, msg)
                 return redirect(_REDIRECT_PLANS)
 

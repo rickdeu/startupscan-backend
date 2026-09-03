@@ -9,7 +9,8 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
 
-from startupscan_api.roles import ROLE_ADMIN, ROLE_ANALISTA, get_user_role
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
+from startupscan_api.roles import ROLE_ADMIN, ROLE_ANALYST, get_user_role
 from startupscan_api.services.model_registry import (
     get_active_model_name,
     get_meta_path,
@@ -29,8 +30,12 @@ from .mixins import RoleRequiredMixin
 logger = logging.getLogger(__name__)
 
 
+def _ui_text_for_request(request):
+    return build_ui_text(normalize_ui_language(getattr(request, "ui_language", None)))
+
+
 class ModelManagementView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
         models = _list_available_models()
@@ -62,7 +67,9 @@ class ModelManagementView(RoleRequiredMixin, View):
         try:
             if action == "fetch_external":
                 job_id = _start_model_training_job(action="fetch_external")
-                messages.success(request, "Importação de dataset iniciada. Acompanhe o progresso em tempo real.")
+                messages.success(request, _ui_text_for_request(request).get(
+                    "msg_dataset_import_started", "Dataset import started. Track progress in real time.",
+                ))
                 return redirect(f"{request.path}?job_id={job_id}")
 
             elif action == "train_new":
@@ -138,7 +145,9 @@ class ModelManagementView(RoleRequiredMixin, View):
                 messages.success(request, f"Modelo removido: {model_name}")
 
             else:
-                messages.error(request, "Ação inválida no painel de modelos.")
+                messages.error(request, _ui_text_for_request(request).get(
+                    "msg_invalid_model_panel_action", "Invalid action on the models panel.",
+                ))
 
         except Exception as exc:
             logger.error("Model management action failed: %s", str(exc), exc_info=True)
@@ -148,7 +157,7 @@ class ModelManagementView(RoleRequiredMixin, View):
 
 
 class ModelTrainingProgressView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request, job_id):
         state = cache.get(_model_training_cache_key(job_id))

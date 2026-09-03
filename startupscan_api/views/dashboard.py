@@ -10,8 +10,8 @@ from django.views import View
 from startupscan_api.models import PitchAnalysis
 from startupscan_api.roles import (
     ROLE_ADMIN,
-    ROLE_ANALISTA,
-    ROLE_EMPREENDEDOR,
+    ROLE_ANALYST,
+    ROLE_ENTREPRENEUR,
     get_user_role,
     role_access_matrix,
     role_home_url_name,
@@ -53,7 +53,7 @@ class LandingView(View):
 
 
 class DashboardView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
         role = get_user_role(request.user)
@@ -81,7 +81,7 @@ class DashboardView(RoleRequiredMixin, View):
             max_score = min_score
 
         all_scored = PitchAnalysis.objects.exclude(success_score__isnull=True)
-        if request.user.is_authenticated and role == ROLE_EMPREENDEDOR:
+        if request.user.is_authenticated and role == ROLE_ENTREPRENEUR:
             all_scored = all_scored.filter(user=request.user)
         if days > 0:
             all_scored = all_scored.filter(created_at__gte=timezone.now() - timedelta(days=days))
