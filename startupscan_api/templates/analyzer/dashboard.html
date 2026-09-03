@@ -10,7 +10,7 @@
         <div class="col-lg-8">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <span class="badge" style="background:rgba(255,255,255,.15);font-size:.72rem;letter-spacing:.06em;padding:.3rem .7rem;">
-                    <i class="fas fa-bolt me-1"></i>AI PLATFORM
+                    <i class="fas fa-bolt me-1"></i>{{ ui_text.ai_platform_badge|default:"AI PLATFORM" }}
                 </span>
             </div>
             <h1 class="display-6 fw-bold mb-2">{{ ui_text.dashboard_hero_title|default:"Centro Inteligente de Avaliação de Startups" }}</h1>
@@ -42,7 +42,7 @@
                     <span style="font-size:.8rem;font-weight:700;color:#22d3ee;">{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</span>
                 </div>
                 {% else %}
-                <p class="mb-0 small" style="color:#64748b;">{{ ui_text.no_active_model_detected|default:"Sem modelo ativo detectado." }}</p>
+                <p class="mb-0 small" style="color:#94a3b8;">{{ ui_text.no_active_model_detected|default:"Sem modelo ativo detectado." }}</p>
                 {% endif %}
             </div>
         </div>
@@ -54,28 +54,28 @@
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.min_score|default:"Score mínimo" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#94a3b8;">{{ ui_text.min_score|default:"Score mínimo" }}</label>
                 <input type="number" class="form-control" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.max_score|default:"Score máximo" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#94a3b8;">{{ ui_text.max_score|default:"Score máximo" }}</label>
                 <input type="number" class="form-control" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}">
             </div>
             <div class="col-md-2">
-                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.time_window|default:"Período" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#94a3b8;">{{ ui_text.time_window|default:"Período" }}</label>
                 <select class="form-select" name="days">
-                    <option value="30"  {% if filter_days == 30  %}selected{% endif %}>30 dias</option>
-                    <option value="90"  {% if filter_days == 90  %}selected{% endif %}>90 dias</option>
-                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>180 dias</option>
-                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>12 meses</option>
-                    <option value="0"   {% if filter_days == 0   %}selected{% endif %}>Todo o período</option>
+                    <option value="30"  {% if filter_days == 30  %}selected{% endif %}>{{ ui_text.days_last_30|default:"30 dias" }}</option>
+                    <option value="90"  {% if filter_days == 90  %}selected{% endif %}>{{ ui_text.days_last_90|default:"90 dias" }}</option>
+                    <option value="180" {% if filter_days == 180 %}selected{% endif %}>{{ ui_text.days_last_180|default:"180 dias" }}</option>
+                    <option value="365" {% if filter_days == 365 %}selected{% endif %}>{{ ui_text.days_last_12m|default:"12 meses" }}</option>
+                    <option value="0"   {% if filter_days == 0   %}selected{% endif %}>{{ ui_text.days_all_period|default:"Todo o período" }}</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#64748b;">{{ ui_text.engine|default:"Motor" }}</label>
+                <label class="form-label" style="font-size:.8rem;font-weight:600;color:#94a3b8;">{{ ui_text.engine|default:"Motor" }}</label>
                 <select class="form-select" name="engine">
-                    <option value="all"   {% if filter_engine == "all"   %}selected{% endif %}>Todos</option>
-                    <option value="local" {% if filter_engine == "local" %}selected{% endif %}>Local</option>
+                    <option value="all"   {% if filter_engine == "all"   %}selected{% endif %}>{{ ui_text.all_label|default:"Todos"|capfirst }}</option>
+                    <option value="local" {% if filter_engine == "local" %}selected{% endif %}>{{ ui_text.local_label|default:"Local"|capfirst }}</option>
                     <option value="gpt"   {% if filter_engine == "gpt"   %}selected{% endif %}>GPT</option>
                 </select>
             </div>
@@ -95,7 +95,7 @@
             <div class="kpi-icon"><i class="fas fa-chart-bar"></i></div>
             <span class="kpi-label">{{ ui_text.analyses_in_system|default:"Análises no sistema" }}</span>
             <h3 class="mb-0 counter" data-target="{{ global_stats.total|default:0 }}">0</h3>
-            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-line"></i> Total acumulado</div>
+            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-line"></i> {{ ui_text.total_accumulated|default:"Total acumulado" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-2">
@@ -103,7 +103,7 @@
             <div class="kpi-icon"><i class="fas fa-star-half-stroke"></i></div>
             <span class="kpi-label">{{ ui_text.average_score|default:"Score médio" }}</span>
             <h3 class="mb-0"><span class="counter-dec" data-target="{{ global_stats.avg_score|default:0 }}">0</span>/10</h3>
-            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-wave-square"></i> Índice geral</div>
+            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-wave-square"></i> {{ ui_text.overall_index|default:"Índice geral" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-3">
@@ -111,7 +111,7 @@
             <div class="kpi-icon"><i class="fas fa-trophy"></i></div>
             <span class="kpi-label">{{ ui_text.best_score|default:"Melhor score" }}</span>
             <h3 class="mb-0"><span class="counter-dec" data-target="{{ global_stats.best|default:0 }}">0</span>/10</h3>
-            <div class="kpi-trend" style="color:#34d399;"><i class="fas fa-arrow-up"></i> Recorde da plataforma</div>
+            <div class="kpi-trend" style="color:#34d399;"><i class="fas fa-arrow-up"></i> {{ ui_text.platform_record|default:"Recorde da plataforma" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-4">
@@ -119,7 +119,7 @@
             <div class="kpi-icon"><i class="fas fa-robot"></i></div>
             <span class="kpi-label">{{ ui_text.available_models|default:"Modelos disponíveis" }}</span>
             <h3 class="mb-0 counter" data-target="{{ models_count }}">0</h3>
-            <div class="kpi-trend" style="color:#fbbf24;"><i class="fas fa-microchip"></i> Motores de IA</div>
+            <div class="kpi-trend" style="color:#fbbf24;"><i class="fas fa-microchip"></i> {{ ui_text.ai_engines|default:"Motores de IA" }}</div>
         </div>
     </div>
 </div>
@@ -143,25 +143,25 @@
             <div class="card-body">
                 {% if user_sector_comparison %}
                 <div class="mb-3 p-3 rounded" style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);">
-                    <div class="small" style="color:#64748b;">Sector</div>
+                    <div class="small" style="color:#94a3b8;">{{ ui_text.sector|default:"Sector" }}</div>
                     <div class="fw-semibold">{{ user_sector_comparison.industry_label }}</div>
                 </div>
                 <div class="d-flex gap-3">
                     <div class="flex-1 text-center p-2 rounded" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);">
-                        <div class="small" style="color:#64748b;">Seu Score</div>
+                        <div class="small" style="color:#94a3b8;">{{ ui_text.your_score|default:"Seu Score" }}</div>
                         <div style="font-size:1.4rem;font-weight:800;color:#34d399;">{{ user_sector_comparison.latest_score }}</div>
                     </div>
                     <div class="flex-1 text-center p-2 rounded" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);">
-                        <div class="small" style="color:#64748b;">Média Sector</div>
+                        <div class="small" style="color:#94a3b8;">{{ ui_text.sector_average|default:"Média Sector" }}</div>
                         <div style="font-size:1.4rem;font-weight:800;color:#a78bfa;">{{ user_sector_comparison.sector_avg }}</div>
                     </div>
                 </div>
                 {% else %}
                 <div class="text-center py-4">
                     <i class="fas fa-chart-pie" style="font-size:2rem;color:#1e2d4a;"></i>
-                    <p class="small mt-2" style="color:#475569;">{{ ui_text.no_benchmark_data|default:"Sem dados suficientes para benchmark." }}</p>
+                    <p class="small mt-2" style="color:#8b98ab;">{{ ui_text.no_benchmark_data|default:"Sem dados suficientes para benchmark." }}</p>
                     <a href="{% url 'pitch_form' %}" class="btn btn-sm btn-primary mt-1">
-                        <i class="fas fa-plus me-1"></i>Criar análise
+                        <i class="fas fa-plus me-1"></i>{{ ui_text.create_analysis|default:"Criar análise" }}
                     </a>
                 </div>
                 {% endif %}
@@ -221,7 +221,7 @@
                     <tr>
                         <th style="width:60px;">ID</th>
                         <th>{{ ui_text.date|default:"Data" }}</th>
-                        <th>Score</th>
+                        <th>{{ ui_text.score|default:"Score" }}</th>
                         <th class="d-none d-md-table-cell">{{ ui_text.revenue|default:"Receita" }}</th>
                         <th class="d-none d-md-table-cell">{{ ui_text.growth|default:"Crescimento" }}</th>
                         <th class="d-none d-lg-table-cell">{{ ui_text.margin|default:"Margem" }}</th>
@@ -231,7 +231,7 @@
                 <tbody>
                     {% for analysis in recent_analyses %}
                     <tr style="cursor:pointer;" onclick="window.location='{% url 'pitch_results' analysis.id %}'">
-                        <td><span style="color:#64748b;font-size:.8rem;">#{{ analysis.id }}</span></td>
+                        <td><span style="color:#94a3b8;font-size:.8rem;">#{{ analysis.id }}</span></td>
                         <td style="font-size:.85rem;">{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
                         <td>
                             <span class="badge rounded-pill {% if analysis.success_score >= 7.5 %}bg-success{% elif analysis.success_score >= 5 %}bg-warning{% else %}bg-danger{% endif %}" style="font-size:.8rem;padding:.35rem .65rem;">
@@ -243,7 +243,7 @@
                         <td class="d-none d-lg-table-cell" style="font-size:.85rem;">{{ analysis.profit_margin|floatformat:1 }}%</td>
                         <td onclick="event.stopPropagation();">
                             <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm btn-primary" style="font-size:.78rem;">
-                                <i class="fas fa-eye me-1"></i>Ver
+                                <i class="fas fa-eye me-1"></i>{{ ui_text.view_analysis|default:"Ver" }}
                             </a>
                         </td>
                     </tr>
@@ -254,7 +254,7 @@
         {% else %}
         <div class="p-5 text-center">
             <i class="fas fa-chart-bar" style="font-size:2.5rem;color:#1e2d4a;"></i>
-            <p class="mt-3 mb-3" style="color:#475569;">{{ ui_text.no_analyses_yet|default:"Nenhuma análise encontrada até agora." }}</p>
+            <p class="mt-3 mb-3" style="color:#8b98ab;">{{ ui_text.no_analyses_yet|default:"Nenhuma análise encontrada até agora." }}</p>
             <a href="{% url 'pitch_form' %}" class="btn btn-primary">
                 <i class="fas fa-rocket me-2"></i>{{ ui_text.new_analysis|default:"Nova Análise" }}
             </a>
@@ -268,7 +268,7 @@
     <p class="mb-3">{{ ui_text.login_to_track|default:"Faça login para acompanhar análises, modelos e oportunidades." }}</p>
     <div class="d-flex gap-2 justify-content-center">
         <a href="{% url 'login' %}" class="btn btn-primary"><i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}</a>
-        <a href="{% url 'register' %}" class="btn btn-outline-light"><i class="fas fa-user-plus me-1"></i>Criar conta</a>
+        <a href="{% url 'register' %}" class="btn btn-outline-light"><i class="fas fa-user-plus me-1"></i>{{ ui_text.create_account|default:"Criar conta" }}</a>
     </div>
 </div>
 {% endif %}
@@ -287,6 +287,14 @@ const sectorLabels  = {{ chart_sector_labels_json|safe }};
 const sectorAvg     = {{ chart_sector_avg_json|safe }};
 
 const grid = { color: "rgba(148,163,184,0.14)" };
+
+const i18nScoreLabel      = "{{ ui_text.score|default:'Score' }}";
+const i18nDistLowLabel    = "{{ ui_text.low_label|default:'baixo'|capfirst }} (<5)";
+const i18nDistMidLabel    = "{{ ui_text.medium_label|default:'médio'|capfirst }} (5-7.4)";
+const i18nDistHighLabel   = "{{ ui_text.high_label|default:'alto'|capfirst }} (≥7.5)";
+const i18nRevenueLabel    = "{{ ui_text.revenue|default:'Receita' }} (AOA)";
+const i18nGrowthLabel     = "{{ ui_text.growth|default:'Crescimento' }} (%)";
+const i18nAvgScoreLabel   = "{{ ui_text.average_score|default:'Score médio' }}";
 
 // Animated counters
 document.querySelectorAll(".counter").forEach(function (el) {
@@ -319,7 +327,7 @@ if (scoreTrendCtx) {
         data: {
             labels,
             datasets: [{
-                label: "Score",
+                label: i18nScoreLabel,
                 data: scores,
                 borderColor: "#3b82f6",
                 backgroundColor: "rgba(59,130,246,0.12)",
@@ -344,7 +352,7 @@ if (distributionCtx) {
     new Chart(distributionCtx, {
         type: "doughnut",
         data: {
-            labels: ["Baixo (<5)", "Médio (5-7.4)", "Alto (≥7.5)"],
+            labels: [i18nDistLowLabel, i18nDistMidLabel, i18nDistHighLabel],
             datasets: [{ data: distribution, backgroundColor: ["#ef4444", "#f59e0b", "#10b981"], borderWidth: 0, hoverOffset: 6 }]
         },
         options: { plugins: { legend: { position: "bottom", labels: { color: "#94a3b8", padding: 12, boxWidth: 12 } } }, cutout: "68%" }
@@ -358,8 +366,8 @@ if (momentumCtx) {
         data: {
             labels,
             datasets: [
-                { type: "bar",  label: "Receita (AOA)", data: revenues, yAxisID: "yRevenue", backgroundColor: "rgba(16,185,129,0.4)", borderColor: "#059669", borderWidth: 1, borderRadius: 4 },
-                { type: "line", label: "Crescimento (%)", data: growth, yAxisID: "yGrowth", borderColor: "#8b5cf6", backgroundColor: "rgba(139,92,246,0.12)", tension: 0.4, pointRadius: 3 }
+                { type: "bar",  label: i18nRevenueLabel, data: revenues, yAxisID: "yRevenue", backgroundColor: "rgba(16,185,129,0.4)", borderColor: "#059669", borderWidth: 1, borderRadius: 4 },
+                { type: "line", label: i18nGrowthLabel, data: growth, yAxisID: "yGrowth", borderColor: "#8b5cf6", backgroundColor: "rgba(139,92,246,0.12)", tension: 0.4, pointRadius: 3 }
             ]
         },
         options: {
@@ -382,7 +390,7 @@ if (sectorCtx) {
         data: {
             labels: sectorLabels,
             datasets: [{
-                label: "Score médio",
+                label: i18nAvgScoreLabel,
                 data: sectorAvg,
                 backgroundColor: "rgba(14,165,233,0.4)",
                 borderColor: "#0284c7",

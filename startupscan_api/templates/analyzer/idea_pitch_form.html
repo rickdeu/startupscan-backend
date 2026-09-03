@@ -42,7 +42,7 @@
                     <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_startup_name }} <span style="color:#f87171;">*</span></label>
                     <input type="text" class="form-control {% if errors.startup_name %}is-invalid{% endif %}"
                            name="startup_name" value="{{ form_data.startup_name }}"
-                           placeholder="Ex: TechVenture AI"
+                           placeholder="{{ ui_text.idea_form_startup_name_placeholder|default:'Ex: TechVenture AI' }}"
                            style="background:#0f172a;border-color:{% if errors.startup_name %}rgba(239,68,68,.5){% else %}rgba(100,116,139,.3){% endif %};color:#e2e8f0;">
                     {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
                 </div>

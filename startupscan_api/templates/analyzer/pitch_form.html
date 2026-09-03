@@ -42,13 +42,13 @@
                     <div class="section-hd-icon"><i class="fas fa-building"></i></div>
                     <div>
                         <h5>{{ ui_text.pitch_form_startup_info|default:"Informação da Startup" }}</h5>
-                        <small style="color:#64748b;">Passo 1 de 3 — dados básicos de identificação</small>
+                        <small style="color:#94a3b8;">{{ ui_text.pitch_form_step1_caption|default:"Passo 1 de 3 — dados básicos de identificação" }}</small>
                     </div>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-5">
                         <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_startup_name }} <span style="color:#ef4444;">*</span></label>
-                        <input class="form-control {% if errors.startup_name %}is-invalid{% endif %}" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}" placeholder="ex: TechAngola AI" autofocus>
+                        <input class="form-control {% if errors.startup_name %}is-invalid{% endif %}" type="text" id="startup_name" name="startup_name" value="{{ form_data.startup_name }}" placeholder="{{ ui_text.pitch_form_startup_name_placeholder|default:'ex: TechAngola AI' }}" autofocus>
                         {% if errors.startup_name %}<div class="invalid-feedback">{{ errors.startup_name }}</div>{% endif %}
                     </div>
                     <div class="col-md-4">
@@ -62,7 +62,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_contact_email }}</label>
-                        <input class="form-control {% if errors.contact_email %}is-invalid{% endif %}" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}" placeholder="email@startup.com">
+                        <input class="form-control {% if errors.contact_email %}is-invalid{% endif %}" type="email" id="contact_email" name="contact_email" value="{{ form_data.contact_email }}" placeholder="{{ ui_text.pitch_form_email_placeholder|default:'email@startup.com' }}">
                         {% if errors.contact_email %}<div class="invalid-feedback">{{ errors.contact_email }}</div>{% endif %}
                     </div>
                 </div>
@@ -80,7 +80,7 @@
                     <div class="section-hd-icon"><i class="fas fa-file-lines"></i></div>
                     <div>
                         <h5>{{ ui_text.pitch_form_modalities|default:"Conteúdo do Pitch" }}</h5>
-                        <small style="color:#64748b;">Passo 2 de 3 — texto, ficheiros, áudio e vídeo</small>
+                        <small style="color:#94a3b8;">{{ ui_text.pitch_form_step2_caption|default:"Passo 2 de 3 — texto, ficheiros, áudio e vídeo" }}</small>
                     </div>
                 </div>
 
@@ -89,7 +89,7 @@
                     <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_pitch_text }}</label>
                     <textarea class="form-control {% if errors.text %}is-invalid{% endif %}" id="pitchText" name="text" rows="5" maxlength="8000" placeholder="{{ ui_text.pitch_form_pitch_text_help }}">{{ form_data.text }}</textarea>
                     <div class="d-flex justify-content-between mt-1">
-                        <small style="color:#64748b;">{{ ui_text.pitch_form_pitch_text_help }}</small>
+                        <small style="color:#94a3b8;">{{ ui_text.pitch_form_pitch_text_help }}</small>
                         <div class="char-counter" id="pitchTextCounter">0 / 8000</div>
                     </div>
                     {% if errors.text %}<div class="invalid-feedback d-block">{{ errors.text }}</div>{% endif %}
@@ -102,7 +102,7 @@
                         <div class="upload-zone" id="docZone">
                             <input type="file" id="text_file" name="text_file" accept=".txt,.md,.csv,.pdf,.docx">
                             <i class="fas fa-file-arrow-up uz-icon"></i>
-                            <div class="fw-semibold mb-1" style="font-size:.85rem;">Arraste o ficheiro aqui</div>
+                            <div class="fw-semibold mb-1" style="font-size:.85rem;">{{ ui_text.pitch_form_drag_file_here|default:"Arraste o ficheiro aqui" }}</div>
                             <div class="uz-text">.txt .md .csv .pdf .docx</div>
                             <div class="uz-file" id="docFileName"></div>
                         </div>
@@ -128,7 +128,7 @@
                         <div class="upload-zone mb-2" id="audioZone">
                             <input type="file" id="audio" name="audio" accept="audio/*">
                             <i class="fas fa-microphone-lines uz-icon"></i>
-                            <div class="fw-semibold mb-1" style="font-size:.85rem;">Carregar áudio</div>
+                            <div class="fw-semibold mb-1" style="font-size:.85rem;">{{ ui_text.pitch_form_upload_audio|default:"Carregar áudio" }}</div>
                             <div class="uz-text">mp3, wav, webm, ogg...</div>
                             <div class="uz-file" id="audioFileName"></div>
                         </div>
@@ -151,7 +151,7 @@
                         <div class="upload-zone mb-2" id="videoZone">
                             <input type="file" id="video" name="video" accept="video/*">
                             <i class="fas fa-film uz-icon"></i>
-                            <div class="fw-semibold mb-1" style="font-size:.85rem;">Carregar vídeo</div>
+                            <div class="fw-semibold mb-1" style="font-size:.85rem;">{{ ui_text.pitch_form_upload_video|default:"Carregar vídeo" }}</div>
                             <div class="uz-text">mp4, webm, mov...</div>
                             <div class="uz-file" id="videoFileName"></div>
                         </div>
@@ -170,7 +170,7 @@
 
                 <div class="d-flex justify-content-between mt-4">
                     <button type="button" class="btn btn-outline-light" onclick="goStep(1)">
-                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                        <i class="fas fa-arrow-left me-2"></i>{{ ui_text.back|default:"Voltar" }}
                     </button>
                     <button type="button" class="btn btn-primary px-4" onclick="goStep(3)">
                         {{ ui_text.pitch_form_financial_data|default:"Financeiro" }} <i class="fas fa-arrow-right ms-2"></i>
@@ -184,7 +184,7 @@
                     <div class="section-hd-icon" style="background:rgba(16,185,129,.14);color:#34d399;"><i class="fas fa-sack-dollar"></i></div>
                     <div>
                         <h5>{{ ui_text.pitch_form_financial_data|default:"Dados Financeiros" }}</h5>
-                        <small style="color:#64748b;">Passo 3 de 3 — métricas e motor de análise</small>
+                        <small style="color:#94a3b8;">{{ ui_text.pitch_form_step3_caption|default:"Passo 3 de 3 — métricas e motor de análise" }}</small>
                     </div>
                 </div>
 
@@ -225,7 +225,7 @@
                                     <input type="radio" name="model_source" value="local" {% if form_data.model_source|default:'local' == 'local' %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#3b82f6;">
                                     <div>
                                         <div class="fw-semibold" style="font-size:.88rem;"><i class="fas fa-microchip me-1" style="color:#60a5fa;"></i>{{ ui_text.pitch_form_engine_local }}</div>
-                                        <div class="small" style="color:#64748b;">Rápido, offline, sem custo adicional</div>
+                                        <div class="small" style="color:#94a3b8;">{{ ui_text.pitch_form_engine_local_desc|default:"Rápido, offline, sem custo adicional" }}</div>
                                     </div>
                                 </label>
                             </div>
@@ -234,7 +234,7 @@
                                     <input type="radio" name="model_source" value="gpt" {% if form_data.model_source == 'gpt' %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#8b5cf6;">
                                     <div>
                                         <div class="fw-semibold" style="font-size:.88rem;"><i class="fas fa-sparkles me-1" style="color:#a78bfa;"></i>{{ ui_text.pitch_form_engine_gpt }}</div>
-                                        <div class="small" style="color:#64748b;">Análise mais profunda com GPT-4 — requer plano Pro</div>
+                                        <div class="small" style="color:#94a3b8;">{{ ui_text.pitch_form_engine_gpt_desc|default:"Análise mais profunda com GPT-4 — requer plano Pro" }}</div>
                                     </div>
                                 </label>
                             </div>
@@ -244,7 +244,7 @@
 
                 <div class="d-flex justify-content-between mt-4">
                     <button type="button" class="btn btn-outline-light" onclick="goStep(2)">
-                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                        <i class="fas fa-arrow-left me-2"></i>{{ ui_text.back|default:"Voltar" }}
                     </button>
                     <button type="submit" class="btn btn-primary btn-lg px-5">
                         <i class="fas fa-chart-line me-2"></i>{{ ui_text.pitch_form_submit }}

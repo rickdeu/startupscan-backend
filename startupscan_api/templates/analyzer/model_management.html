@@ -51,7 +51,7 @@
                     <input type="hidden" name="action" value="train_new">
                     <div class="col-12">
                         <label class="form-label">{{ ui_text.models_name|default:"Nome do modelo" }}</label>
-                        <input class="form-control" type="text" name="model_name" placeholder="ex: modelo-growth-v1" required>
+                        <input class="form-control" type="text" name="model_name" placeholder="{{ ui_text.models_name_placeholder|default:'ex: modelo-growth-v1' }}" required>
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">{{ ui_text.models_dataset|default:"Base de treino" }}</label>
@@ -184,6 +184,9 @@
         const badge = document.getElementById("trainingStatusBadge");
         const meta = document.getElementById("trainingProgressMeta");
         const refreshBase = "{% url 'model_management' %}";
+        const processingFallback = "{{ ui_text.phase_processing|default:'Processando' }}...";
+        const jobLabel = "{{ ui_text.models_job|default:'Job' }}";
+        const updatedLabel = "{{ ui_text.updated_at_label|default:'atualizado em' }}";
         let polling = null;
 
         function clampProgress(v) {
@@ -209,9 +212,9 @@
 
                 bar.style.width = `${progress}%`;
                 bar.textContent = `${progress}%`;
-                msg.textContent = data.message || "Processando...";
+                msg.textContent = data.message || processingFallback;
                 setBadge(data.status || "RUNNING");
-                meta.textContent = `Job: ${jobId} | Atualizado: ${data.updated_at || "-"}`;
+                meta.textContent = `${jobLabel}: ${jobId} | ${updatedLabel}: ${data.updated_at || "-"}`;
 
                 if (data.status === "COMPLETED" || data.status === "FAILED") {
                     clearInterval(polling);

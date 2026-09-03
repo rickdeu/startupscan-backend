@@ -15,8 +15,8 @@
             <p class="mb-0" style="color:#94a3b8;font-size:.88rem;">{{ ui_text.investor_dashboard_hero_desc }}</p>
         </div>
         <div class="ms-auto">
-            <span class="badge" style="background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);font-size:.75rem;padding:.35rem .7rem;">
-                <i class="fas fa-circle me-1" style="font-size:.5rem;"></i>INVESTOR VIEW
+            <span class="badge" style="background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);font-size:.75rem;padding:.35rem .7rem;text-transform:uppercase;">
+                <i class="fas fa-circle me-1" style="font-size:.5rem;"></i>{{ ui_text.investor_view|default:"Investor View" }}
             </span>
         </div>
     </div>
@@ -74,7 +74,7 @@
                     <i class="fas fa-rocket" style="color:#60a5fa;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-bar me-1"></i>Total analisadas</div>
+            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-bar me-1"></i>{{ ui_text.trend_total_analyzed|default:"Total analisadas" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-2">
@@ -88,7 +88,7 @@
                     <i class="fas fa-star" style="color:#34d399;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#34d399;"><i class="fas fa-arrow-trend-up me-1"></i>Score &ge; 7.5</div>
+            <div class="kpi-trend" style="color:#34d399;"><i class="fas fa-arrow-trend-up me-1"></i>{{ ui_text.trend_score_ge_75|default:"Score ≥ 7.5" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-3">
@@ -102,7 +102,7 @@
                     <i class="fas fa-gauge-high" style="color:#a78bfa;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-calculator me-1"></i>Média /10</div>
+            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-calculator me-1"></i>{{ ui_text.trend_avg_10|default:"Média /10" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-4">
@@ -116,7 +116,7 @@
                     <i class="fas fa-trophy" style="color:#fcd34d;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#fcd34d;"><i class="fas fa-crown me-1"></i>Melhor score</div>
+            <div class="kpi-trend" style="color:#fcd34d;"><i class="fas fa-crown me-1"></i>{{ ui_text.best_score|default:"Melhor score" }}</div>
         </div>
     </div>
 </div>
@@ -128,7 +128,7 @@
             <div class="card-header d-flex align-items-center gap-2" style="border-bottom:1px solid rgba(100,116,139,.15);background:transparent;">
                 <i class="fas fa-chart-bar" style="color:#60a5fa;font-size:.9rem;"></i>
                 <span style="font-weight:600;font-size:.9rem;">{{ ui_text.visual_ranking_potential }}</span>
-                <span class="ms-auto badge" style="background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2);font-size:.72rem;">CLIQUE PARA VER</span>
+                <span class="ms-auto badge" style="background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2);font-size:.72rem;text-transform:uppercase;">{{ ui_text.click_to_view_badge|default:"CLIQUE PARA VER" }}</span>
             </div>
             <div class="card-body">
                 <canvas id="investorScoreChart" height="120"></canvas>
@@ -169,9 +169,9 @@
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
                             <div class="fw-bold" style="font-size:.95rem;color:#f1f5f9;">
-                                {% if analysis.startup_name %}{{ analysis.startup_name }}{% else %}Startup #{{ analysis.id }}{% endif %}
+                                {% if analysis.startup_name %}{{ analysis.startup_name }}{% else %}{{ ui_text.startup_label|default:"Startup" }} #{{ analysis.id }}{% endif %}
                             </div>
-                            <div style="font-size:.78rem;color:#64748b;margin-top:.2rem;">
+                            <div style="font-size:.78rem;color:#94a3b8;margin-top:.2rem;">
                                 <i class="fas fa-clock me-1"></i>{{ analysis.created_at|date:"d/m/Y" }}
                                 {% if analysis.user %}&nbsp;&bull;&nbsp;<i class="fas fa-user me-1"></i>{{ analysis.user.first_name|default:analysis.user.username }}{% endif %}
                             </div>
@@ -181,7 +181,7 @@
                                 color:{% if score >= 7.5 %}#34d399{% elif score >= 5 %}#fcd34d{% else %}#f87171{% endif %};">
                                 {{ score|floatformat:1 }}
                             </div>
-                            <div style="font-size:.65rem;color:#475569;text-transform:uppercase;letter-spacing:.05em;">/10</div>
+                            <div style="font-size:.65rem;color:#8b98ab;text-transform:uppercase;letter-spacing:.05em;">/10</div>
                         </div>
                     </div>
 
@@ -193,16 +193,16 @@
                     <!-- Thesis & readiness -->
                     {% if analysis.investor_pitch %}
                     <div class="mb-2" style="font-size:.82rem;">
-                        <span style="color:#64748b;">Tese:</span>
+                        <span style="color:#94a3b8;">{{ ui_text.thesis_label|default:"Tese" }}:</span>
                         <span style="color:#cbd5e1;margin-left:.4rem;">{{ analysis.investor_pitch.investment_thesis|truncatechars:80 }}</span>
                     </div>
                     <div class="mb-3" style="font-size:.82rem;">
-                        <span style="color:#64748b;">Prontidão:</span>
+                        <span style="color:#94a3b8;">{{ ui_text.readiness_label|default:"Prontidão" }}:</span>
                         <span style="color:#cbd5e1;margin-left:.4rem;">{{ analysis.investor_pitch.funding_readiness }}</span>
                     </div>
                     {% if analysis.investor_pitch.capital_use_plan %}
                     <div class="mb-3">
-                        <div style="font-size:.75rem;color:#64748b;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">{{ ui_text.suggested_use_of_capital }}</div>
+                        <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">{{ ui_text.suggested_use_of_capital }}</div>
                         <ul style="margin:0;padding-left:1.2rem;font-size:.8rem;color:#94a3b8;">
                             {% for item in analysis.investor_pitch.capital_use_plan %}
                             <li>{{ item }}</li>
@@ -231,7 +231,7 @@
                             <i class="fas fa-handshake me-1"></i>{{ ui_text.show_interest }}
                         </button>
                         {% else %}
-                        <span style="font-size:.78rem;color:#475569;"><i class="fas fa-user-slash me-1"></i>{{ ui_text.no_entrepreneur_connection }}</span>
+                        <span style="font-size:.78rem;color:#8b98ab;"><i class="fas fa-user-slash me-1"></i>{{ ui_text.no_entrepreneur_connection }}</span>
                         {% endif %}
                         {% endif %}
                     </div>
@@ -257,7 +257,7 @@
             <div class="col-12">
                 <div class="text-center py-5">
                     <i class="fas fa-binoculars" style="font-size:3rem;color:#334155;margin-bottom:1rem;display:block;"></i>
-                    <p style="color:#475569;margin:0;">{{ ui_text.no_scored_analyses }}</p>
+                    <p style="color:#8b98ab;margin:0;">{{ ui_text.no_scored_analyses }}</p>
                 </div>
             </div>
             {% endfor %}

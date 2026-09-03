@@ -189,7 +189,7 @@
                         <div class="label">{{ ui_text.landing_stats_engine }}</div>
                     </div>
                     <div class="hero-stat">
-                        <div class="value">7 dias</div>
+                        <div class="value">{{ ui_text.landing_stats_trial_days_value|default:"7 dias" }}</div>
                         <div class="label">{{ ui_text.landing_stats_trial }}</div>
                     </div>
                 </div>
@@ -197,16 +197,16 @@
             <div class="col-lg-6 hero-visual">
                 <div class="hero-card">
                     <div class="text-center mb-3">
-                        <div class="text-muted small mb-1">Score</div>
+                        <div class="text-muted small mb-1">{{ ui_text.score|default:"Score" }}</div>
                         <div class="score-ring"><span class="score-val">8.2</span></div>
-                        <div class="chip">Alto Potencial</div>
+                        <div class="chip">{{ ui_text.landing_demo_high_potential|default:"Alto Potencial" }}</div>
                     </div>
-                    <div class="metric-row"><span class="metric-label">Receita Anual</span><span class="metric-value">AOA 4,200,000</span></div>
-                    <div class="metric-row"><span class="metric-label">Crescimento</span><span class="metric-value">+38% <span class="chip">↑</span></span></div>
-                    <div class="metric-row"><span class="metric-label">Margem de Lucro</span><span class="metric-value">22%</span></div>
-                    <div class="metric-row"><span class="metric-label">Motor</span><span class="metric-value">GPT-4o</span></div>
-                    <div class="metric-row"><span class="metric-label">Prontidão inv.</span><span class="metric-value"><span class="chip">Alta</span></span></div>
-                    <div class="metric-row"><span class="metric-label">Escala</span><span class="metric-value"><span class="chip chip-warn">Moderado</span></span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.landing_demo_annual_revenue|default:"Receita Anual" }}</span><span class="metric-value">AOA 4,200,000</span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.growth|default:"Crescimento" }}</span><span class="metric-value">+38% <span class="chip">↑</span></span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.pitch_form_profit_margin|default:"Margem de Lucro" }}</span><span class="metric-value">22%</span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.engine|default:"Motor" }}</span><span class="metric-value">GPT-4o</span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.landing_demo_investor_readiness|default:"Prontidão inv." }}</span><span class="metric-value"><span class="chip">{{ ui_text.landing_demo_readiness_high|default:"Alta" }}</span></span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.landing_demo_scale_label|default:"Escala" }}</span><span class="metric-value"><span class="chip chip-warn">{{ ui_text.landing_demo_moderate_label|default:"Moderado" }}</span></span></div>
                     <div class="mt-3 d-grid">
                         <button class="btn btn-sm btn-purple" disabled><i class="fas fa-file-pdf me-1"></i> PDF</button>
                     </div>
@@ -247,43 +247,43 @@
             <div class="col-md-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-magnifying-glass-chart"></i></div>
-                    <div class="feature-title">Análise de Pitch por IA</div>
-                    <div class="feature-desc">Submeta texto, áudio ou vídeo. A IA analisa métricas financeiras, narrativa e potencial gerando um score detalhado de 0 a 10.</div>
+                    <div class="feature-title">{{ ui_text.landing_feat_pitch_ai_title|default:"Análise de Pitch por IA" }}</div>
+                    <div class="feature-desc">{{ ui_text.landing_feat_pitch_ai_desc|default:"Submeta texto, áudio ou vídeo. A IA analisa métricas financeiras, narrativa e potencial gerando um score detalhado de 0 a 10." }}</div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-file-powerpoint"></i></div>
-                    <div class="feature-title">Geração Automática de Pitch</div>
-                    <div class="feature-desc">A partir dos dados da sua startup, o sistema gera automaticamente um pitch deck completo em PDF com design profissional.</div>
+                    <div class="feature-title">{{ ui_text.landing_feat_auto_pitch_title|default:"Geração Automática de Pitch" }}</div>
+                    <div class="feature-desc">{{ ui_text.landing_feat_auto_pitch_desc|default:"A partir dos dados da sua startup, o sistema gera automaticamente um pitch deck completo em PDF com design profissional." }}</div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-hand-holding-dollar"></i></div>
-                    <div class="feature-title">Dashboard de Investidores</div>
-                    <div class="feature-desc">Investidores filtram startups com alto potencial. Entrepreneurs recebem sinais de interesse com mensagens personalizadas.</div>
+                    <div class="feature-title">{{ ui_text.landing_feat_investor_dash_title|default:"Dashboard de Investidores" }}</div>
+                    <div class="feature-desc">{{ ui_text.landing_feat_investor_dash_desc|default:"Investidores filtram startups com alto potencial. Entrepreneurs recebem sinais de interesse com mensagens personalizadas." }}</div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-robot"></i></div>
-                    <div class="feature-title">Motor GPT-4 (Pro)</div>
-                    <div class="feature-desc">Planos Pro utilizam GPT-4 para análise semântica avançada com insights contextuais e recomendações estratégicas personalizadas.</div>
+                    <div class="feature-title">{{ ui_text.landing_feat_gpt_engine_title|default:"Motor GPT-4 (Pro)" }}</div>
+                    <div class="feature-desc">{{ ui_text.landing_feat_gpt_engine_desc|default:"Planos Pro utilizam GPT-4 para análise semântica avançada com insights contextuais e recomendações estratégicas personalizadas." }}</div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-film"></i></div>
-                    <div class="feature-title">Vídeo Explicativo IA</div>
-                    <div class="feature-desc">Gere um vídeo explicativo do pitch com apresentador virtual, narração automática e design animado — pronto para partilhar.</div>
+                    <div class="feature-title">{{ ui_text.landing_feat_video_ai_title|default:"Vídeo Explicativo IA" }}</div>
+                    <div class="feature-desc">{{ ui_text.landing_feat_video_ai_desc|default:"Gere um vídeo explicativo do pitch com apresentador virtual, narração automática e design animado — pronto para partilhar." }}</div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-table"></i></div>
-                    <div class="feature-title">Análise em Lote (CSV)</div>
-                    <div class="feature-desc">Analise múltiplas startups de uma vez com um ficheiro CSV. Ideal para aceleradores e fundos que gerem portfolios.</div>
+                    <div class="feature-title">{{ ui_text.landing_feat_batch_title|default:"Análise em Lote (CSV)" }}</div>
+                    <div class="feature-desc">{{ ui_text.landing_feat_batch_desc|default:"Analise múltiplas startups de uma vez com um ficheiro CSV. Ideal para aceleradores e fundos que gerem portfolios." }}</div>
                 </div>
             </div>
         </div>
@@ -319,7 +319,7 @@
                     </div>
                     <div class="pb-4">
                         <div class="fw-bold mb-1">{{ ui_text.landing_footer_step2 }}</div>
-                        <div class="text-muted" style="font-size:.9rem;">Cole o texto, faça upload de um documento, áudio ou vídeo. Adicione dados financeiros para uma análise mais precisa.</div>
+                        <div class="text-muted" style="font-size:.9rem;">{{ ui_text.landing_how_step2_desc|default:"Cole o texto, faça upload de um documento, áudio ou vídeo. Adicione dados financeiros para uma análise mais precisa." }}</div>
                     </div>
                 </div>
                 <div class="d-flex gap-3 mb-4">
@@ -328,15 +328,15 @@
                         <div class="step-connector"></div>
                     </div>
                     <div class="pb-4">
-                        <div class="fw-bold mb-1">Receba o score e relatório completo</div>
-                        <div class="text-muted" style="font-size:.9rem;">A IA processa o pitch e gera um score de 0–10 com análise detalhada de pontos fortes, fracos e recomendações estratégicas.</div>
+                        <div class="fw-bold mb-1">{{ ui_text.landing_how_step3_title|default:"Receba o score e relatório completo" }}</div>
+                        <div class="text-muted" style="font-size:.9rem;">{{ ui_text.landing_how_step3_desc|default:"A IA processa o pitch e gera um score de 0–10 com análise detalhada de pontos fortes, fracos e recomendações estratégicas." }}</div>
                     </div>
                 </div>
                 <div class="d-flex gap-3">
                     <div class="step-num">4</div>
                     <div>
                         <div class="fw-bold mb-1">{{ ui_text.landing_footer_step3 }}</div>
-                        <div class="text-muted" style="font-size:.9rem;">Com um clique, exporte um pitch deck profissional ou um vídeo explicativo com apresentador virtual. Fique visível no dashboard de investidores.</div>
+                        <div class="text-muted" style="font-size:.9rem;">{{ ui_text.landing_how_step4_desc|default:"Com um clique, exporte um pitch deck profissional ou um vídeo explicativo com apresentador virtual. Fique visível no dashboard de investidores." }}</div>
                     </div>
                 </div>
             </div>
@@ -358,7 +358,7 @@
         <div class="billing-toggle" id="billingToggle">
             <button class="billing-btn active" data-billing="monthly" onclick="setBilling('monthly')">{{ ui_text.landing_billing_monthly }}</button>
             <button class="billing-btn" data-billing="annual" onclick="setBilling('annual')">
-                {{ ui_text.landing_billing_annual }} <span class="savings-pill">~33% off</span>
+                {{ ui_text.landing_billing_annual }} <span class="savings-pill">{{ ui_text.plans_annual_savings|default:"~33% off" }}</span>
             </button>
         </div>
 
@@ -366,20 +366,20 @@
             <!-- TRIAL -->
             <div class="col-md-6 col-lg-3">
                 <div class="plan-card">
-                    <div class="text-uppercase small text-muted fw-semibold mb-1">Trial</div>
+                    <div class="text-uppercase small text-muted fw-semibold mb-1">{{ ui_text.plan_name_trial|default:"Trial" }}</div>
                     <div class="plan-price-val mb-1">$0</div>
                     <div class="plan-price-period mb-3">{{ ui_text.landing_trial_free }}</div>
                     <hr style="border-color: var(--border);">
                     <ul class="plan-feature-list mb-4">
-                        <li><i class="fas fa-check"></i> 3 análises de pitch</li>
-                        <li><i class="fas fa-check"></i> Modelo local (XGBoost)</li>
-                        <li><i class="fas fa-check"></i> Upload de documento</li>
-                        <li><i class="fas fa-check"></i> Gerar pitch (local)</li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Análise GPT</span></li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Upload áudio/vídeo</span></li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Exportar PDF</span></li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Dashboard investidores</span></li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Vídeo IA</span></li>
+                        <li><i class="fas fa-check"></i> 3 {{ ui_text.landing_feat_pitch_analyses_suffix|default:"análises de pitch" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_local_model|default:"Modelo local" }} (XGBoost)</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_doc_upload|default:"Upload de documento" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.landing_feat_generate_pitch_local|default:"Gerar pitch (local)" }}</li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_no_gpt|default:"Análise GPT" }}</span></li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_no_audio_video|default:"Upload áudio/vídeo" }}</span></li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_no_pdf|default:"Exportar PDF" }}</span></li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_feat_investor_dash|default:"Dashboard investidores" }}</span></li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_no_video_ai|default:"Vídeo IA" }}</span></li>
                     </ul>
                     <a href="{% url 'register' %}" class="btn btn-outline-secondary w-100 mt-auto">{{ ui_text.landing_cta_trial }}</a>
                 </div>
@@ -388,26 +388,26 @@
             <!-- BASIC -->
             <div class="col-md-6 col-lg-3">
                 <div class="plan-card">
-                    <div class="text-uppercase small text-muted fw-semibold mb-1">Basic</div>
+                    <div class="text-uppercase small text-muted fw-semibold mb-1">{{ ui_text.plan_name_basic|default:"Basic" }}</div>
                     <div data-monthly>
                         <div class="plan-price-val mb-1">{% if basic_monthly %}${{ basic_monthly.price_usd|floatformat:0 }}{% else %}$50{% endif %}</div>
                         <div class="plan-price-period mb-3">/{{ ui_text.landing_billing_monthly|lower }}</div>
                     </div>
                     <div data-annual style="display:none">
                         <div class="plan-price-val mb-1">{% if basic_annual %}${{ basic_annual.price_usd|floatformat:0 }}{% else %}$400{% endif %}</div>
-                        <div class="plan-price-period mb-3">/{{ ui_text.landing_billing_annual|lower }} <span class="savings-pill">~33% off</span></div>
+                        <div class="plan-price-period mb-3">/{{ ui_text.landing_billing_annual|lower }} <span class="savings-pill">{{ ui_text.plans_annual_savings|default:"~33% off" }}</span></div>
                     </div>
                     <hr style="border-color: var(--border);">
                     <ul class="plan-feature-list mb-4">
-                        <li><i class="fas fa-check"></i> 15 análises/mês</li>
-                        <li><i class="fas fa-check"></i> Modelo local</li>
-                        <li><i class="fas fa-check"></i> Upload documento</li>
-                        <li><i class="fas fa-check"></i> Dados financeiros</li>
-                        <li><i class="fas fa-check"></i> PDF do relatório</li>
-                        <li><i class="fas fa-check"></i> Dashboard investidores</li>
-                        <li><i class="fas fa-check"></i> Gerar pitch PDF</li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Análise GPT</span></li>
-                        <li><i class="fas fa-xmark"></i> <span class="text-muted">Vídeo IA</span></li>
+                        <li><i class="fas fa-check"></i> 15 {{ ui_text.plans_feat_analyses|default:"análises/mês" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_local_model|default:"Modelo local" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_doc_upload|default:"Upload de documento" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_financial|default:"Dados financeiros" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_pdf_report|default:"PDF do relatório" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_investor_dash|default:"Dashboard investidores" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_pitch_pdf|default:"Gerar pitch PDF" }}</li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_no_gpt|default:"Análise GPT" }}</span></li>
+                        <li><i class="fas fa-xmark"></i> <span class="text-muted">{{ ui_text.plans_no_video_ai|default:"Vídeo IA" }}</span></li>
                     </ul>
                     <a href="{% url 'register' %}" class="btn btn-outline-light w-100 mt-auto">{{ ui_text.create_account }}</a>
                 </div>
@@ -417,8 +417,8 @@
             <div class="col-md-6 col-lg-3">
                 <div class="plan-card featured">
                     <div class="d-flex align-items-center gap-2 mb-1">
-                        <div class="text-uppercase small text-muted fw-semibold">Pro</div>
-                        <span class="plan-badge">Top</span>
+                        <div class="text-uppercase small text-muted fw-semibold">{{ ui_text.plan_name_pro|default:"Pro" }}</div>
+                        <span class="plan-badge">{{ ui_text.landing_plan_badge_top|default:"Top" }}</span>
                     </div>
                     <div data-monthly>
                         <div class="plan-price-val mb-1">{% if pro_monthly %}${{ pro_monthly.price_usd|floatformat:0 }}{% else %}$150{% endif %}</div>
@@ -426,19 +426,19 @@
                     </div>
                     <div data-annual style="display:none">
                         <div class="plan-price-val mb-1">{% if pro_annual %}${{ pro_annual.price_usd|floatformat:0 }}{% else %}$1200{% endif %}</div>
-                        <div class="plan-price-period mb-3">/{{ ui_text.landing_billing_annual|lower }} <span class="savings-pill">~33% off</span></div>
+                        <div class="plan-price-period mb-3">/{{ ui_text.landing_billing_annual|lower }} <span class="savings-pill">{{ ui_text.plans_annual_savings|default:"~33% off" }}</span></div>
                     </div>
                     <hr style="border-color: var(--purple);">
                     <ul class="plan-feature-list mb-4">
-                        <li><i class="fas fa-check"></i> Análises ilimitadas</li>
-                        <li><i class="fas fa-check"></i> <strong>Motor GPT-4</strong></li>
-                        <li><i class="fas fa-check"></i> Upload áudio + vídeo</li>
-                        <li><i class="fas fa-check"></i> URL YouTube</li>
-                        <li><i class="fas fa-check"></i> PDF relatório + pitch</li>
-                        <li><i class="fas fa-check"></i> Dashboard investidores</li>
-                        <li><i class="fas fa-check"></i> <strong>Vídeo IA</strong></li>
-                        <li><i class="fas fa-check"></i> <strong>Análise em lote CSV</strong></li>
-                        <li><i class="fas fa-check"></i> Todas as funcionalidades</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_unlimited_analyses|default:"Análises ilimitadas" }}</li>
+                        <li><i class="fas fa-check"></i> <strong>{{ ui_text.landing_feat_gpt4_engine|default:"Motor GPT-4" }}</strong></li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.landing_feat_upload_audio_video|default:"Upload áudio + vídeo" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.landing_feat_youtube_url|default:"URL YouTube" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.landing_feat_pdf_report_and_pitch|default:"PDF relatório + pitch" }}</li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.plans_feat_investor_dash|default:"Dashboard investidores" }}</li>
+                        <li><i class="fas fa-check"></i> <strong>{{ ui_text.plans_no_video_ai|default:"Vídeo IA" }}</strong></li>
+                        <li><i class="fas fa-check"></i> <strong>{{ ui_text.landing_feat_batch_csv|default:"Análise em lote CSV" }}</strong></li>
+                        <li><i class="fas fa-check"></i> {{ ui_text.landing_feat_all_features|default:"Todas as funcionalidades" }}</li>
                     </ul>
                     <a href="{% url 'register' %}" class="btn btn-purple w-100 mt-auto py-2">{{ ui_text.landing_start_free }}</a>
                 </div>
@@ -447,7 +447,7 @@
 
         <p class="text-center text-muted small mt-4">
             <i class="fas fa-shield-halved me-1"></i>
-            {{ ui_text.landing_trust_powered }} &nbsp;·&nbsp; Stripe &nbsp;·&nbsp; Cancel anytime
+            {{ ui_text.landing_trust_powered }} &nbsp;·&nbsp; Stripe &nbsp;·&nbsp; {{ ui_text.landing_trust_cancel_anytime|default:"Cancel anytime" }}
         </p>
     </div>
 </section>
@@ -465,30 +465,30 @@
             <div class="col-md-4">
                 <div class="proof-card h-100">
                     <div class="stars mb-2">★★★★★</div>
-                    <p class="mb-3" style="font-size:.92rem;">"Consegui identificar os pontos fracos do meu pitch antes de apresentar a investidores. O score e as recomendações foram determinantes para reformular a narrativa."</p>
+                    <p class="mb-3" style="font-size:.92rem;">{{ ui_text.landing_testimonial1_quote|default:"“Consegui identificar os pontos fracos do meu pitch antes de apresentar a investidores. O score e as recomendações foram determinantes para reformular a narrativa.”" }}</p>
                     <div class="d-flex align-items-center gap-2">
                         <div class="avatar-placeholder">MF</div>
-                        <div><div class="fw-semibold small">Miguel F.</div><div class="text-muted" style="font-size:.78rem;">Co-Fundador · FinTech</div></div>
+                        <div><div class="fw-semibold small">Miguel F.</div><div class="text-muted" style="font-size:.78rem;">{{ ui_text.landing_testimonial1_role|default:"Co-Fundador · FinTech" }}</div></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="proof-card h-100">
                     <div class="stars mb-2">★★★★★</div>
-                    <p class="mb-3" style="font-size:.92rem;">"O dashboard de investidores é excelente. Filtro por score mínimo e recebo pitches de startups realmente promissoras. A funcionalidade de interesse direto agiliza o processo."</p>
+                    <p class="mb-3" style="font-size:.92rem;">{{ ui_text.landing_testimonial2_quote|default:"“O dashboard de investidores é excelente. Filtro por score mínimo e recebo pitches de startups realmente promissoras. A funcionalidade de interesse direto agiliza o processo.”" }}</p>
                     <div class="d-flex align-items-center gap-2">
                         <div class="avatar-placeholder" style="background:#0ea5e9;">CS</div>
-                        <div><div class="fw-semibold small">Carlos S.</div><div class="text-muted" style="font-size:.78rem;">Angel Investor · Luanda</div></div>
+                        <div><div class="fw-semibold small">Carlos S.</div><div class="text-muted" style="font-size:.78rem;">{{ ui_text.landing_testimonial2_role|default:"Angel Investor · Luanda" }}</div></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="proof-card h-100">
                     <div class="stars mb-2">★★★★★</div>
-                    <p class="mb-3" style="font-size:.92rem;">"Utilizamos o modo batch para analisar 40 startups do nosso processo de seleção em menos de 5 minutos. O relatório automático poupou dias de trabalho da equipa."</p>
+                    <p class="mb-3" style="font-size:.92rem;">{{ ui_text.landing_testimonial3_quote|default:"“Utilizamos o modo batch para analisar 40 startups do nosso processo de seleção em menos de 5 minutos. O relatório automático poupou dias de trabalho da equipa.”" }}</p>
                     <div class="d-flex align-items-center gap-2">
                         <div class="avatar-placeholder" style="background:#16a34a;">AT</div>
-                        <div><div class="fw-semibold small">Ana T.</div><div class="text-muted" style="font-size:.78rem;">Gestora · Aceleradora</div></div>
+                        <div><div class="fw-semibold small">Ana T.</div><div class="text-muted" style="font-size:.78rem;">{{ ui_text.landing_testimonial3_role|default:"Gestora · Aceleradora" }}</div></div>
                     </div>
                 </div>
             </div>
@@ -533,7 +533,7 @@
                 <div class="fw-semibold small text-uppercase text-muted mb-3" style="letter-spacing:.06em;">{{ ui_text.landing_footer_platform }}</div>
                 <a href="#features">{{ ui_text.landing_nav_features }}</a>
                 <a href="#pricing">{{ ui_text.landing_nav_pricing }}</a>
-                <a href="{% url 'subscription_plans' %}">Planos detalhados</a>
+                <a href="{% url 'subscription_plans' %}">{{ ui_text.landing_footer_detailed_plans|default:"Planos detalhados" }}</a>
             </div>
             <div class="col-6 col-lg-2 footer-links">
                 <div class="fw-semibold small text-uppercase text-muted mb-3" style="letter-spacing:.06em;">{{ ui_text.landing_footer_account }}</div>

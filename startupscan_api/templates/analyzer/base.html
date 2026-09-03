@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block page_title %}Startup Intelligence Hub{% endblock %}</title>
+    <title>{% block page_title %}{{ ui_text.footer|default:"Startup Intelligence Hub" }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'analyzer/css/styles.css' %}?v=20260423-01">
@@ -69,26 +69,26 @@
                 <div class="user-avatar">{{ user.first_name|default:user.username|slice:":2"|upper }}</div>
                 <div class="min-width-0">
                     <div class="fw-semibold text-truncate" style="max-width:140px;">{{ user.first_name|default:user.username }}</div>
-                    <div class="small" style="color:#64748b;font-size:.72rem;">{{ user_role_label }}</div>
+                    <div class="small" style="color:#94a3b8;font-size:.72rem;">{{ user_role_label }}</div>
                 </div>
             </div>
 
             {% if user_plan_tier == 'trial' %}
             <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
                 <span class="badge w-100 py-1" style="background:rgba(245,158,11,0.2);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);">
-                    <i class="fas fa-clock me-1"></i>Trial — {{ subscription_trial_days_left }} dia(s)
+                    <i class="fas fa-clock me-1"></i>{{ ui_text.plan_name_trial|default:"Trial" }} — {{ subscription_trial_days_left }} {{ ui_text.days_unit_short|default:"dia(s)" }}
                 </span>
             </a>
             {% elif user_plan_tier == 'basic' %}
             <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
                 <span class="badge w-100 py-1" style="background:rgba(59,130,246,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">
-                    <i class="fas fa-star me-1"></i>Plano Basic
+                    <i class="fas fa-star me-1"></i>{{ ui_text.sidebar_plan_basic_badge|default:"Plano Basic" }}
                 </span>
             </a>
             {% elif user_plan_tier == 'pro' %}
             <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
                 <span class="badge w-100 py-1" style="background:rgba(139,92,246,0.2);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);">
-                    <i class="fas fa-gem me-1"></i>Plano Pro
+                    <i class="fas fa-gem me-1"></i>{{ ui_text.sidebar_plan_pro_badge|default:"Plano Pro" }}
                 </span>
             </a>
             {% endif %}
@@ -150,7 +150,7 @@
         </main>
 
         <footer class="app-footer py-3">
-            <p class="mb-0 text-center" style="font-size:.8rem;color:#334155;">{{ ui_text.footer }} &copy; {% now "Y" %} — StartupScan.AI</p>
+            <p class="mb-0 text-center" style="font-size:.8rem;color:#8b98ab;">{{ ui_text.footer }} &copy; {% now "Y" %} — StartupScanAI</p>
         </footer>
     </div>
 </div>
