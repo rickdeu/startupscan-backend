@@ -30,25 +30,75 @@ def _build_uniqueness_key(text, financial_data, metadata):
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
 
 
-def _ensure_unique_report_language(report: dict, startup_name: str, uniqueness_key: str):
+_GPT_UNIQUENESS_STRINGS = {
+    "pt": {
+        "fallback_label": "startup avaliada",
+        "signature": "Analise exclusiva para {startup_label}.",
+        "summary_fallback": "Avaliacao estrategica personalizada para {startup_label}. {signature}",
+        "unique_line": "Construir narrativa de captacao exclusiva para {startup_label}, "
+                       "com tese diferenciada de investidor ({uniqueness_key}).",
+    },
+    "en": {
+        "fallback_label": "the evaluated startup",
+        "signature": "Exclusive analysis for {startup_label}.",
+        "summary_fallback": "Personalized strategic assessment for {startup_label}. {signature}",
+        "unique_line": "Build an exclusive fundraising narrative for {startup_label}, "
+                       "with a differentiated investor thesis ({uniqueness_key}).",
+    },
+    "ru": {
+        "fallback_label": "оцениваемый стартап",
+        "signature": "Эксклюзивный анализ для {startup_label}.",
+        "summary_fallback": "Персонализированная стратегическая оценка для {startup_label}. {signature}",
+        "unique_line": "Построить эксклюзивное повествование для привлечения инвестиций для {startup_label} "
+                       "с уникальным инвестиционным тезисом ({uniqueness_key}).",
+    },
+    "de": {
+        "fallback_label": "das bewertete Startup",
+        "signature": "Exklusive Analyse fuer {startup_label}.",
+        "summary_fallback": "Personalisierte strategische Bewertung fuer {startup_label}. {signature}",
+        "unique_line": "Eine exklusive Fundraising-Erzaehlung fuer {startup_label} mit einer differenzierten "
+                       "Investorenthese aufbauen ({uniqueness_key}).",
+    },
+    "es": {
+        "fallback_label": "la startup evaluada",
+        "signature": "Analisis exclusivo para {startup_label}.",
+        "summary_fallback": "Evaluacion estrategica personalizada para {startup_label}. {signature}",
+        "unique_line": "Construir una narrativa de captacion exclusiva para {startup_label}, "
+                       "con una tesis de inversion diferenciada ({uniqueness_key}).",
+    },
+    "zh-hans": {
+        "fallback_label": "本次评估的创业公司",
+        "signature": "为{startup_label}提供的专属分析。",
+        "summary_fallback": "为{startup_label}提供的个性化战略评估。{signature}",
+        "unique_line": "为{startup_label}构建独特的融资叙事，并提出差异化的投资论点（{uniqueness_key}）。",
+    },
+    "umb": {
+        "fallback_label": "startup yina yakuandiwa",
+        "signature": "Elombolwilo lyokamba ku {startup_label}.",
+        "summary_fallback": "Elombolwilo lyombiliko lyokamba ku {startup_label}. {signature}",
+        "unique_line": "Panga etyulo lyokamba lyokwambata ombongo ku {startup_label}, "
+                       "lo tese yokamba ({uniqueness_key}).",
+    },
+}
+
+
+def _ensure_unique_report_language(report: dict, startup_name: str, uniqueness_key: str, language: str = "en"):
+    strings = _GPT_UNIQUENESS_STRINGS.get(language) or _GPT_UNIQUENESS_STRINGS["en"]
     report = report if isinstance(report, dict) else {}
     summary = str(report.get("summary", "") or "").strip()
-    startup_label = startup_name.strip() or "startup avaliada"
-    signature = f"Análise exclusiva para {startup_label}."
+    startup_label = startup_name.strip() or strings["fallback_label"]
+    signature = strings["signature"].format(startup_label=startup_label)
     if signature not in summary:
         if summary:
             summary = f"{summary} {signature}"
         else:
-            summary = f"Avaliação estratégica personalizada para {startup_label}. {signature}"
+            summary = strings["summary_fallback"].format(startup_label=startup_label, signature=signature)
     report["summary"] = summary
 
     recommendations = report.get("recommendations")
     if not isinstance(recommendations, list):
         recommendations = []
-    unique_line = (
-        f"Construir narrativa de captação exclusiva para {startup_label}, "
-        f"com tese diferenciada de investidor ({uniqueness_key})."
-    )
+    unique_line = strings["unique_line"].format(startup_label=startup_label, uniqueness_key=uniqueness_key)
     if unique_line not in recommendations:
         recommendations.insert(0, unique_line)
     report["recommendations"] = recommendations[:8]
@@ -77,7 +127,7 @@ def _merge_training_frames(pitches_df, financial_df):
 
 def _augment_dataset(df, factor=60, seed=42):
     """
-    Amplia o dataset com jitter leve para robustez e estabilidade.
+    Expands the dataset with light jitter for robustness and stability.
     """
     if df.empty:
         return df
@@ -164,14 +214,14 @@ def _build_preprocessor():
 
 
 def _compute_consistency_accuracy(y_true, y_pred):
-    # "acurácia" tratada como previsão dentro de ±1 ponto (escala 0-10)
+    # "accuracy" treated as a prediction within ±1 point (0-10 scale)
     return float(np.mean(np.abs(y_true - y_pred) <= 1.0))
 
 
 def train_and_evaluate(pitches_df, financial_df, progress_callback=None):
     """
-    Treina um modelo robusto de regressão para score de sucesso (0-10).
-    Retorna bundle versionado + métricas de consistência.
+    Trains a robust regression model for the success score (0-10).
+    Returns a versioned bundle + consistency metrics.
     """
     def _progress(value, message):
         if callable(progress_callback):
@@ -185,7 +235,7 @@ def train_and_evaluate(pitches_df, financial_df, progress_callback=None):
     if len(merged) < 5:
         raise ValueError("Dataset insuficiente para treino robusto (mínimo 5 amostras).")
 
-    # Tenta múltiplos níveis de augmentation para garantir estabilidade alta.
+    # Tries multiple augmentation levels to ensure high stability.
     best_bundle = None
     best_metrics = None
     best_r2 = -np.inf
@@ -198,7 +248,7 @@ def train_and_evaluate(pitches_df, financial_df, progress_callback=None):
     else:
         factors = [1, 2]
 
-    total_iterations = max(1, len(factors) * 3)  # 3 candidatos por fator
+    total_iterations = max(1, len(factors) * 3)  # 3 candidates per factor
     current_iteration = 0
 
     for factor in factors:
@@ -210,8 +260,8 @@ def train_and_evaluate(pitches_df, financial_df, progress_callback=None):
         train_frame = _build_modeling_frame(augmented)
         y = train_frame["success_score"].astype(float).values
 
-        # Em datasets grandes, avaliamos em amostra estratificada por quantis
-        # para manter o ciclo de treino viável em tempo.
+        # For large datasets, we evaluate on a sample stratified by quantiles
+        # to keep the training cycle time-feasible.
         eval_frame = train_frame
         if len(train_frame) > 3000:
             eval_frame = train_frame.sample(n=3000, random_state=42)
@@ -283,7 +333,7 @@ def train_and_evaluate(pitches_df, financial_df, progress_callback=None):
             best_metrics = metrics
             best_bundle = bundle
 
-        # Encerra cedo ao atingir a meta solicitada.
+        # Stops early once the requested target is reached.
         if metrics["consistency_accuracy"] >= 0.90:
             logger.info("Training target reached with factor=%s", factor)
             _progress(96, "Meta de consistência atingida; finalizando")
@@ -307,16 +357,16 @@ def _build_inference_row(pitch_data, financial_data):
 
 def predict_success_score(model_obj, pitch_data, financial_data, precomputed_features=None):
     """
-    Predição compatível com modelo antigo e bundle novo.
+    Prediction compatible with both the old model and the new bundle.
     """
     if isinstance(model_obj, dict) and model_obj.get("model_type") == "startupscan_bundle_v3":
         row = _build_inference_row(pitch_data, financial_data)
         pred = float(model_obj["model"].predict(row)[0])
         return float(np.clip(pred, 0.0, 10.0))
 
-    # Fallback para modelo legado baseado em vetor numérico.
+    # Fallback for the legacy model based on a numeric vector.
     if precomputed_features is None:
-        from startupscan_api.utils import prepare_features  # import tardio para evitar ciclo
+        from startupscan_api.utils import prepare_features  # late import to avoid circular import
 
         precomputed_features, _ = prepare_features(pitch_data, financial_data)
 
@@ -327,7 +377,7 @@ def predict_success_score(model_obj, pitch_data, financial_data, precomputed_fea
 def ensure_report_dict(report, score):
     if isinstance(report, dict):
         report.setdefault("status", "ok")
-        report.setdefault("summary", f"Pontuação prevista: {float(score):.2f}/10")
+        report.setdefault("summary", f"Predicted score: {float(score):.2f}/10")
         report.setdefault("recommendations", [])
         report.setdefault("category_scores", {})
         report.setdefault("final_score", round(float(score), 1))
@@ -342,21 +392,32 @@ def ensure_report_dict(report, score):
         }
     return {
         "status": "ok",
-        "summary": f"Pontuação prevista: {float(score):.2f}/10",
+        "summary": f"Predicted score: {float(score):.2f}/10",
         "recommendations": [],
         "category_scores": {},
         "final_score": round(float(score), 1),
     }
 
 
-def analyze_with_gpt(text, financial_data, metadata):
+_GPT_OUTPUT_LANGUAGE_INSTRUCTIONS = {
+    "pt": "português (Portugal/Angola), formal mas acessível",
+    "en": "English, formal but approachable",
+    "ru": "русский язык, официальный, но доступный стиль",
+    "de": "Deutsch, formell aber zugaenglich",
+    "es": "español, formal pero accesible",
+    "zh-hans": "简体中文，正式但易于理解",
+    "umb": "Umbundu when possible, falling back to Portuguese for technical venture-capital terms",
+}
+
+
+def analyze_with_gpt(text, financial_data, metadata, language: str = "en"):
     """
-    Usa um modelo GPT existente para gerar score + relatório.
-    Retorna (score, report, engine_used).
+    Uses an existing GPT model to generate score + report.
+    Returns (score, report, engine_used).
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return None, {"status": "fallback", "summary": "OPENAI_API_KEY ausente"}, "local-fallback"
+        return None, {"status": "fallback", "summary": "OPENAI_API_KEY missing"}, "local-fallback"
 
     try:
         from openai import OpenAI
@@ -365,6 +426,7 @@ def analyze_with_gpt(text, financial_data, metadata):
         client = OpenAI(api_key=api_key)
         startup_name = str((metadata or {}).get("startup_name", "") or "").strip()
         uniqueness_key = _build_uniqueness_key(text, financial_data, metadata)
+        output_language = _GPT_OUTPUT_LANGUAGE_INSTRUCTIONS.get(language, _GPT_OUTPUT_LANGUAGE_INSTRUCTIONS["en"])
 
         system_prompt = (
             "Você é um analista sênior de venture capital com 20 anos de experiência avaliando startups "
@@ -379,7 +441,9 @@ def analyze_with_gpt(text, financial_data, metadata):
             "3. Linguagem de VC: use PMF, unit economics, GTM, churn, LTV/CAC, burn rate, runway, moat, "
             "TAM/SAM/SOM onde pertinentes.\n"
             "4. Tom: direto, assertivo e construtivo.\n"
-            "5. Idioma: português do Brasil, formal mas acessível."
+            f"5. Idioma de saída OBRIGATÓRIO para todos os campos de texto livre (summary, strengths, "
+            f"weaknesses, recommendations, investor_pitch, market_opportunity, competitive_position): "
+            f"{output_language}. Os nomes das chaves do JSON continuam em português como especificado."
         )
 
         user_prompt = (
@@ -444,7 +508,7 @@ def analyze_with_gpt(text, financial_data, metadata):
         score = float(np.clip(score, 0.0, 10.0))
         report = {
             "status": "gpt",
-            "summary": data.get("summary", "Relatório gerado por GPT."),
+            "summary": data.get("summary", "Report generated by GPT."),
             "strengths": data.get("strengths", []),
             "weaknesses": data.get("weaknesses", []),
             "recommendations": data.get("recommendations", []),
@@ -453,7 +517,7 @@ def analyze_with_gpt(text, financial_data, metadata):
             "market_opportunity": data.get("market_opportunity", ""),
             "competitive_position": data.get("competitive_position", ""),
         }
-        report = _ensure_unique_report_language(report, startup_name, uniqueness_key)
+        report = _ensure_unique_report_language(report, startup_name, uniqueness_key, language)
         return score, report, "gpt"
     except Exception as exc:
         logger.warning("GPT analysis failed, fallback to local model: %s", str(exc), exc_info=True)

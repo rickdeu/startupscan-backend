@@ -6,7 +6,7 @@ from pypdf import PdfReader
 
 def extract_text_from_uploaded_file(uploaded_file) -> str:
     """
-    Extrai texto de uploads .txt/.md/.pdf/.docx.
+    Extract text from .txt/.md/.pdf/.docx uploads.
     """
     if not uploaded_file:
         return ""
@@ -43,7 +43,7 @@ def extract_text_from_uploaded_file(uploaded_file) -> str:
         except Exception:
             return ""
 
-    # Para formatos não suportados, tenta fallback textual.
+    # For unsupported formats, attempt a text fallback.
     try:
         return raw_bytes.decode("utf-8", errors="ignore")
     except Exception:

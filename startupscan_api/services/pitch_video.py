@@ -39,7 +39,7 @@ ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1"
 
 
 class ExplainerVideoGenerationError(RuntimeError):
-    """Erro estruturado para expor falhas de geração realista/local."""
+    """Structured error to surface realistic/local generation failures."""
 
     def __init__(
         self,
@@ -127,7 +127,7 @@ def _number_for_speech_pt(token: str) -> str:
 
 def _normalize_numeric_ratio_for_tts(text: str) -> str:
     """
-    Evita leitura de razão como data (ex.: 6.1/10 -> 6 virgula 1 por dez).
+    Prevents a ratio from being read like a date (e.g., 6.1/10 -> 6 virgula 1 por dez).
     """
     source = " ".join((text or "").split())
     if not source:
@@ -514,7 +514,7 @@ def _gpt_video_plan(payload: dict) -> VideoPlan | None:
                 f"{_narrative_tagline(payload['startup_name'], uniqueness_key)}"
             )
         narration = str(data.get("narration", "")).strip() or " ".join(scene["text"] for scene in fixed_scenes)
-        # Regra de produto: personagem deve ser sempre o nome da startup.
+        # Product rule: the character must always be the startup name.
         character_name = str(payload["startup_name"]).strip() or payload["startup_name"]
         return VideoPlan(
             scenes=fixed_scenes[:8],
@@ -535,8 +535,8 @@ def _plan_total_duration_seconds(plan: VideoPlan) -> int:
 
 def _enforce_video_duration(plan: VideoPlan, payload: dict) -> VideoPlan:
     """
-    Garante vídeo entre 1 e 3 minutos com ritmo natural.
-    Se GPT vier fora da janela, usa fallback local.
+    Ensures the video is between 1 and 3 minutes with a natural pace.
+    If GPT falls outside that window, falls back to the local plan.
     """
     total = _plan_total_duration_seconds(plan)
     word_count = len((plan.narration or "").split())
@@ -629,7 +629,7 @@ def _ensure_plan_has_conclusion(plan: VideoPlan, payload: dict) -> VideoPlan:
     if total <= (MAX_VIDEO_SECONDS - 14):
         scenes.append(conclusion)
     else:
-        # Se já está no limite, substitui a última cena mantendo duração adequada.
+        # If already at the limit, replace the last scene while keeping an adequate duration.
         replacement = dict(conclusion)
         last_duration = int(float(scenes[-1].get("duration", 18) or 18))
         replacement["duration"] = max(12, min(20, last_duration))
@@ -699,7 +699,7 @@ def _split_script_for_did(
             segments.append(current)
             current = sentence
         else:
-            # sentença longa: quebra por palavras
+            # long sentence: break by words
             words = sentence.split()
             buf = []
             for w in words:
@@ -714,7 +714,7 @@ def _split_script_for_did(
     if current:
         segments.append(current)
 
-    # Refina segmentos grandes em blocos menores para manter ritmo natural.
+    # Refine large segments into smaller chunks to maintain a natural pace.
     target = max(1, min(max_segments, target_min_segments))
     while len(segments) < target:
         idx_long = None
@@ -749,8 +749,8 @@ def _split_script_for_did(
 
 def _stylize_stage_cinematic_text(script_text: str) -> str:
     """
-    Ajusta ritmo da locução para apresentação curta: frases curtas e pausas naturais.
-    Não altera semântica principal, apenas a musicalidade.
+    Adjusts the narration pace for a short presentation: short sentences and natural pauses.
+    Does not change the main semantics, only the cadence.
     """
     text = _normalize_numeric_ratio_for_tts(script_text or "")
     if not text:
@@ -761,7 +761,7 @@ def _stylize_stage_cinematic_text(script_text: str) -> str:
         sentence = sentence.rstrip(" .")
         if not sentence:
             continue
-        # Introduz pausas pontuais de oratória sem exagerar.
+        # Introduces occasional rhetorical pauses without overdoing it.
         if idx % 3 == 0:
             stylized.append(f"{sentence}.")
         elif idx % 3 == 1:
@@ -829,8 +829,8 @@ def _extract_gender_detection_details(result) -> dict:
 
 def detect_presenter_gender(image_path: str | None) -> dict:
     """
-    Detecta gênero provável do apresentador para orientar a voz.
-    Retorna: gender (male/female/unknown), confidence (0-1|None), method.
+    Detects the presenter's likely gender to guide voice selection.
+    Returns: gender (male/female/unknown), confidence (0-1|None), method.
     """
     if not image_path or not os.path.exists(image_path):
         return {"gender": "unknown", "confidence": None, "method": "unavailable"}
@@ -855,7 +855,7 @@ def detect_presenter_gender(image_path: str | None) -> dict:
     except Exception:
         pass
 
-    # Fallback leve por nome de arquivo quando não for possível inferir via modelo.
+    # Lightweight fallback by filename when inference via the model isn't possible.
     name_hint = Path(image_path).name.lower()
     if any(token in name_hint for token in ["woman", "female", "mulher", "femin"]):
         return {"gender": "female", "confidence": None, "method": "filename_hint"}
@@ -1024,25 +1024,25 @@ def _try_generate_realistic_video_did(
     progress_callback=None,
 ):
     """
-    Usa D-ID para gerar vídeo de avatar realista com gestos/lip-sync.
-    Retorna metadados ou None em caso de falha/sem configuração.
+    Uses D-ID to generate a realistic avatar video with gestures/lip-sync.
+    Returns metadata or None on failure/missing configuration.
     """
     api_key = os.getenv("DID_API_KEY", "").strip()
     original_source = (source_image_url or "").strip()
     did_sources = [u.strip() for u in (source_image_urls or []) if isinstance(u, str) and u.strip()]
     if real_image_only:
-        # Modo estrito: usa apenas fontes reais sem composição de cenário.
+        # Strict mode: uses only real sources without scene composition.
         real_only_sources = [u for u in did_sources if u]
         if original_source:
             real_only_sources = [original_source] + [u for u in real_only_sources if u != original_source]
         did_sources = list(dict.fromkeys(real_only_sources))
     else:
-        # Mantém fallback do source original ativo por padrão para reduzir falhas em poses dinâmicas.
+        # Keeps the original-source fallback enabled by default to reduce failures on dynamic poses.
         allow_original_fallback = os.getenv("DID_ALLOW_ORIGINAL_SOURCE_FALLBACK", "1").strip().lower() in {"1", "true", "yes"}
         if original_source and original_source not in did_sources:
             if not did_sources or allow_original_fallback:
                 did_sources.append(original_source)
-    # Dedup mantendo ordem.
+    # Dedup while preserving order.
     did_sources = list(dict.fromkeys(did_sources))
 
     if not api_key or not did_sources:
@@ -1119,7 +1119,7 @@ def _try_generate_realistic_video_did(
                 candidate_errors.append(f"{source_candidate} => {attempt_meta.get('error', 'unknown_error')}")
 
             if not talk_meta or talk_meta.get("status") != "done":
-                # Fallback de resgate: tenta uma versão condensada no source original.
+                # Rescue fallback: tries a condensed version on the original source.
                 rescue_error = ""
                 if original_source:
                     rescue_script = " ".join(segments[: min(3, len(segments))]).strip()
@@ -1246,14 +1246,14 @@ def _prepare_presenter_image(image_path: str | None):
 
 
 def _extract_face_patch(presenter_image: Image.Image | None):
-    """Extrai um recorte aproximado do rosto (funciona mesmo sem detector facial)."""
+    """Extracts an approximate face crop (works even without a face detector)."""
     if presenter_image is None:
         return None
     w, h = presenter_image.size
     if w < 40 or h < 40:
         return None
 
-    # Heurística: rosto costuma estar no terço superior e mais próximo do centro.
+    # Heuristic: the face is usually in the upper third and closer to the center.
     crop_size = int(min(w, h) * 0.42)
     crop_size = max(80, min(crop_size, min(w, h)))
     center_x = w // 2
@@ -1273,8 +1273,8 @@ def _render_did_fullbody_source_image(
     pose_index: int = 0,
 ):
     """
-    Gera uma imagem vertical de corpo inteiro para D-ID (palco + plateia + gestos).
-    Serve para transformar foto meio-corpo em um visual de apresentador completo.
+    Generates a vertical full-body image for D-ID (stage + audience + gestures).
+    Used to turn a half-body photo into a complete presenter visual.
     """
     width, height = 1024, 1536
     shot_profiles = ["wide", "left", "right", "close", "hero"]
@@ -1282,7 +1282,7 @@ def _render_did_fullbody_source_image(
     img = Image.new("RGB", (width, height), (10, 17, 31))
     draw = ImageDraw.Draw(img)
 
-    # Fundo com gradiente simples de palco
+    # Background with a simple stage gradient
     for y in range(height):
         t = y / max(1, height - 1)
         r = int(8 + 20 * (1 - t))
@@ -1290,7 +1290,7 @@ def _render_did_fullbody_source_image(
         b = int(26 + 62 * (1 - t))
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    # Luzes e tela institucional
+    # Lights and institutional screen
     beam_shift = {"wide": 0, "left": -36, "right": 36, "close": 0, "hero": 20}.get(profile, 0)
     draw.polygon([(0 + beam_shift, 0), (220 + beam_shift, 0), (80 + beam_shift, 420)], outline=(68, 124, 196))
     draw.polygon([(width - beam_shift, 0), (width - 220 - beam_shift, 0), (width - 80 - beam_shift, 420)], outline=(68, 124, 196))
@@ -1298,7 +1298,7 @@ def _render_did_fullbody_source_image(
     draw.text((280, 160), "Global Startup Summit", fill=(224, 236, 255), font=_load_font(34))
     draw.text((280, 208), "Palestra para grande audiência", fill=(178, 201, 232), font=_load_font(24))
 
-    # Plateia gigante
+    # Giant audience
     base_y = height - 45
     for row in range(10):
         y = base_y - row * 46
@@ -1311,7 +1311,7 @@ def _render_did_fullbody_source_image(
             if row >= 2:
                 draw.rectangle((x - max(2, head_r // 2), y + head_r - 1, x + max(2, head_r // 2), y + head_r + 9), fill=(shade - 2, shade - 2, shade + 4))
 
-    # Personagem corpo inteiro
+    # Full-body character
     cx = width // 2
     top = 340
     if profile == "left":
@@ -1331,13 +1331,13 @@ def _render_did_fullbody_source_image(
     shirt = (229, 234, 242)
     tie = (164, 34, 58)
 
-    # Pernas
+    # Legs
     draw.rounded_rectangle((cx - 66, top + 520, cx - 12, top + 815), radius=18, fill=(14, 26, 49))
     draw.rounded_rectangle((cx + 12, top + 520, cx + 66, top + 815), radius=18, fill=(14, 26, 49))
     draw.rounded_rectangle((cx - 86, top + 805, cx - 4, top + 842), radius=10, fill=(8, 12, 22))
     draw.rounded_rectangle((cx + 4, top + 805, cx + 86, top + 842), radius=10, fill=(8, 12, 22))
 
-    # Tronco
+    # Torso
     draw.rounded_rectangle((cx - 130, top + 188, cx + 130, top + 564), radius=44, fill=suit_dark, outline=(102, 178, 250), width=4)
     draw.polygon([(cx - 44, top + 212), (cx - 9, top + 360), (cx - 78, top + 360)], fill=suit_mid)
     draw.polygon([(cx + 44, top + 212), (cx + 9, top + 360), (cx + 78, top + 360)], fill=suit_mid)
@@ -1346,7 +1346,7 @@ def _render_did_fullbody_source_image(
     draw.polygon([(cx - 7, top + 430), (cx + 7, top + 430), (cx, top + 486)], fill=tie)
     draw.polygon([(cx + 48, top + 290), (cx + 76, top + 290), (cx + 66, top + 312)], fill=(242, 242, 242))
 
-    # Braços em 3 poses para dar sensação de gestos entre segmentos D-ID
+    # Arms in 3 poses to give a sense of gestures between D-ID segments
     left_shoulder = (cx - 90, top + 266)
     right_shoulder = (cx + 90, top + 266)
     if pose_index % 5 == 0:
@@ -1382,7 +1382,7 @@ def _render_did_fullbody_source_image(
     draw.line([right_elbow, right_hand], fill=suit_mid, width=26, joint="curve")
     draw.ellipse((right_hand[0] - 17, right_hand[1] - 17, right_hand[0] + 17, right_hand[1] + 17), fill=skin)
 
-    # Cabeça + face enviada
+    # Head + submitted face
     head_size = 186
     head_left = cx - head_size // 2
     head_top = top + 28
@@ -1399,7 +1399,7 @@ def _render_did_fullbody_source_image(
         draw.text((head_left + 56, head_top + 64), initials, fill=(255, 255, 255), font=_load_font(58))
     draw.ellipse((head_left, head_top, head_left + head_size, head_top + head_size), outline=(122, 206, 252), width=4)
 
-    # Púlpito frontal para reforçar ambiente de palestra
+    # Front podium to reinforce the lecture-hall environment
     podium_top = top + 452
     draw.rounded_rectangle((cx - 170, podium_top, cx + 170, podium_top + 352), radius=24, fill=(20, 31, 55), outline=(86, 146, 220), width=4)
     draw.rounded_rectangle((cx - 112, podium_top + 82, cx + 112, podium_top + 152), radius=12, fill=(32, 64, 112))
@@ -1419,8 +1419,8 @@ def build_did_presenter_source_urls(
     startup_name: str,
 ) -> list[str]:
     """
-    Cria imagens de corpo inteiro (poses diferentes) e devolve URLs públicas.
-    Útil quando a foto enviada é meio corpo e queremos palco dinâmico no D-ID.
+    Creates full-body images (different poses) and returns public URLs.
+    Useful when the submitted photo is half-body and we want a dynamic stage in D-ID.
     """
     if not presenter_image_path or not presenter_image_url:
         return []
@@ -1455,10 +1455,10 @@ def build_did_real_image_only_source_url(
     presenter_image_url: str | None,
 ) -> str | None:
     """
-    Gera uma fonte visual "real-only" para o D-ID:
-    - sem cenário artificial;
-    - sem palco ou composição extra;
-    - close-up da pessoa para minimizar qualquer fundo visível.
+    Generates a "real-only" visual source for D-ID:
+    - no artificial scenery;
+    - no stage or extra composition;
+    - close-up of the person to minimize any visible background.
     """
     if not presenter_image_path or not presenter_image_url:
         return None
@@ -1473,12 +1473,12 @@ def build_did_real_image_only_source_url(
         file_path = os.path.join(source_dir, file_name)
         url_base = presenter_image_url.rsplit("/", 1)[0]
 
-        # No modo did_only, o foco é close-up real sem cenário.
-        # Evita transparência para não cair em preenchimentos automáticos do provedor.
+        # In did_only mode, the focus is a real close-up without scenery.
+        # Avoids transparency to prevent falling back to the provider's automatic fills.
         presenter_image = raw_image.convert("RGB")
         face_patch = _extract_face_patch(presenter_image)
         if face_patch is not None:
-            # Zoom adicional para reduzir ainda mais fundo periférico.
+            # Additional zoom to further reduce peripheral background.
             zoomed = ImageOps.fit(face_patch, (1400, 1400), method=Image.Resampling.LANCZOS)
             source_img = ImageOps.fit(zoomed, (1024, 1024), method=Image.Resampling.LANCZOS)
         else:
@@ -1493,7 +1493,7 @@ def build_did_real_image_only_source_url(
 
 
 def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):
-    """Cria efeito de plateia grande ao fundo para cenário de palestra."""
+    """Creates a large-audience effect in the background for a lecture-hall scene."""
     base_y = height - 24
     rows = 6
     for row in range(rows):
@@ -1512,14 +1512,14 @@ def _draw_audience(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: fl
 
 
 def _draw_formal_stage_elements(draw: ImageDraw.ImageDraw, width: int, height: int, pulse: float):
-    """Elementos corporativos de palco para reforçar estilo formal."""
-    # Trilhas de luz
+    """Corporate stage elements to reinforce a formal style."""
+    # Light beams
     beam_color = (52, 102, 168)
     draw.polygon([(0, 0), (220, 0), (80, 300)], outline=beam_color)
     draw.polygon([(width, 0), (width - 220, 0), (width - 80, 300)], outline=beam_color)
     draw.polygon([(260, 0), (420, 0), (320, 300)], outline=beam_color)
 
-    # Tela de conferência no fundo
+    # Conference screen in the background
     panel_top = 96
     panel_left = 450
     panel_right = width - 60
@@ -1546,7 +1546,7 @@ def _draw_formal_podium(draw: ImageDraw.ImageDraw, cx: int, top: int, pulse: flo
     podium_right = cx + 142
     podium_bottom = top + 540
 
-    # Base do púlpito
+    # Podium base
     draw.rounded_rectangle(
         (podium_left, podium_top, podium_right, podium_bottom),
         radius=20,
@@ -1558,13 +1558,13 @@ def _draw_formal_podium(draw: ImageDraw.ImageDraw, cx: int, top: int, pulse: flo
         [(podium_left + 16, podium_top + 10), (podium_right - 16, podium_top + 10), (podium_right - 28, podium_top + 45), (podium_left + 28, podium_top + 45)],
         fill=(29, 46, 82),
     )
-    # Plaqueta institucional
+    # Institutional nameplate
     plate = (podium_left + 34, podium_top + 72, podium_right - 34, podium_top + 126)
     draw.rounded_rectangle(plate, radius=10, fill=(30, 58, 102))
     plate_font = _load_font(16)
     startup_short = (startup_name or "Startup")[:18]
     draw.text((plate[0] + 10, plate[1] + 16), f"{startup_short} · CEO", fill=(230, 240, 255), font=plate_font)
-    # Microfones
+    # Microphones
     mic_bounce = int(5 * pulse)
     draw.line([(podium_left + 92, podium_top + 12), (podium_left + 74, podium_top - 55 - mic_bounce)], fill=(120, 140, 170), width=4)
     draw.line([(podium_left + 128, podium_top + 14), (podium_left + 144, podium_top - 52 + mic_bounce)], fill=(120, 140, 170), width=4)
@@ -1580,7 +1580,7 @@ def _draw_full_body_presenter(
     motion_t: float,
     scene_index: int,
 ):
-    """Desenha apresentador de corpo inteiro, em postura formal e com gestos executivos."""
+    """Draws a full-body presenter, in a formal posture with executive gestures."""
     draw = ImageDraw.Draw(img)
     pulse = 0.5 + 0.5 * math.sin(motion_t * 2.6 + scene_index * 0.9)
 
@@ -1588,7 +1588,7 @@ def _draw_full_body_presenter(
     top = 112 + int(math.sin(motion_t * 1.8 + scene_index * 0.3) * 4)
     gesture_factor = 0.45 + (0.12 if scene_index % 2 == 0 else -0.08)
 
-    # Sombra de palco
+    # Stage shadow
     draw.ellipse((cx - 120, 560, cx + 120, 620), fill=(8, 11, 18))
     _draw_formal_podium(draw, cx=cx, top=top, pulse=pulse, startup_name=startup_name)
 
@@ -1598,23 +1598,23 @@ def _draw_full_body_presenter(
     tie = (170, 38, 58)
     skin = (205, 156, 128)
 
-    # Pernas e sapatos
+    # Legs and shoes
     draw.rounded_rectangle((cx - 52, top + 360, cx - 8, top + 536), radius=16, fill=(14, 25, 46))
     draw.rounded_rectangle((cx + 8, top + 360, cx + 52, top + 536), radius=16, fill=(14, 25, 46))
     draw.rounded_rectangle((cx - 70, top + 526, cx - 2, top + 552), radius=8, fill=(8, 12, 22))
     draw.rounded_rectangle((cx + 2, top + 526, cx + 70, top + 552), radius=8, fill=(8, 12, 22))
 
-    # Tronco
+    # Torso
     draw.rounded_rectangle((cx - 88, top + 150, cx + 88, top + 392), radius=36, fill=suit_dark, outline=(106, 184, 255), width=3)
     draw.polygon([(cx - 34, top + 166), (cx - 7, top + 270), (cx - 54, top + 270)], fill=suit_mid)
     draw.polygon([(cx + 34, top + 166), (cx + 7, top + 270), (cx + 54, top + 270)], fill=suit_mid)
     draw.polygon([(cx - 11, top + 166), (cx + 11, top + 166), (cx + 20, top + 255), (cx - 20, top + 255)], fill=shirt)
     draw.rectangle((cx - 6, top + 182, cx + 6, top + 300), fill=tie)
     draw.polygon([(cx - 6, top + 300), (cx + 6, top + 300), (cx, top + 332)], fill=tie)
-    # Pocket square para formalidade
+    # Pocket square for formality
     draw.polygon([(cx + 35, top + 220), (cx + 55, top + 220), (cx + 48, top + 236)], fill=(240, 240, 240))
 
-    # Braços com gestual formal (amplitude reduzida e postura executiva)
+    # Arms with formal gestures (reduced amplitude and executive posture)
     left_shoulder = (cx - 62, top + 198)
     right_shoulder = (cx + 62, top + 198)
 
@@ -1643,10 +1643,10 @@ def _draw_full_body_presenter(
     draw.line([right_shoulder, right_elbow], fill=suit_mid, width=24, joint="curve")
     draw.line([right_elbow, right_hand], fill=suit_mid, width=18, joint="curve")
     draw.ellipse((right_hand[0] - 13, right_hand[1] - 13, right_hand[0] + 13, right_hand[1] + 13), fill=skin)
-    # Clicker na mão direita para estilo de conferência
+    # Clicker in the right hand for a conference style
     draw.rounded_rectangle((right_hand[0] + 8, right_hand[1] - 4, right_hand[0] + 22, right_hand[1] + 9), radius=3, fill=(35, 40, 50))
 
-    # Cabeça (usa face enviada quando disponível)
+    # Head (uses submitted face when available)
     head_size = 128
     head_left = cx - head_size // 2
     head_top = top + 20
@@ -1663,7 +1663,7 @@ def _draw_full_body_presenter(
         draw.text((head_left + 28, head_top + 40), initials, fill=(255, 255, 255), font=_load_font(46))
     draw.ellipse((head_left, head_top, head_left + head_size, head_top + head_size), outline=(125, 211, 252), width=3)
 
-    # Reflexo no palco para sensação mais cinematográfica
+    # Stage reflection for a more cinematic feel
     glow_r = int(40 + pulse * 18)
     glow_g = int(96 + pulse * 30)
     glow_b = int(150 + pulse * 40)
@@ -1671,7 +1671,7 @@ def _draw_full_body_presenter(
 
 
 def _apply_cinematic_camera_and_grade(img: Image.Image, motion_t: float, scene_index: int):
-    """Aplica zoom/pan suave e leve color grading para aspecto mais formal."""
+    """Applies a smooth zoom/pan and light color grading for a more formal look."""
     w, h = img.size
     zoom = 1.04 + 0.03 * (0.5 + 0.5 * math.sin(motion_t * 0.42 + scene_index * 0.6))
     zw = int(w * zoom)
@@ -1721,7 +1721,7 @@ def _draw_scene(
     draw.text((30, 22), f"{startup_name} · Potencial de Investimento", fill=(255, 255, 255), font=small_font)
     draw.text((1040, 22), f"Score {score:.1f}/10", fill=(125, 211, 252), font=small_font)
 
-    # Spotlights de palco + plateia
+    # Stage spotlights + audience
     draw.ellipse((-120, 70, 260, 520), outline=(69, 112, 170), width=3)
     draw.ellipse((190, 96, 540, 512), outline=(69, 112, 170), width=2)
     draw.ellipse((80, 420, 380, 670), fill=(9, 14, 24))
@@ -1729,7 +1729,7 @@ def _draw_scene(
     _draw_formal_stage_elements(draw, width, height, pulse)
     _draw_audience(draw, width, height, pulse)
 
-    # Avatar/personagem
+    # Avatar/character
     if presenter_image is not None:
         _draw_full_body_presenter(
             img=img,
@@ -1806,7 +1806,7 @@ def _generate_tts_audio(
     *,
     preferred_voices: list[str] | None = None,
 ) -> tuple[bool, str]:
-    # 1) tenta voz neural (mais natural e próxima do sotaque desejado)
+    # 1) try neural voice (more natural and closer to the desired accent)
     try:
         ok, used_voice = asyncio.run(_edge_tts_save(narration_text, audio_path, preferred_voices=preferred_voices))
         if ok:
@@ -1898,7 +1898,7 @@ def _elevenlabs_tts_save(
     *,
     voice_id: str = "",
 ) -> tuple[bool, str]:
-    """Compat helper para fallback TTS com ElevenLabs."""
+    """Compatibility helper for ElevenLabs TTS fallback."""
     profile = {}
     if voice_id:
         profile["voice_id"] = voice_id
@@ -1955,7 +1955,7 @@ def generate_explainer_video(
     plan = build_video_plan_from_analysis(analysis, plan_mode=plan_mode)
     payload = _analysis_payload(analysis)
     startup_name = payload["startup_name"]
-    # Regra de negócio: o personagem deve sempre ser o nome da startup inserida.
+    # Business rule: the character must always be the name of the entered startup.
     enforced_character_name = str(getattr(analysis, "startup_name", "") or startup_name).strip() or startup_name
     plan.character_name = enforced_character_name
     score = payload["score"]
@@ -1975,8 +1975,8 @@ def generate_explainer_video(
     should_try_did = mode in {"auto", "did_only"}
     allow_local_render = mode in {"auto", "local_only", "canva_capcut"}
     if should_try_did:
-        # Se o utilizador carregou imagem, ela deve ser usada no vídeo.
-        # Evita fallback para fontes padrão no cenário D-ID.
+        # If the user uploaded an image, it must be used in the video.
+        # Avoids falling back to default sources in the D-ID scene.
         did_source_urls = list(presenter_source_urls or [])
         if presenter_image_url and presenter_image_url not in did_source_urls:
             did_source_urls.insert(0, presenter_image_url)
