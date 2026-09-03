@@ -22,7 +22,9 @@ def _build_pitch_uniqueness_key(idea_data: dict) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
 
 
-def _build_gpt_system_prompt() -> str:
+def _build_gpt_system_prompt(language: str = "en") -> str:
+    from startupscan_api.modeling import _GPT_OUTPUT_LANGUAGE_INSTRUCTIONS
+    output_language = _GPT_OUTPUT_LANGUAGE_INSTRUCTIONS.get(language, _GPT_OUTPUT_LANGUAGE_INSTRUCTIONS["en"])
     return (
         "Você é um estrategista sênior de captação de investimentos com 15 anos de experiência "
         "assessorando startups em rodadas Seed, Series A e B em fundos como Softbank, Kaszek e Sequoia. "
@@ -40,7 +42,8 @@ def _build_gpt_system_prompt() -> str:
         "'solução inovadora', 'mundo melhor', 'exponencial' sem justificativa concreta.\n"
         "6. Tom: assertivo e executivo — como um CEO experiente falando com um comitê de investimentos, "
         "não como um estudante explicando um projeto.\n"
-        "7. Idioma: responda integralmente em português do Brasil, linguagem formal mas não burocrática."
+        f"7. Idioma de saida OBRIGATORIO para todo o texto gerado: {output_language}. "
+        "Os nomes das chaves do JSON continuam conforme especificado no prompt do utilizador."
     )
 
 
@@ -148,7 +151,244 @@ REGRAS CRÍTICAS:
     return f"Gere o pitch profissional completo para a seguinte startup:\n\n{data_block}\n\n{schema}"
 
 
-def _local_pitch_fallback(idea_data: dict) -> dict:
+def _local_pitch_fallback(idea_data: dict, language: str = "en") -> dict:
+    # Only English and Portuguese are implemented for this rich local
+    # generator today; per product decision, any other/unknown language
+    # falls back to English rather than Portuguese (English is the
+    # platform default).
+    if language == "pt":
+        return _local_pitch_fallback_pt(idea_data)
+    return _local_pitch_fallback_en(idea_data)
+
+
+def _local_pitch_fallback_en(idea_data: dict) -> dict:
+    s = idea_data
+    startup_name = s.get("startup_name", "Startup")
+    one_liner = (s.get("one_liner", "") or "").strip() or f"{startup_name}: a scalable solution for a real market problem."
+    problem = (s.get("problem", "") or "").strip() or "An operational efficiency gap with direct impact on cost and customer experience."
+    solution = (s.get("solution", "") or "").strip() or "A data-driven platform that automates critical processes and delivers measurable results."
+    target_customer = (s.get("target_customer", "") or "").strip() or "Mid-sized companies that need to scale operations without growing headcount."
+    market_size = (s.get("market_size", "") or "").strip() or "A growing market with accelerated growth and low penetration of digital solutions."
+    business_model = (s.get("business_model", "") or "").strip() or "SaaS with monthly recurring revenue, upsell-driven expansion, and usage-based pricing."
+    competitive_advantage = (s.get("competitive_advantage", "") or "").strip() or "A combination of proprietary data, native integration with existing systems, and a team specialized in the sector."
+    traction = (s.get("traction", "") or "").strip() or "First active customers, positive feedback, and engagement metrics growing consistently."
+    team = (s.get("team", "") or "").strip() or "A founding team with combined experience in product, technology, and business development."
+    funding_goal = (s.get("funding_goal", "") or "").strip() or "Not specified"
+    use_of_funds = (s.get("use_of_funds", "") or "").strip() or "Product development, commercial expansion, and strengthening the operational structure."
+    call_to_action = (s.get("call_to_action", "") or "").strip() or "A meeting to dive deeper into the investment thesis and align next steps for the round."
+
+    elevator_pitch = (
+        f"{startup_name} operates in a market where {problem.lower().rstrip('.')} directly affects the efficiency and "
+        f"growth of organizations. Our solution — {solution.lower().rstrip('.')} — was built "
+        f"specifically for {target_customer.lower().rstrip('.')}, delivering concrete results from the "
+        f"first cycles of use. We operate in {market_size.lower().rstrip('.')}, with {business_model.lower().rstrip('.')}, "
+        f"which positions us to scale with revenue predictability and acquisition efficiency. "
+        f"{traction} We're looking for partners who share the vision of building a category-leading business in this segment."
+    )
+
+    sections = [
+        {
+            "title": "Problem and Opportunity",
+            "content": (
+                f"{problem} This pain point directly affects {target_customer.lower()}, generating operational costs, "
+                f"inefficiencies, and a loss of competitiveness. The current market lacks solutions that combine "
+                f"ease of adoption with technical depth to solve this challenge definitively. "
+                f"The timing is right: accelerated digitalization of the sector widens the opportunity window for "
+                f"whoever arrives with a clear value proposition and proven execution capability."
+            ),
+        },
+        {
+            "title": "Solution and Differentiation",
+            "content": (
+                f"{solution} {startup_name}'s approach stands out through the combination of {competitive_advantage.lower().rstrip('.')}. "
+                f"Unlike existing alternatives, the solution was built with a focus on measurable results "
+                f"from the very first use, reducing implementation time and switching cost for the customer. "
+                f"The technical architecture allows scaling without loss of quality or a proportional cost increase, "
+                f"creating a sustainable structural advantage over the long term."
+            ),
+        },
+        {
+            "title": "Market and Segmentation",
+            "content": (
+                f"{market_size} The initial focus segment — {target_customer.lower().rstrip('.')} — represents "
+                f"the entry point with the highest problem density and the lowest adoption resistance. "
+                f"From this base, {startup_name} plans to expand into adjacent segments, "
+                f"widening the addressable TAM without abandoning the core competency already validated. "
+                f"Sector dynamics favor solutions that combine vertical specialization with horizontal integration, "
+                f"creating an opportunity for one company to set the market standard."
+            ),
+        },
+        {
+            "title": "Business Model and Unit Economics",
+            "content": (
+                f"{business_model} This model was chosen for its revenue predictability, low potential churn, "
+                f"and ability to expand revenue per account without a proportional increase in CAC. "
+                f"As the customer base grows, data and network effects widen the competitive moat "
+                f"and improve LTV/CAC indicators, making the business more resilient with each growth cycle. "
+                f"The path to a positive margin is clear and doesn't depend on extreme volumes to be viable."
+            ),
+        },
+        {
+            "title": "Traction and Validation",
+            "content": (
+                f"{traction} These indicators validate not only the value proposition but also the team's "
+                f"execution capability under real market conditions. The current growth pace shows that "
+                f"product-market fit is being achieved, and qualitative feedback from early customers "
+                f"confirms the relevance of the problem and the effectiveness of the solution. "
+                f"The next growth cycle will be accelerated with this round's capital, turning "
+                f"initial validation into sustained, predictable growth."
+            ),
+        },
+        {
+            "title": "Team and Execution Capability",
+            "content": (
+                f"{team} The team's composition was designed to cover the critical pillars of this phase: "
+                f"product development, commercial expansion, and operational management. "
+                f"The founders' combined experience in this specific sector reduces execution risk "
+                f"and accelerates the learning curve against challenges that generalist teams would take longer to overcome. "
+                f"The team has metrics discipline, a fast-iteration culture, and the commitment "
+                f"needed to navigate this growth phase's challenges."
+            ),
+        },
+        {
+            "title": "Go-to-Market Strategy",
+            "content": (
+                f"{startup_name}'s GTM strategy prioritizes channels with lower CAC and higher organic expansion potential. "
+                f"The initial focus on {target_customer.lower().rstrip('.')} allows building robust use cases, "
+                f"commercial references, and a data base that feeds both the product and the sales argument. "
+                f"Strategic partnerships with established players in the sector reduce entry cost and accelerate "
+                f"the sales cycle in the first 12 months. The expansion playbook is replicable and scales "
+                f"without a proportional dependency on headcount."
+            ),
+        },
+        {
+            "title": "Competitive Advantage and Moat",
+            "content": (
+                f"{competitive_advantage} This advantage becomes harder to replicate as the customer "
+                f"base grows, since each new customer enriches the proprietary data, improves the product, "
+                f"and strengthens network effects. {startup_name} is building a moat based on "
+                f"deep sector knowledge, technical integration with the customer's critical workflows, and a "
+                f"product experience that creates positive functional dependency. "
+                f"The barrier to entry for new competitors increases with every quarter of operation."
+            ),
+        },
+    ]
+
+    script_3min = [
+        f"Step 1 — Opening (0-20s): Imagine losing revenue and efficiency every day because of {problem.lower().rstrip('.')}. That's exactly what's happening to {target_customer.lower().rstrip('.')} today — and nobody has definitively solved it yet.",
+        f"Step 2 — Problem (20-45s): {problem} This problem costs companies time, money, and competitiveness. Current solutions are fragmented, expensive to implement, or were built for other segments — which is why they fail to deliver real results.",
+        f"Step 3 — Solution (45-75s): {startup_name} solves this with {solution.lower().rstrip('.')}. The differentiator is {competitive_advantage.lower().rstrip('.')} — which lets us deliver results from the very first cycle of use, with simple adoption and no months-long implementation.",
+        f"Step 4 — Market and Traction (75-110s): We operate in {market_size.lower().rstrip('.')}. {traction} These numbers show that the market validates our approach and that we're at the right pace to capture a meaningful position in this segment.",
+        f"Step 5 — Team and Execution (110-140s): {team} We have the sector knowledge, the execution discipline, and the network to scale with speed. Every team member was chosen to cover this growth phase's critical risks.",
+        f"Step 6 — Ask and Next Steps (140-180s): We're raising {funding_goal} for {use_of_funds.lower().rstrip('.')}. This capital takes us to the milestones needed for the next round from a position of strength. {call_to_action}",
+    ]
+
+    pitch_deck = [
+        {"slide": 1, "title": "Cover", "bullets": [
+            one_liner,
+            startup_name,
+            "Investment Pitch — Seed Round",
+        ]},
+        {"slide": 2, "title": "The Problem", "bullets": [
+            problem,
+            f"Directly affects: {target_customer}",
+            "Existing solutions are fragmented, expensive, or built for other contexts",
+            "The opportunity window is open — the market needs a definitive solution now",
+        ]},
+        {"slide": 3, "title": "Our Solution", "bullets": [
+            solution,
+            f"Built specifically for {target_customer.lower()}",
+            competitive_advantage,
+            "Measurable results from the first cycle of use — no months-long implementation",
+        ]},
+        {"slide": 4, "title": "Addressable Market", "bullets": [
+            market_size,
+            f"Initial focus segment: {target_customer}",
+            "Expansion into adjacent verticals after consolidating the initial base",
+            "Sector dynamics favor new entrants with a superior product and disciplined execution",
+        ]},
+        {"slide": 5, "title": "Business Model", "bullets": [
+            business_model,
+            "Predictable revenue with expansion potential via upsell and cross-sell per account",
+            "Favorable LTV/CAC that keeps improving as the customer base grows",
+            "Growing margins with scale — cost structure doesn't grow proportionally with revenue",
+        ]},
+        {"slide": 6, "title": "Traction and Validation", "bullets": [
+            traction,
+            "Qualitative feedback confirms product-market fit in progress",
+            "Engagement and retention metrics above sector average",
+            "Early customers generate use cases, references, and data to improve the product",
+        ]},
+        {"slide": 7, "title": "GTM Strategy", "bullets": [
+            f"Primary channel: direct, consultative approach to {target_customer.lower()}",
+            "Strategic partnerships to reduce CAC and accelerate the sales cycle",
+            "Replicable expansion playbook after validating the initial segment",
+            "Geographic and vertical expansion planned for 18-36 months",
+        ]},
+        {"slide": 8, "title": "Competitive Advantage", "bullets": [
+            competitive_advantage,
+            "Growing moat: proprietary data and network effects with every new customer",
+            "High switching cost after integration with the customer's critical workflows",
+            "Technical and sector-knowledge barrier that grows with time in operation",
+        ]},
+        {"slide": 9, "title": "Team", "bullets": [
+            team,
+            "Specific sector experience reduces execution risk in this phase",
+            "Culture of metrics, fast iteration, and relentless focus on results",
+            "Network and strategic advisory for opening doors and accelerating sales",
+        ]},
+        {"slide": 10, "title": "Fundraising and Use of Capital", "bullets": [
+            f"This round's goal: {funding_goal}",
+            f"Strategic allocation: {use_of_funds}",
+            "Clear, measurable milestones tied to each investment front",
+            "18-24 months of runway to reach the metrics that support the next round",
+        ]},
+        {"slide": 11, "title": "Vision and Roadmap", "bullets": [
+            f"{startup_name}: the reference in the segment within 36 months",
+            "Product expansion guided by data and feedback from early customers",
+            "International expansion planned after consolidating and leading the domestic market",
+            "Next round prepared with proven KPIs and a solid growth base",
+        ]},
+        {"slide": 12, "title": "Conclusion and Call to Action", "bullets": [
+            f"{startup_name} — {one_liner}",
+            "Validated market, committed team, and a solution with a defensible differentiator",
+            f"{call_to_action}",
+            "The ideal time to enter is now — before the acceleration curve",
+        ]},
+    ]
+
+    closing = (
+        f"{startup_name} represents a clear thesis: a real and urgent problem, a differentiated solution with a growing moat, "
+        f"an expanding market, and a team with proven execution capability. "
+        f"{traction} This moment — right before the growth acceleration — is the ideal window to enter with the highest potential upside. "
+        f"We propose the next step: {call_to_action.lower().rstrip('.')}, so we can deepen diligence, "
+        f"align the round's terms, and build a category-leading business together in this market."
+    )
+
+    return {
+        "title": f"{startup_name} — {one_liner[:70]}{'...' if len(one_liner) > 70 else ''}",
+        "slogan": one_liner,
+        "sections": sections,
+        "investment": {
+            "funding_goal": funding_goal,
+            "use_of_funds": use_of_funds,
+            "runway_months": "18-24 months",
+            "key_milestones": (
+                f"(1) Scale the customer base with solid retention metrics; "
+                f"(2) Reach operational break-even or recurring revenue that justifies the next round; "
+                f"(3) Consolidate a replicable sales playbook for accelerated expansion."
+            ),
+        },
+        "elevator_pitch": elevator_pitch,
+        "script_3min": script_3min,
+        "pitch_deck": pitch_deck,
+        "closing": closing,
+        "narrative_uniqueness_key": _build_pitch_uniqueness_key(idea_data),
+        "engine_used": "local",
+    }
+
+
+def _local_pitch_fallback_pt(idea_data: dict) -> dict:
     s = idea_data
     startup_name = s.get("startup_name", "Startup")
     one_liner = (s.get("one_liner", "") or "").strip() or f"{startup_name}: solução escalável para um problema real de mercado."
@@ -392,7 +632,7 @@ def _normalize_payload(data: dict, engine_used: str, *, enrich: bool = True) -> 
     return data
 
 
-def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> dict:
+def generate_pitch_from_idea(idea_data: dict, model_source: str = "local", language: str = "en") -> dict:
     model_source = (model_source or "local").strip().lower()
     if model_source not in {"local", "gpt"}:
         model_source = "local"
@@ -412,7 +652,7 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> di
                     temperature=0.72,
                     response_format={"type": "json_object"},
                     messages=[
-                        {"role": "system", "content": _build_gpt_system_prompt()},
+                        {"role": "system", "content": _build_gpt_system_prompt(language)},
                         {"role": "user", "content": _build_gpt_user_prompt(idea_data, uniqueness_key)},
                     ],
                 )
@@ -424,4 +664,4 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local") -> di
             except Exception:
                 pass
 
-    return _normalize_payload(_local_pitch_fallback(idea_data), "local", enrich=True)
+    return _normalize_payload(_local_pitch_fallback(idea_data, language=language), "local", enrich=True)

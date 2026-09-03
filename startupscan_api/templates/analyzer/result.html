@@ -103,9 +103,9 @@
                 <div class="card-body">
                     <div class="section-hd mb-3">
                         <div class="section-hd-icon"><i class="fas fa-align-left"></i></div>
-                        <h5>{{ ui_text.executive_summary|default:"Resumo executivo" }}</h5>
+                        <h5 style="color:#f1f5f9;">{{ ui_text.executive_summary|default:"Resumo executivo" }}</h5>
                     </div>
-                    <div class="p-3 rounded" style="background:rgba(15,23,42,.7);border:1px solid #1e2d4a;line-height:1.7;">
+                    <div class="p-3 rounded" style="background:rgba(15,23,42,.7);border:1px solid #1e2d4a;line-height:1.7;color:#f1f5f9;">
                         {{ analysis.report.summary|default:ui_text.report_unavailable|default:"Relatório indisponível." }}
                     </div>
 
@@ -167,7 +167,7 @@
                 <div class="card-body">
                     <div class="section-hd mb-4">
                         <div class="section-hd-icon"><i class="fas fa-chart-bar"></i></div>
-                        <h5>{{ ui_text.category_score_0_10|default:"Scores por Categoria (0–10)" }}</h5>
+                        <h5 style="color:#f1f5f9;">{{ ui_text.category_score_0_10|default:"Scores por Categoria (0–10)" }}</h5>
                     </div>
                     {% for key, value in analysis.report.category_scores.items %}
                     {% with pct=value|default:0 label=analysis.report.category_labels|dict_get:key %}
@@ -193,12 +193,12 @@
                 <div class="card-body">
                     <div class="section-hd mb-4">
                         <div class="section-hd-icon" style="background:rgba(37,99,235,.14);color:#60a5fa;"><i class="fas fa-hand-holding-dollar"></i></div>
-                        <h5>{{ ui_text.investor_thesis_title|default:"Tese do Investidor" }}</h5>
+                        <h5 style="color:#f1f5f9;">{{ ui_text.investor_thesis_title|default:"Tese do Investidor" }}</h5>
                     </div>
                     <div class="thesis-box mb-4">
-                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.thesis_label|default:"Tese" }}:</span> {{ analysis.report.investor_pitch.investment_thesis }}</div>
-                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.readiness_label|default:"Prontidão" }}:</span> {{ analysis.report.investor_pitch.funding_readiness }}</div>
-                        <div><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.suggested_ticket|default:"Ticket" }}:</span> {{ analysis.report.investor_pitch.suggested_ticket }}</div>
+                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.thesis_label|default:"Tese" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.investment_thesis }}</span></div>
+                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.readiness_label|default:"Prontidão" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.funding_readiness }}</span></div>
+                        <div><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.suggested_ticket|default:"Ticket" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.suggested_ticket }}</span></div>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -242,7 +242,8 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" style="font-size:.8rem;">{{ ui_text.premium_manual_template|default:"Template" }}</label>
-                                <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate">
+                                <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate"
+                                        onchange="var m=document.getElementById('resultPitchDesignMode'); if(m && m.options.length>1){m.value=m.options[m.options.length-1].value;}">
                                     {% for value, label in pitch_design_template_choices %}
                                     <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
@@ -301,7 +302,7 @@
             {% if can_view_received_interests %}
             <div class="card mb-3 animate-fade-up">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-users me-2" style="color:#60a5fa;"></i>{{ ui_text.investors_interested_in_pitch|default:"Investidores interessados" }}</h5>
+                    <h5 class="mb-0" style="color:#f1f5f9;"><i class="fas fa-users me-2" style="color:#60a5fa;"></i>{{ ui_text.investors_interested_in_pitch|default:"Investidores interessados" }}</h5>
                     <span class="badge bg-primary">{{ received_interests|length }}</span>
                 </div>
                 <div class="card-body">

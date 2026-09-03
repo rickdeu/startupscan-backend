@@ -181,7 +181,10 @@ class IdeaPitchDetailView(RoleRequiredMixin, View):
                 return redirect('idea_pitch_detail', submission_id=submission.id)
 
         try:
-            pitch_payload = generate_pitch_from_idea(self._to_payload(submission), model_source=submission.model_source)
+            pitch_language = normalize_ui_language(getattr(request, "ui_language", None))
+            pitch_payload = generate_pitch_from_idea(
+                self._to_payload(submission), model_source=submission.model_source, language=pitch_language,
+            )
             submission.generated_pitch = pitch_payload
             submission.status = "generated"
             submission.generated_at = timezone.now()
@@ -368,7 +371,10 @@ class IdeaPitchPDFView(RoleRequiredMixin, View):
                 "use_of_funds": submission.use_of_funds,
                 "call_to_action": submission.call_to_action,
             }
-            generated = generate_pitch_from_idea(payload, model_source=submission.model_source)
+            generated = generate_pitch_from_idea(
+                payload, model_source=submission.model_source,
+                language=normalize_ui_language(getattr(request, "ui_language", None)),
+            )
             submission.generated_pitch = generated
             submission.status = "generated"
             submission.generated_at = timezone.now()

@@ -52,6 +52,15 @@ def _ui_text_for_request(request):
 
 
 def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
+    # NOTE: startupscan_api/services/pitch/generator.py's local fallback
+    # (_local_pitch_fallback) that ultimately consumes this payload is a
+    # rich but Portuguese-only prose generator with no language parameter
+    # of its own. Regenerating analysis.report in another language here
+    # would feed non-Portuguese fragments into its Portuguese connective
+    # sentences, producing worse mixing than today. Keep this payload (and
+    # its fallbacks) in Portuguese until that generator gets its own
+    # multi-language support; only report_export.py's technical report is
+    # fully language-aware end to end for now.
     report = analysis.report or {}
     investor_pitch = report.get("investor_pitch", {}) if isinstance(report, dict) else {}
     strengths = report.get("strengths", []) if isinstance(report, dict) else []
@@ -615,7 +624,7 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
                 request, default_mode=PITCH_DESIGN_MODE_AUTO, default_template="orbit"
             )
             report_language = normalize_ui_language(getattr(request, "ui_language", None))
-            pitch_payload = generate_pitch_from_idea(payload, model_source=model_source)
+            pitch_payload = generate_pitch_from_idea(payload, model_source=model_source, language=report_language)
 
             media_root = settings.MEDIA_ROOT
             try:

@@ -263,53 +263,42 @@ _CANVAS_BLOCK_FILLS = {
 }
 
 
-def _canvas_cell(block: dict, styles):
+def _canvas_cell(block: dict, styles, max_items: int = 2):
     flow = [Paragraph(block["title"], styles["canvas_block_title"])]
-    for item in block.get("items", []):
+    for item in (block.get("items") or [])[:max_items]:
         flow.append(Paragraph(f"• {item}", styles["canvas_item"]))
     return flow
 
 
 def _build_business_canvas(canvas: dict, styles):
     """
-    Renders the classic 9-block Business Model Canvas grid:
-      [Key Partners  | Key Activities      | Value          | Customer      | Customer]
-      [(tall)        | Key Resources       | Propositions   | Relationships | Segments]
-      [                                    | (tall)         | Channels      | (tall)  ]
-      [Cost Structure (wide)               | Revenue Streams (wide)                   ]
+    Renders the 9 Business Model Canvas blocks as a plain 3x3 grid.
+    Deliberately avoids ReportLab row-spanning: Platypus's automatic
+    row-height calculation does not reliably account for cells that span
+    multiple rows, which caused real overlapping/garbled text with the
+    previous "classic diamond" layout. A uniform grid with no spans lets
+    every row auto-size correctly to its tallest cell, with no overlap.
     """
     b = canvas["blocks"]
     avail_w = PAGE_W - 2 * MARGIN
-    col_w = [avail_w * 0.18, avail_w * 0.18, avail_w * 0.24, avail_w * 0.20, avail_w * 0.20]
+    col_w = [avail_w / 3.0] * 3
 
-    data = [
-        [_canvas_cell(b["key_partners"], styles), _canvas_cell(b["key_activities"], styles),
-         _canvas_cell(b["value_propositions"], styles), _canvas_cell(b["customer_relationships"], styles),
-         _canvas_cell(b["customer_segments"], styles)],
-        ["", _canvas_cell(b["key_resources"], styles), "", _canvas_cell(b["channels"], styles), ""],
-        [_canvas_cell(b["cost_structure"], styles), "", _canvas_cell(b["revenue_streams"], styles), "", ""],
+    order = [
+        ("key_partners", "key_activities", "value_propositions"),
+        ("key_resources", "customer_relationships", "customer_segments"),
+        ("channels", "cost_structure", "revenue_streams"),
     ]
+    data = [[_canvas_cell(b[key], styles) for key in row] for row in order]
 
-    table = Table(data, colWidths=col_w, rowHeights=[3.1 * cm, 3.1 * cm, 2.0 * cm])
+    table = Table(data, colWidths=col_w)
     style = [
         ("GRID", (0, 0), (-1, -1), 0.6, C_VIOLET_MD),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("PADDING", (0, 0), (-1, -1), 6),
-        ("SPAN", (0, 0), (0, 1)),   # Key Partners tall
-        ("SPAN", (2, 0), (2, 1)),   # Value Propositions tall
-        ("SPAN", (4, 0), (4, 1)),   # Customer Segments tall
-        ("SPAN", (0, 2), (1, 2)),   # Cost Structure wide
-        ("SPAN", (2, 2), (4, 2)),   # Revenue Streams wide
-        ("BACKGROUND", (0, 0), (0, 1), _CANVAS_BLOCK_FILLS["key_partners"]),
-        ("BACKGROUND", (1, 0), (1, 0), _CANVAS_BLOCK_FILLS["key_activities"]),
-        ("BACKGROUND", (1, 1), (1, 1), _CANVAS_BLOCK_FILLS["key_resources"]),
-        ("BACKGROUND", (2, 0), (2, 1), _CANVAS_BLOCK_FILLS["value_propositions"]),
-        ("BACKGROUND", (3, 0), (3, 0), _CANVAS_BLOCK_FILLS["customer_relationships"]),
-        ("BACKGROUND", (3, 1), (3, 1), _CANVAS_BLOCK_FILLS["channels"]),
-        ("BACKGROUND", (4, 0), (4, 1), _CANVAS_BLOCK_FILLS["customer_segments"]),
-        ("BACKGROUND", (0, 2), (1, 2), _CANVAS_BLOCK_FILLS["cost_structure"]),
-        ("BACKGROUND", (2, 2), (4, 2), _CANVAS_BLOCK_FILLS["revenue_streams"]),
+        ("PADDING", (0, 0), (-1, -1), 8),
     ]
+    for row_idx, row_keys in enumerate(order):
+        for col_idx, key in enumerate(row_keys):
+            style.append(("BACKGROUND", (col_idx, row_idx), (col_idx, row_idx), _CANVAS_BLOCK_FILLS[key]))
     table.setStyle(TableStyle(style))
     return table
 
@@ -419,6 +408,16 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
 
     report = analysis.report or {}
     metadata = analysis.metadata or {}
+
+    # The local engine's narrative is a deterministic function of
+    # (score, metadata) plus language, so a report generated in one
+    # language can be safely and losslessly regenerated in another at
+    # export time — this avoids ever mixing the (translated) PDF chrome
+    # with a stale, differently-languaged stored narrative.
+    if report.get("status") == "local_report" and report.get("language") != language:
+        from startupscan_api.utils.report import generate_interpretable_report
+        report = generate_interpretable_report(analysis.success_score, metadata, language=language)
+
     category_scores = report.get("category_scores", {})
     category_labels = report.get("category_labels", {})
     startup_name = str(metadata.get("startup_name", "") or "").strip() or t.get("startup_label", "Startup")
