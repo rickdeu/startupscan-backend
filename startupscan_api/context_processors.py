@@ -1,5 +1,5 @@
 from startupscan_api.roles import (
-    ROLE_PUBLICO,
+    ROLE_GENERAL_PUBLIC,
     get_user_role,
     role_access_matrix,
     role_home_url_name,
@@ -27,15 +27,17 @@ def user_role_context(request):
         except Exception:
             pass
 
+    ui_text = build_ui_text(current_ui_language)
+
     return {
         "user_role": role,
-        "user_role_label": role_label(role),
+        "user_role_label": role_label(role, ui_text),
         "user_role_home_url_name": role_home_url_name(role),
         "user_role_access": access,
-        "role_publico": ROLE_PUBLICO,
+        "role_general_public": ROLE_GENERAL_PUBLIC,
         "current_ui_language": current_ui_language,
         "ui_languages": SUPPORTED_UI_LANGUAGES,
-        "ui_text": build_ui_text(current_ui_language),
+        "ui_text": ui_text,
         "user_subscription": user_subscription,
         "user_plan_tier": user_plan_tier,
         "subscription_trial_days_left": subscription_trial_days_left,

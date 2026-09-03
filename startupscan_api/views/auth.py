@@ -10,7 +10,7 @@ from django.utils.translation import activate
 from django.views import View
 
 from startupscan_api.forms import RegisterForm
-from startupscan_api.i18n import normalize_ui_language, to_django_language
+from startupscan_api.i18n import build_ui_text, normalize_ui_language, to_django_language
 from startupscan_api.roles import get_or_create_profile_for_user, get_user_role, role_home_url
 from .helpers import _redirect_for_role
 
@@ -29,16 +29,21 @@ class RoleHomeView(LoginRequiredMixin, View):
 
 
 def register_view(request):
+    current_ui_language = normalize_ui_language(
+        getattr(request, "ui_language", None) or request.session.get("ui_language")
+    )
+    ui_text = build_ui_text(current_ui_language)
+
     if request.method == "POST":
-        form = RegisterForm(request.POST)
+        form = RegisterForm(request.POST, ui_text=ui_text)
         if form.is_valid():
             user = form.save()
             login(request, user)
             get_or_create_profile_for_user(user)
-            messages.success(request, "Registro realizado com sucesso!")
+            messages.success(request, ui_text.get("register_success", "Registration completed successfully!"))
             return _redirect_for_role(request, fallback_role=get_user_role(user))
     else:
-        form = RegisterForm()
+        form = RegisterForm(ui_text=ui_text)
     return render(request, 'analyzer/register.html', {'form': form})
 
 
@@ -46,7 +51,7 @@ def set_ui_language(request):
     if request.method != "POST":
         return redirect("dashboard")
 
-    selected = normalize_ui_language(request.POST.get("language", "pt"))
+    selected = normalize_ui_language(request.POST.get("language", "en"))
     django_lang = to_django_language(selected)
 
     request.session["ui_language"] = selected
