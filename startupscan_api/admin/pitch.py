@@ -33,19 +33,19 @@ class PitchAnalysisAdmin(admin.ModelAdmin):
         'file_links',
     )
     fieldsets = (
-        ('Informações Básicas', {
+        ('Basic Information', {
             'fields': ('status', 'startup_name', 'user', 'contact_email', 'industry'),
         }),
-        ('Conteúdo do Pitch', {
+        ('Pitch Content', {
             'fields': ('text', 'audio_file', 'video_file', 'file_links', 'submission_date'),
         }),
-        ('Dados Financeiros', {
+        ('Financial Data', {
             'fields': ('revenue', 'growth_rate', 'profit_margin', 'burn_rate'),
         }),
-        ('Resultados da Análise', {
+        ('Analysis Results', {
             'fields': ('success_score', 'confidence', 'report', 'metadata'),
         }),
-        ('Metadados Técnicos', {
+        ('Technical Metadata', {
             'fields': (
                 'created_at',
                 'updated_at',
@@ -63,8 +63,8 @@ class PitchAnalysisAdmin(admin.ModelAdmin):
     radio_fields = {'status': admin.HORIZONTAL, 'industry': admin.VERTICAL}
 
     def user_display(self, obj):
-        return obj.user.username if obj.user else 'Anônimo'
-    user_display.short_description = 'Usuário'
+        return obj.user.username if obj.user else 'Anonymous'
+    user_display.short_description = 'User'
     user_display.admin_order_field = 'user__username'
 
     def status_badge(self, obj):
@@ -96,57 +96,57 @@ class PitchAnalysisAdmin(admin.ModelAdmin):
 
     def financial_metrics(self, obj):
         return format_html(
-            'AOA {}<br>{}% Cresc.<br>{}% Margem',
-            f"{obj.revenue:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            'AOA {}<br>{}% Growth<br>{}% Margin',
+            f"{obj.revenue:,.2f}",
             obj.growth_rate,
             obj.profit_margin,
         )
-    financial_metrics.short_description = 'Métricas Financeiras'
+    financial_metrics.short_description = 'Financial Metrics'
     financial_metrics.admin_order_field = 'revenue'
 
     def created_at_short(self, obj):
-        return obj.created_at.strftime('%d/%m/%Y %H:%M')
-    created_at_short.short_description = 'Criado em'
+        return obj.created_at.strftime('%Y-%m-%d %H:%M')
+    created_at_short.short_description = 'Created at'
     created_at_short.admin_order_field = 'created_at'
 
     def analysis_actions(self, obj):
         return format_html(
-            '<a href="{}" class="button" style="padding: 2px 5px; background: #417690; color: white; text-decoration: none;">Ver</a>&nbsp;'
-            '<a href="{}" class="button" style="padding: 2px 5px; background: #447e9b; color: white; text-decoration: none;">Editar</a>',
+            '<a href="{}" class="button" style="padding: 2px 5px; background: #417690; color: white; text-decoration: none;">View</a>&nbsp;'
+            '<a href="{}" class="button" style="padding: 2px 5px; background: #447e9b; color: white; text-decoration: none;">Edit</a>',
             obj.get_absolute_url(),
             f"{obj.id}/change/",
         )
-    analysis_actions.short_description = 'Ações'
+    analysis_actions.short_description = 'Actions'
 
     def file_links(self, obj):
         links = []
         if obj.audio_file:
-            links.append(f'<a href="{obj.audio_file.url}" target="_blank">Áudio</a>')
+            links.append(f'<a href="{obj.audio_file.url}" target="_blank">Audio</a>')
         if obj.video_file:
-            links.append(f'<a href="{obj.video_file.url}" target="_blank">Vídeo</a>')
+            links.append(f'<a href="{obj.video_file.url}" target="_blank">Video</a>')
         return format_html(' | '.join(links)) if links else '-'
-    file_links.short_description = 'Arquivos'
+    file_links.short_description = 'Files'
 
     def analysis_duration(self, obj):
         if obj.processing_time:
-            return f"{obj.processing_time:.2f} segundos"
+            return f"{obj.processing_time:.2f} seconds"
         return '-'
-    analysis_duration.short_description = 'Duração da Análise'
+    analysis_duration.short_description = 'Analysis Duration'
 
     def _format_json(self, data):
         return json.dumps(data, indent=2, ensure_ascii=False)
 
-    @admin.action(description='Marcar como completo')
+    @admin.action(description='Mark as completed')
     def mark_as_completed(self, request, queryset):
         updated = queryset.update(status='completed')
-        self.message_user(request, f"{updated} análises marcadas como completas.")
+        self.message_user(request, f"{updated} analyses marked as completed.")
 
-    @admin.action(description='Reprocessar análise')
+    @admin.action(description='Reprocess analysis')
     def reprocess_analysis(self, request, queryset):
         from startupscan_api.tasks import reprocess_pitch_analysis
         for analysis in queryset:
             reprocess_pitch_analysis.delay(analysis.id)
-        self.message_user(request, f"{queryset.count()} análises enviadas para reprocessamento.")
+        self.message_user(request, f"{queryset.count()} analyses sent for reprocessing.")
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

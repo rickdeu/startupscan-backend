@@ -36,30 +36,30 @@ class Command(BaseCommand):
         self.stdout.write("Starting model training...")
         
         try:
-            # 1. Carregar datasets
+            # 1. Load datasets
             if options['pitches_data'] and options['financials_data']:
-                # Usar caminhos customizados se fornecidos
+                # Use custom paths if provided
                 pitches_path = options['pitches_data']
                 financials_path = options['financials_data']
             else:
-                # Usar caminhos padrão
+                # Use default paths
                 pitches_path, financials_path = self.load_training_data()
-            
+
             self.stdout.write(f"Loading data from:\n- Pitches: {pitches_path}\n- Financials: {financials_path}")
-            
-            # 2. Ler os datasets
+
+            # 2. Read the datasets
             pitches_df = pd.read_csv(pitches_path)
             financial_df = pd.read_csv(financials_path)
-            
-            # 3. Treinar modelo
+
+            # 3. Train model
             model, metrics = train_and_evaluate(pitches_df, financial_df)
-            
-            # 4. Salvar modelo
+
+            # 4. Save model
             model_path = options['model_output']
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             joblib.dump(model, model_path)
 
-            # 5. Salvar métricas ao lado do modelo
+            # 5. Save metrics alongside the model
             metrics_path = get_metrics_path(os.path.basename(model_path))
             with open(metrics_path, "w", encoding="utf-8") as fh:
                 json.dump(metrics, fh, ensure_ascii=False, indent=2)
@@ -79,11 +79,11 @@ class Command(BaseCommand):
             raise e
     
     def load_training_data(self):
-        """Carrega os paths dos datasets padrão"""
+        """Loads the default dataset paths"""
         pitches_path = Path(settings.DATA_DIR) / 'pitches_dataset.csv'
         financials_path = Path(settings.DATA_DIR) / 'financials_dataset.csv'
-        
-        # Verificar existência dos arquivos
+
+        # Check that the files exist
         if not all(os.path.exists(p) for p in [pitches_path, financials_path]):
             raise FileNotFoundError(
                 f"Default datasets not found. Please provide paths using --pitches-data and --financials-data"

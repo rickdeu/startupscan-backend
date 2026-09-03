@@ -16,7 +16,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-# ── Paleta de cores ──────────────────────────────────────────────────────────
+# ── Color palette ───────────────────────────────────────────────────────────
 C_NAVY    = colors.HexColor("#0f172a")
 C_BLUE    = colors.HexColor("#2563eb")
 C_BLUE_LT = colors.HexColor("#dbeafe")
@@ -30,13 +30,16 @@ C_RED     = colors.HexColor("#dc2626")
 C_RED_LT  = colors.HexColor("#fee2e2")
 C_AMBER   = colors.HexColor("#d97706")
 C_AMBER_LT = colors.HexColor("#fef3c7")
+C_VIOLET  = colors.HexColor("#7c3aed")
+C_VIOLET_LT = colors.HexColor("#ede9fe")
+C_VIOLET_MD = colors.HexColor("#c4b5fd")
 C_WHITE   = colors.white
 
 PAGE_W, PAGE_H = A4
 MARGIN = 1.5 * cm
 
 
-# ── Estilos ──────────────────────────────────────────────────────────────────
+# ── Styles ───────────────────────────────────────────────────────────────────
 def _build_styles():
     base = getSampleStyleSheet()
 
@@ -76,6 +79,14 @@ def _build_styles():
                          fontName="Helvetica-Bold"),
         "footer":      s("footer",      fontSize=7,  textColor=C_SLATE,
                          alignment=TA_CENTER),
+        "canvas_block_title": s("canvas_block_title", fontSize=8.5, textColor=C_VIOLET,
+                                fontName="Helvetica-Bold", leading=11, spaceAfter=3),
+        "canvas_item": s("canvas_item", fontSize=7.3, textColor=C_NAVY,
+                         leading=10, spaceAfter=2),
+        "canvas_intro": s("canvas_intro", fontSize=9, textColor=C_SLATE,
+                          leading=13, spaceAfter=8, fontName="Helvetica-Oblique"),
+        "pro_badge": s("pro_badge", fontSize=7, textColor=C_WHITE,
+                       fontName="Helvetica-Bold", alignment=TA_CENTER),
     }
 
 
@@ -101,12 +112,13 @@ def _readiness_style(text: str, styles):
     return styles["tag_red"]
 
 
-# ── Gráfico de barras nativo ─────────────────────────────────────────────────
-def _build_category_chart(categories: dict):
+# ── Native bar chart ─────────────────────────────────────────────────────────
+def _build_category_chart(categories: dict, t: dict, category_labels: dict | None = None):
     from reportlab.graphics.charts.barcharts import VerticalBarChart
     from reportlab.graphics.shapes import Drawing, String
 
-    labels = [k.replace("_", " ").title() for k in categories.keys()]
+    category_labels = category_labels or {}
+    labels = [category_labels.get(k) or k.replace("_", " ").title() for k in categories.keys()]
     values = [[float(v) for v in categories.values()]]
 
     d = Drawing(460, 190)
@@ -127,15 +139,15 @@ def _build_category_chart(categories: dict):
     chart.bars[0].strokeColor = colors.HexColor("#1d4ed8")
     chart.bars[0].strokeWidth = 0.4
 
-    title = String(230, 184, "Pontuação por Categoria (0–10)",
+    title = String(230, 184, t.get("report_pdf_category_score_chart_title", "Pontuação por Categoria (0–10)"),
                    textAnchor="middle", fontSize=8.5, fillColor=C_NAVY)
     d.add(chart)
     d.add(title)
     return d
 
 
-# ── Tabela de KPIs financeiros ───────────────────────────────────────────────
-def _build_kpi_table(analysis, styles):
+# ── Financial KPI table ──────────────────────────────────────────────────────
+def _build_kpi_table(analysis, styles, t: dict):
     score = float(analysis.success_score or 0)
     fg, bg = _score_color(score)
 
@@ -147,10 +159,10 @@ def _build_kpi_table(analysis, styles):
             Paragraph(f"{float(analysis.profit_margin or 0):.1f}%", styles["kpi_value"]),
         ],
         [
-            Paragraph("Score Final", styles["kpi_label"]),
-            Paragraph("Receita", styles["kpi_label"]),
-            Paragraph("Crescimento", styles["kpi_label"]),
-            Paragraph("Margem de Lucro", styles["kpi_label"]),
+            Paragraph(t.get("report_pdf_final_score", "Score Final"), styles["kpi_label"]),
+            Paragraph(t.get("revenue", "Receita"), styles["kpi_label"]),
+            Paragraph(t.get("growth", "Crescimento"), styles["kpi_label"]),
+            Paragraph(t.get("report_pdf_profit_margin", "Margem de Lucro"), styles["kpi_label"]),
         ],
     ]
     col_w = (PAGE_W - 2 * MARGIN) / 4
@@ -168,24 +180,25 @@ def _build_kpi_table(analysis, styles):
     return t
 
 
-# ── Tabela de notas por categoria ────────────────────────────────────────────
-def _build_category_table(categories: dict, styles):
+# ── Category score table ─────────────────────────────────────────────────────
+def _build_category_table(categories: dict, styles, t: dict, category_labels: dict | None = None):
+    category_labels = category_labels or {}
     rows = [
         [
-            Paragraph("<b>Categoria</b>", styles["small"]),
-            Paragraph("<b>Nota</b>", styles["small"]),
-            Paragraph("<b>Avaliação</b>", styles["small"]),
+            Paragraph(f"<b>{t.get('category', 'Categoria')}</b>", styles["small"]),
+            Paragraph(f"<b>{t.get('report_pdf_grade', 'Nota')}</b>", styles["small"]),
+            Paragraph(f"<b>{t.get('report_pdf_rating', 'Avaliação')}</b>", styles["small"]),
         ]
     ]
     for key, val in categories.items():
         v = float(val)
-        label = key.replace("_", " ").title()
+        label = category_labels.get(key) or key.replace("_", " ").title()
         if v >= 7.5:
-            rating = Paragraph("● Forte", styles["tag_green"])
+            rating = Paragraph(f"● {t.get('report_pdf_rating_strong', 'Forte')}", styles["tag_green"])
         elif v >= 5.0:
-            rating = Paragraph("● Moderado", styles["tag_amber"])
+            rating = Paragraph(f"● {t.get('report_pdf_rating_moderate', 'Moderado')}", styles["tag_amber"])
         else:
-            rating = Paragraph("● Fraco", styles["tag_red"])
+            rating = Paragraph(f"● {t.get('report_pdf_rating_weak', 'Fraco')}", styles["tag_red"])
         rows.append([
             Paragraph(label, styles["body"]),
             Paragraph(f"{v:.1f}", styles["body"]),
@@ -204,14 +217,14 @@ def _build_category_table(categories: dict, styles):
     return t
 
 
-# ── Tabela de tese para investidores ─────────────────────────────────────────
-def _build_investor_table(investor_pitch: dict, styles):
+# ── Investor thesis table ────────────────────────────────────────────────────
+def _build_investor_table(investor_pitch: dict, styles, t: dict):
     fields = [
-        ("Tese de Investimento",   investor_pitch.get("investment_thesis", "N/A")),
-        ("Prontidão para Captação", investor_pitch.get("funding_readiness", "N/A")),
-        ("Ticket Sugerido",         investor_pitch.get("suggested_ticket", "N/A")),
-        ("Riscos para o Investidor", investor_pitch.get("key_risks_for_investor", "N/A")),
-        ("Perfil de Retorno Esperado", investor_pitch.get("expected_return_profile", "N/A")),
+        (t.get("report_pdf_investment_thesis", "Tese de Investimento"),   investor_pitch.get("investment_thesis", "N/A")),
+        (t.get("report_pdf_funding_readiness", "Prontidão para Captação"), investor_pitch.get("funding_readiness", "N/A")),
+        (t.get("suggested_ticket", "Ticket Sugerido"),         investor_pitch.get("suggested_ticket", "N/A")),
+        (t.get("report_pdf_key_risks_investor", "Riscos para o Investidor"), investor_pitch.get("key_risks_for_investor", "N/A")),
+        (t.get("report_pdf_expected_return_profile", "Perfil de Retorno Esperado"), investor_pitch.get("expected_return_profile", "N/A")),
     ]
     rows = []
     for label, value in fields:
@@ -236,7 +249,61 @@ def _build_investor_table(investor_pitch: dict, styles):
     return t
 
 
-# ── Seção com lista de bullets coloridos ─────────────────────────────────────
+# ── Business Model Canvas (Pro tier) ─────────────────────────────────────────
+_CANVAS_BLOCK_FILLS = {
+    "key_partners": C_VIOLET_LT,
+    "key_activities": C_BLUE_LT,
+    "key_resources": C_BLUE_LT,
+    "value_propositions": C_AMBER_LT,
+    "customer_relationships": C_GREEN_LT,
+    "channels": C_GREEN_LT,
+    "customer_segments": C_VIOLET_LT,
+    "cost_structure": C_SLATE_LT,
+    "revenue_streams": C_SLATE_LT,
+}
+
+
+def _canvas_cell(block: dict, styles, max_items: int = 2):
+    flow = [Paragraph(block["title"], styles["canvas_block_title"])]
+    for item in (block.get("items") or [])[:max_items]:
+        flow.append(Paragraph(f"• {item}", styles["canvas_item"]))
+    return flow
+
+
+def _build_business_canvas(canvas: dict, styles):
+    """
+    Renders the 9 Business Model Canvas blocks as a plain 3x3 grid.
+    Deliberately avoids ReportLab row-spanning: Platypus's automatic
+    row-height calculation does not reliably account for cells that span
+    multiple rows, which caused real overlapping/garbled text with the
+    previous "classic diamond" layout. A uniform grid with no spans lets
+    every row auto-size correctly to its tallest cell, with no overlap.
+    """
+    b = canvas["blocks"]
+    avail_w = PAGE_W - 2 * MARGIN
+    col_w = [avail_w / 3.0] * 3
+
+    order = [
+        ("key_partners", "key_activities", "value_propositions"),
+        ("key_resources", "customer_relationships", "customer_segments"),
+        ("channels", "cost_structure", "revenue_streams"),
+    ]
+    data = [[_canvas_cell(b[key], styles) for key in row] for row in order]
+
+    table = Table(data, colWidths=col_w)
+    style = [
+        ("GRID", (0, 0), (-1, -1), 0.6, C_VIOLET_MD),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 8),
+    ]
+    for row_idx, row_keys in enumerate(order):
+        for col_idx, key in enumerate(row_keys):
+            style.append(("BACKGROUND", (col_idx, row_idx), (col_idx, row_idx), _CANVAS_BLOCK_FILLS[key]))
+    table.setStyle(TableStyle(style))
+    return table
+
+
+# ── Section with colored bullet list ─────────────────────────────────────────
 def _bullet_section(title: str, items: list, story, styles,
                     bullet_char="▸", color=C_NAVY):
     if not items:
@@ -265,18 +332,18 @@ def _bullet_section_simple(title: str, items: list, story, styles, prefix="●")
     story.append(Spacer(1, 0.2 * cm))
 
 
-# ── Cover inline (sem canvas) ─────────────────────────────────────────────────
-def _build_cover_block(analysis, styles):
+# ── Inline cover (no canvas) ────────────────────────────────────────────────
+def _build_cover_block(analysis, styles, t: dict):
     story = []
     startup_name = (analysis.metadata or {}).get("startup_name", "") if analysis.metadata else ""
     score = float(analysis.success_score or 0)
     fg, bg = _score_color(score)
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-    # Cabeçalho azul como tabela de fundo
+    # Blue header rendered as a background table
     header_data = [[
         Paragraph(
-            f"<b>{'StartupScan — Relatório de Avaliação de Pitch'}</b>",
+            f"<b>{t.get('report_pdf_cover_title', 'StartupScan — Relatório de Avaliação de Pitch')}</b>",
             ParagraphStyle("ch", fontSize=16, textColor=C_WHITE,
                            fontName="Helvetica-Bold", leading=22),
         )
@@ -291,17 +358,21 @@ def _build_cover_block(analysis, styles):
     story.append(header_t)
     story.append(Spacer(1, 0.4 * cm))
 
-    # Linha de meta-dados
-    meta_parts = [f"<b>Análise #{analysis.id}</b>"]
+    # Metadata line
+    meta_parts = [f"<b>{t.get('report_pdf_analysis_number_prefix', 'Análise')} #{analysis.id}</b>"]
     if startup_name:
-        meta_parts.append(f"Startup: <b>{startup_name}</b>")
-    meta_parts.append(f"Gerado em: {now_str}")
+        meta_parts.append(f"{t.get('startup_label', 'Startup')}: <b>{startup_name}</b>")
+    meta_parts.append(f"{t.get('generated_at', 'Gerado em')}: {now_str}")
     story.append(Paragraph("  |  ".join(meta_parts), styles["small"]))
     story.append(_hr(C_BLUE, thickness=1.2))
     story.append(Spacer(1, 0.3 * cm))
 
-    # Score destaque
-    score_label = "Excelente" if score >= 8 else ("Bom" if score >= 6.5 else ("Regular" if score >= 5 else "Fraco"))
+    # Highlighted score
+    score_label = (
+        t.get("report_pdf_score_excellent", "Excelente") if score >= 8
+        else (t.get("report_pdf_score_good", "Bom") if score >= 6.5
+        else (t.get("report_pdf_score_regular", "Regular") if score >= 5
+        else t.get("report_pdf_rating_weak", "Fraco"))))
     score_data = [[
         Paragraph(f"{score:.1f}", ParagraphStyle("sv", fontSize=40, textColor=fg,
                                                   fontName="Helvetica-Bold", alignment=TA_CENTER)),
@@ -321,124 +392,156 @@ def _build_cover_block(analysis, styles):
     return story
 
 
-# ── Exportação principal ──────────────────────────────────────────────────────
-def export_analysis_pdf(analysis, output_path: str):
+# ── Main export ─────────────────────────────────────────────────────────────
+def export_analysis_pdf(analysis, output_path: str, language: str = "en", include_business_canvas: bool = False):
+    from startupscan_api.i18n import build_ui_text
+
+    t = build_ui_text(language)
+
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     styles = _build_styles()
     story = []
 
-    # ── Capa / cabeçalho ─────────────────────────────────────────────────────
-    story.extend(_build_cover_block(analysis, styles))
+    # ── Cover / header ────────────────────────────────────────────────────────
+    story.extend(_build_cover_block(analysis, styles, t))
 
     report = analysis.report or {}
     metadata = analysis.metadata or {}
-    category_scores = report.get("category_scores", {})
-    startup_name = str(metadata.get("startup_name", "") or "").strip() or "Startup"
 
-    # ── KPIs financeiros ─────────────────────────────────────────────────────
-    story.append(Paragraph("<b>Indicadores Financeiros</b>", styles["section_h"]))
-    story.append(_build_kpi_table(analysis, styles))
+    # The local engine's narrative is a deterministic function of
+    # (score, metadata) plus language, so a report generated in one
+    # language can be safely and losslessly regenerated in another at
+    # export time — this avoids ever mixing the (translated) PDF chrome
+    # with a stale, differently-languaged stored narrative.
+    if report.get("status") == "local_report" and report.get("language") != language:
+        from startupscan_api.utils.report import generate_interpretable_report
+        report = generate_interpretable_report(analysis.success_score, metadata, language=language)
+
+    category_scores = report.get("category_scores", {})
+    category_labels = report.get("category_labels", {})
+    startup_name = str(metadata.get("startup_name", "") or "").strip() or t.get("startup_label", "Startup")
+
+    # ── Financial KPIs ────────────────────────────────────────────────────────
+    story.append(Paragraph(f"<b>{t.get('financial_indicators', 'Indicadores Financeiros')}</b>", styles["section_h"]))
+    story.append(_build_kpi_table(analysis, styles, t))
     story.append(Spacer(1, 0.5 * cm))
 
-    # ── Resumo executivo ─────────────────────────────────────────────────────
+    # ── Executive summary ─────────────────────────────────────────────────────
     story.append(_hr())
-    story.append(Paragraph("<b>Resumo Executivo</b>", styles["section_h"]))
-    summary = report.get("summary", "Resumo não disponível.")
+    story.append(Paragraph(f"<b>{t.get('executive_summary', 'Resumo Executivo')}</b>", styles["section_h"]))
+    summary = report.get("summary", t.get("report_pdf_summary_unavailable", "Resumo não disponível."))
     for para in str(summary).split("\n\n"):
         para = para.strip()
         if para:
             story.append(Paragraph(para, styles["body"]))
     story.append(Spacer(1, 0.4 * cm))
 
-    # ── Oportunidade de mercado ───────────────────────────────────────────────
+    # ── Market opportunity ────────────────────────────────────────────────────
     market_opp = report.get("market_opportunity", "")
     if market_opp:
         story.append(_hr())
-        story.append(Paragraph("<b>Oportunidade de Mercado</b>", styles["section_h"]))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_market_opportunity', 'Oportunidade de Mercado')}</b>", styles["section_h"]))
         story.append(Paragraph(str(market_opp), styles["body"]))
         story.append(Spacer(1, 0.3 * cm))
 
-    # ── Posicionamento competitivo ────────────────────────────────────────────
+    # ── Competitive positioning ───────────────────────────────────────────────
     comp_pos = report.get("competitive_position", "")
     if comp_pos:
-        story.append(Paragraph("<b>Posicionamento Competitivo</b>", styles["section_h"]))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_competitive_position', 'Posicionamento Competitivo')}</b>", styles["section_h"]))
         story.append(Paragraph(str(comp_pos), styles["body"]))
         story.append(Spacer(1, 0.3 * cm))
 
-    # ── Avaliação por categoria ───────────────────────────────────────────────
+    # ── Category assessment ───────────────────────────────────────────────────
     if category_scores:
         story.append(PageBreak())
-        story.append(Paragraph("<b>Avaliação Detalhada por Categoria</b>", styles["section_h"]))
-        story.append(_build_category_table(category_scores, styles))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_category_assessment', 'Avaliação Detalhada por Categoria')}</b>", styles["section_h"]))
+        story.append(_build_category_table(category_scores, styles, t, category_labels))
         story.append(Spacer(1, 0.4 * cm))
-        story.append(_build_category_chart(category_scores))
+        story.append(_build_category_chart(category_scores, t, category_labels))
         story.append(Spacer(1, 0.5 * cm))
 
-    # ── Pontos fortes ────────────────────────────────────────────────────────
+    # ── Strengths ─────────────────────────────────────────────────────────────
     strengths = report.get("strengths", [])
     weaknesses = report.get("weaknesses", [])
     recommendations = report.get("recommendations", [])
 
     if strengths or weaknesses or recommendations:
         story.append(_hr())
-        story.append(Paragraph("<b>Análise Qualitativa</b>", styles["section_h"]))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_qualitative_analysis', 'Análise Qualitativa')}</b>", styles["section_h"]))
 
     if strengths:
-        story.append(Paragraph("<b>Pontos Fortes</b>", styles["sub_h"]))
+        story.append(Paragraph(f"<b>{t.get('strengths', 'Pontos Fortes')}</b>", styles["sub_h"]))
         for item in strengths:
             story.append(Paragraph(f"✔ {item}", styles["bullet"]))
         story.append(Spacer(1, 0.3 * cm))
 
     if weaknesses:
-        story.append(Paragraph("<b>Riscos e Pontos a Melhorar</b>", styles["sub_h"]))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_weaknesses', 'Riscos e Pontos a Melhorar')}</b>", styles["sub_h"]))
         for item in weaknesses:
             story.append(Paragraph(f"✘ {item}", styles["bullet"]))
         story.append(Spacer(1, 0.3 * cm))
 
     if recommendations:
-        story.append(Paragraph("<b>Recomendações Acionáveis</b>", styles["sub_h"]))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_recommendations', 'Recomendações Acionáveis')}</b>", styles["sub_h"]))
         for i, item in enumerate(recommendations, 1):
             story.append(Paragraph(f"{i}. {item}", styles["bullet"]))
         story.append(Spacer(1, 0.4 * cm))
 
-    # ── Tese para investidores ────────────────────────────────────────────────
+    # ── Investor thesis ───────────────────────────────────────────────────────
     investor_pitch = report.get("investor_pitch", {})
     if investor_pitch:
         story.append(PageBreak())
-        story.append(Paragraph("<b>Perspectiva para Investidores</b>", styles["section_h"]))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_investor_perspective', 'Perspectiva para Investidores')}</b>", styles["section_h"]))
         story.append(_hr(C_BLUE, 0.8))
 
         thesis = investor_pitch.get("investment_thesis", "")
         if thesis:
-            story.append(Paragraph("<b>Tese de Investimento</b>", styles["sub_h"]))
+            story.append(Paragraph(f"<b>{t.get('report_pdf_investment_thesis', 'Tese de Investimento')}</b>", styles["sub_h"]))
             story.append(Paragraph(str(thesis), styles["body"]))
             story.append(Spacer(1, 0.3 * cm))
 
-        inv_table = _build_investor_table(investor_pitch, styles)
+        inv_table = _build_investor_table(investor_pitch, styles, t)
         if inv_table:
             story.append(inv_table)
             story.append(Spacer(1, 0.4 * cm))
 
-    # ── Legado (fallback: investor_pitch antigo sem campos ricos) ────────────
+    # ── Legacy (fallback: old investor_pitch without rich fields) ────────────
     elif report.get("investor_pitch") and isinstance(report["investor_pitch"], dict):
         old = report["investor_pitch"]
         if old.get("investment_thesis"):
-            story.append(Paragraph("<b>Tese para Investidores</b>", styles["section_h"]))
+            story.append(Paragraph(f"<b>{t.get('report_pdf_investor_thesis_legacy', 'Tese para Investidores')}</b>", styles["section_h"]))
             story.append(Paragraph(old.get("investment_thesis", ""), styles["body"]))
-            story.append(Paragraph(f"<b>Prontidão:</b> {old.get('funding_readiness', 'N/A')}", styles["body"]))
-            story.append(Paragraph(f"<b>Ticket sugerido:</b> {old.get('suggested_ticket', 'N/A')}", styles["body"]))
+            story.append(Paragraph(f"<b>{t.get('readiness_label', 'Prontidão')}:</b> {old.get('funding_readiness', 'N/A')}", styles["body"]))
+            story.append(Paragraph(f"<b>{t.get('suggested_ticket', 'Ticket sugerido')}:</b> {old.get('suggested_ticket', 'N/A')}", styles["body"]))
 
-    # ── Rodapé de metadados ───────────────────────────────────────────────────
+    # ── Business Model Canvas (Pro tier only) ─────────────────────────────────
+    if include_business_canvas:
+        from startupscan_api.utils.business_canvas import generate_business_model_canvas
+        canvas = generate_business_model_canvas(analysis, language=language)
+        story.append(PageBreak())
+        story.append(Paragraph(
+            f'<font color="#{C_VIOLET.hexval()[2:]}">★</font> '
+            f"<b>{canvas['section_title']}</b> "
+            f'<font size="7" color="#{C_VIOLET.hexval()[2:]}">PRO</font>',
+            styles["section_h"],
+        ))
+        story.append(_hr(C_VIOLET, 0.8))
+        story.append(Paragraph(canvas["intro"], styles["canvas_intro"]))
+        story.append(_build_business_canvas(canvas, styles))
+        story.append(Spacer(1, 0.4 * cm))
+
+    # ── Metadata footer ───────────────────────────────────────────────────────
     story.append(Spacer(1, 0.6 * cm))
     story.append(_hr())
     engine_used = metadata.get("analysis_engine_used", "local")
     engine_req  = metadata.get("analysis_engine_requested", "local")
     story.append(
         Paragraph(
-            f"Motor utilizado: <b>{engine_used}</b> | Solicitado: {engine_req} | "
-            f"Startup: {startup_name} | "
-            f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')} | StartupScan.AI",
+            f"{t.get('report_pdf_engine_used', 'Motor utilizado')}: <b>{engine_used}</b> | "
+            f"{t.get('report_pdf_engine_requested', 'Solicitado')}: {engine_req} | "
+            f"{t.get('startup_label', 'Startup')}: {startup_name} | "
+            f"{t.get('generated_at', 'Gerado em')}: {datetime.now().strftime('%d/%m/%Y %H:%M')} | StartupScanAI",
             styles["footer"],
         )
     )
@@ -448,8 +551,28 @@ def export_analysis_pdf(analysis, output_path: str):
         pagesize=A4,
         rightMargin=MARGIN,
         leftMargin=MARGIN,
-        topMargin=MARGIN,
-        bottomMargin=MARGIN,
+        topMargin=MARGIN + 0.35 * cm,
+        bottomMargin=MARGIN + 0.6 * cm,
     )
-    doc.build(story)
+    startup_short = (startup_name or "StartupScan")[:40]
+
+    def _decorate_page(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        # Top accent strip
+        canvas_obj.setFillColor(C_BLUE)
+        canvas_obj.rect(0, PAGE_H - 0.14 * cm, PAGE_W, 0.14 * cm, stroke=0, fill=1)
+        # Running footer
+        canvas_obj.setStrokeColor(C_BORDER)
+        canvas_obj.setLineWidth(0.4)
+        canvas_obj.line(MARGIN, MARGIN * 0.55, PAGE_W - MARGIN, MARGIN * 0.55)
+        canvas_obj.setFont("Helvetica", 7.5)
+        canvas_obj.setFillColor(C_SLATE)
+        canvas_obj.drawString(MARGIN, MARGIN * 0.32, f"StartupScanAI  •  {startup_short}")
+        canvas_obj.drawRightString(
+            PAGE_W - MARGIN, MARGIN * 0.32,
+            f"{t.get('report_pdf_page_label', 'Page')} {doc_obj.page}",
+        )
+        canvas_obj.restoreState()
+
+    doc.build(story, onFirstPage=_decorate_page, onLaterPages=_decorate_page)
     return output_path

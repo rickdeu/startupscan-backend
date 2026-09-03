@@ -96,7 +96,8 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label text-muted mb-1">{{ ui_text.premium_manual_template }}</label>
-                <select class="form-select form-select-sm" name="design_template" id="ideaPitchDesignTemplate">
+                <select class="form-select form-select-sm" name="design_template" id="ideaPitchDesignTemplate"
+                        onchange="var m=document.getElementById('ideaPitchDesignMode'); if(m && m.options.length>1){m.value=m.options[m.options.length-1].value;}">
                     {% for value, label in pitch_design_template_choices %}
                     <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}

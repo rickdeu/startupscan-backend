@@ -7,12 +7,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.models import IdeaPitchSubmission, IdeaPublicFeedback
 from startupscan_api.roles import (
     ROLE_ADMIN,
-    ROLE_ANALISTA,
-    ROLE_EMPREENDEDOR,
-    ROLE_PUBLICO,
+    ROLE_ANALYST,
+    ROLE_ENTREPRENEUR,
+    ROLE_GENERAL_PUBLIC,
     get_user_role,
 )
 from startupscan_api.services.pitch_builder import (
@@ -32,8 +33,12 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def _ui_text_for_request(request):
+    return build_ui_text(normalize_ui_language(getattr(request, "ui_language", None)))
+
+
 class IdeaPitchBuilderView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     required_fields = {
         "startup_name": "Nome da startup",
@@ -83,7 +88,9 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
         errors = self._validate(form_data)
 
         if errors:
-            messages.error(request, "Preencha os campos obrigatórios para guardar a ideia.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_fill_required_idea_fields", "Fill in the required fields to save the idea.",
+            ))
             return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": errors})
 
         try:
@@ -92,16 +99,21 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
                 **{k: v for k, v in form_data.items() if k != "model_source"},
                 model_source=form_data["model_source"],
             )
-            messages.success(request, "Informações guardadas com sucesso. Revise os dados e clique em 'Gerar Pitch Completo'.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_idea_info_saved",
+                "Information saved successfully. Review the details and click 'Generate Full Pitch'.",
+            ))
             return redirect("idea_pitch_detail", submission_id=submission.id)
         except Exception as exc:
             logger.error("Falha ao guardar submissão de ideia: %s", str(exc), exc_info=True)
-            messages.error(request, "Não foi possível guardar a ideia. Tente novamente.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_idea_save_failed", "Could not save the idea. Please try again.",
+            ))
             return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": {}})
 
 
 class IdeaPitchDetailView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     @staticmethod
     def _can_access(request, submission):
@@ -160,28 +172,37 @@ class IdeaPitchDetailView(RoleRequiredMixin, View):
         if action != "generate":
             return redirect("idea_pitch_detail", submission_id=submission.id)
 
-        if submission.model_source == 'gpt' and get_user_role(request.user) != ROLE_ADMIN:
+        if submission.model_source == 'gpt' and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
             allowed, _ = check_feature_access(request.user, 'pitch_gpt')
             if not allowed:
-                messages.warning(request, 'Geração de pitch via GPT requer um plano superior.')
+                messages.warning(request, _ui_text_for_request(request).get(
+                    "msg_pitch_gpt_requires_upgrade", "Generating a pitch via GPT requires a higher plan.",
+                ))
                 return redirect('idea_pitch_detail', submission_id=submission.id)
 
         try:
-            pitch_payload = generate_pitch_from_idea(self._to_payload(submission), model_source=submission.model_source)
+            pitch_language = normalize_ui_language(getattr(request, "ui_language", None))
+            pitch_payload = generate_pitch_from_idea(
+                self._to_payload(submission), model_source=submission.model_source, language=pitch_language,
+            )
             submission.generated_pitch = pitch_payload
             submission.status = "generated"
             submission.generated_at = timezone.now()
             submission.save(update_fields=["generated_pitch", "status", "generated_at", "updated_at"])
-            messages.success(request, "Pitch completo gerado com sucesso. Já está pronto para apresentação.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_pitch_generated_success", "Full pitch generated successfully. It's ready for presentation.",
+            ))
         except Exception as exc:
             logger.error("Falha ao gerar pitch completo: %s", str(exc), exc_info=True)
-            messages.error(request, "Não foi possível gerar o pitch completo. Tente novamente.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_pitch_generation_failed", "Could not generate the full pitch. Please try again.",
+            ))
 
         return redirect("idea_pitch_detail", submission_id=submission.id)
 
 
 class PublicIdeasView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_PUBLICO}
+    allowed_roles = {ROLE_GENERAL_PUBLIC}
 
     @staticmethod
     def _ranking_points(submission) -> float:
@@ -251,7 +272,7 @@ class PublicIdeasView(RoleRequiredMixin, View):
 
 
 class PublicIdeaDetailView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_PUBLICO}
+    allowed_roles = {ROLE_GENERAL_PUBLIC}
 
     def get(self, request, submission_id):
         submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
@@ -275,7 +296,7 @@ class PublicIdeaDetailView(RoleRequiredMixin, View):
 
 
 class PublicIdeaFeedbackView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_PUBLICO}
+    allowed_roles = {ROLE_GENERAL_PUBLIC}
 
     def post(self, request, submission_id):
         submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
@@ -287,11 +308,15 @@ class PublicIdeaFeedbackView(RoleRequiredMixin, View):
         try:
             stars = int(stars_raw)
         except (TypeError, ValueError):
-            messages.error(request, "Selecione uma nota válida entre 1 e 5 estrelas.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_select_valid_rating", "Select a valid rating between 1 and 5 stars.",
+            ))
             return redirect("public_idea_detail", submission_id=submission.id)
 
         if stars < 1 or stars > 5:
-            messages.error(request, "A nota deve estar entre 1 e 5 estrelas.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_rating_out_of_range", "The rating must be between 1 and 5 stars.",
+            ))
             return redirect("public_idea_detail", submission_id=submission.id)
 
         if len(comment) > 2000:
@@ -304,20 +329,24 @@ class PublicIdeaFeedbackView(RoleRequiredMixin, View):
         )
 
         if created:
-            messages.success(request, "Obrigado! O seu feedback foi registado.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_feedback_registered_thanks", "Thank you! Your feedback has been recorded.",
+            ))
         else:
-            messages.success(request, "O seu feedback foi atualizado com sucesso.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_feedback_updated_success", "Your feedback has been updated successfully.",
+            ))
 
         return redirect("public_idea_detail", submission_id=submission.id)
 
 
 class IdeaPitchPDFView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request, submission_id):
         submission = get_object_or_404(IdeaPitchSubmission, id=submission_id)
         if (
-            get_user_role(request.user) != ROLE_ADMIN
+            get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST)
             and submission.user_id
             and request.user.is_authenticated
             and submission.user_id != request.user.id
@@ -342,7 +371,10 @@ class IdeaPitchPDFView(RoleRequiredMixin, View):
                 "use_of_funds": submission.use_of_funds,
                 "call_to_action": submission.call_to_action,
             }
-            generated = generate_pitch_from_idea(payload, model_source=submission.model_source)
+            generated = generate_pitch_from_idea(
+                payload, model_source=submission.model_source,
+                language=normalize_ui_language(getattr(request, "ui_language", None)),
+            )
             submission.generated_pitch = generated
             submission.status = "generated"
             submission.generated_at = timezone.now()
@@ -363,7 +395,9 @@ class IdeaPitchPDFView(RoleRequiredMixin, View):
         design_mode, design_template = _resolve_pitch_design_selection(
             request, default_mode=PITCH_DESIGN_MODE_AUTO, default_template="orbit"
         )
-        export_pitch_pdf(submission.generated_pitch, output_path, design_mode=design_mode, manual_template=design_template)
+        report_language = normalize_ui_language(getattr(request, "ui_language", None))
+        export_pitch_pdf(submission.generated_pitch, output_path, design_mode=design_mode, manual_template=design_template,
+                          language=report_language)
 
         return FileResponse(
             open(output_path, "rb"),

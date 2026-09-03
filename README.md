@@ -1,480 +1,480 @@
-# StartupScan — Plataforma de Avaliação Inteligente de Startups
+# StartupScan — Intelligent Startup Evaluation Platform
 
-StartupScan é uma plataforma web full-stack que automatiza a avaliação de startups usando inteligência artificial. Combina entrada multimodal (texto, documentos, áudio, vídeo), modelos de ML locais e integração com GPT para produzir um score de 0 a 10, um relatório técnico detalhado, um pitch deck visual em PDF e um vídeo explicativo narrado gerado por IA.
+StartupScan is a full-stack web platform that automates startup pitch evaluation using artificial intelligence. It combines multimodal input (text, documents, audio, video), local ML models, and GPT integration to produce a score from 0 to 10, a detailed technical report, a visual pitch deck in PDF, and an AI-narrated explainer video.
 
-O sistema serve empreendedores que querem validar ideias, analistas que avaliam oportunidades em escala, e investidores que precisam de triagem rápida de deals.
+The system serves entrepreneurs who want to validate ideas, analysts who evaluate opportunities at scale, and investors who need fast deal-flow triage.
 
 ---
 
-## Índice
+## Table of contents
 
-1. [Contexto e propósito](#1-contexto-e-propósito)
-2. [Funcionalidades principais](#2-funcionalidades-principais)
-3. [Arquitectura técnica](#3-arquitectura-técnica)
-4. [Papéis de utilizador](#4-papéis-de-utilizador)
-5. [Modelos de dados](#5-modelos-de-dados)
-6. [Pré-requisitos](#6-pré-requisitos)
-7. [Setup local passo a passo](#7-setup-local-passo-a-passo)
-8. [Variáveis de ambiente](#8-variáveis-de-ambiente)
-9. [Treino do modelo de IA](#9-treino-do-modelo-de-ia)
-10. [Uso da plataforma](#10-uso-da-plataforma)
-11. [Referência de endpoints](#11-referência-de-endpoints)
-12. [Execução com Docker Compose](#12-execução-com-docker-compose)
-13. [Deploy na Render (CI/CD)](#13-deploy-na-render-cicd)
-14. [Testes e validação](#14-testes-e-validação)
+1. [Context and purpose](#1-context-and-purpose)
+2. [Main features](#2-main-features)
+3. [Technical architecture](#3-technical-architecture)
+4. [User roles](#4-user-roles)
+5. [Data models](#5-data-models)
+6. [Prerequisites](#6-prerequisites)
+7. [Step-by-step local setup](#7-step-by-step-local-setup)
+8. [Environment variables](#8-environment-variables)
+9. [Training the AI model](#9-training-the-ai-model)
+10. [Using the platform](#10-using-the-platform)
+11. [Endpoint reference](#11-endpoint-reference)
+12. [Running with Docker Compose](#12-running-with-docker-compose)
+13. [Deploying to Render (CI/CD)](#13-deploying-to-render-cicd)
+14. [Testing and validation](#14-testing-and-validation)
 15. [Troubleshooting](#15-troubleshooting)
-16. [Documentação técnica adicional](#16-documentação-técnica-adicional)
+16. [Additional technical documentation](#16-additional-technical-documentation)
 
 ---
 
-## 1. Contexto e propósito
+## 1. Context and purpose
 
-### O problema
+### The problem
 
-A avaliação manual de pitches de startups é lenta, subjectiva e não escala. Um analista experiente consegue avaliar alguns pitches por semana; uma aceleradora recebe dezenas por mês. O feedback é inconsistente entre avaliadores e raramente inclui artefactos concretos que o empreendedor possa usar.
+Manually evaluating startup pitches is slow, subjective, and doesn't scale. An experienced analyst can review a handful of pitches per week; an accelerator receives dozens per month. Feedback is inconsistent across reviewers and rarely includes concrete artifacts the entrepreneur can actually use.
 
-### A solução
+### The solution
 
-O StartupScan automatiza o ciclo completo: da submissão do pitch à entrega de artefactos prontos para apresentação.
+StartupScan automates the full cycle: from pitch submission to delivery of presentation-ready artifacts.
 
-1. O empreendedor submete o pitch em qualquer formato (texto, PDF, vídeo, áudio ou link YouTube) com dados financeiros básicos.
-2. O sistema extrai, normaliza e combina todas as entradas.
-3. Um pipeline de ML (scikit-learn + XGBoost) ou GPT gera um score de sucesso com categorias e explicabilidade.
-4. São produzidos automaticamente: relatório técnico PDF, pitch deck visual PDF e vídeo narrado por IA.
-5. Investidores podem expressar interesse em startups directamente na plataforma.
+1. The entrepreneur submits the pitch in any format (text, PDF, video, audio, or a YouTube link) along with basic financial data.
+2. The system extracts, normalizes, and merges all inputs.
+3. An ML pipeline (scikit-learn + XGBoost) or GPT generates a success score with categories and explainability.
+4. The system automatically produces: a technical PDF report, a visual PDF pitch deck, and an AI-narrated video.
+5. Investors can express interest in startups directly on the platform.
 
-### Para quem é
+### Who it's for
 
-| Perfil | O que usa |
+| Profile | What they use |
 |---|---|
-| Empreendedor | Submissão de pitch, construtor de ideias, pitch deck PDF |
-| Analista | Dashboard, avaliação em lote (CSV), gestão de modelos |
-| Investidor | Dashboard de deal flow, conexões com startups |
-| Público geral | Navegação de ideias públicas, feedback com estrelas |
-| Admin | Gestão de utilizadores, modelos de ML, configuração |
+| Entrepreneur | Pitch submission, idea builder, PDF pitch deck |
+| Analyst | Dashboard, batch evaluation (CSV), model management |
+| Investor | Deal-flow dashboard, connections with startups |
+| General public | Browsing public ideas, star-based feedback |
+| Admin | User management, ML models, configuration |
 
 ---
 
-## 2. Funcionalidades principais
+## 2. Main features
 
-### Avaliação de startup (core)
+### Startup evaluation (core)
 
-- Submissão multimodal: texto livre, `.txt`, `.md`, `.csv`, `.pdf`, `.docx`, áudio, vídeo, link YouTube
-- Dados financeiros: receita (AOA), taxa de crescimento, margem de lucro, burn rate
-- Score final de 0 a 10 com nível de confiança percentual
-- Relatório com 8 categorias: Clareza da Proposta, Proposta de Valor, Inovação, Viabilidade, Escalabilidade, Mercado-Alvo, Equipa, Sustentabilidade
-- Pontos fortes, pontos fracos e recomendações práticas
-- Fallback automático para modelo local quando GPT não está disponível
+- Multimodal submission: free text, `.txt`, `.md`, `.csv`, `.pdf`, `.docx`, audio, video, YouTube link
+- Financial data: revenue (AOA), growth rate, profit margin, burn rate
+- Final score from 0 to 10 with a confidence percentage
+- Report with 8 categories: Clarity of Proposal, Value Proposition, Innovation, Feasibility, Scalability, Target Market, Team, Sustainability
+- Strengths, weaknesses, and actionable recommendations
+- Automatic fallback to the local model when GPT is unavailable
 
-### Processamento em lote
+### Batch processing
 
-- Upload de CSV com múltiplos pitches
-- Processamento assíncrono com polling de progresso
-- Download de resultados consolidados
+- CSV upload with multiple pitches
+- Asynchronous processing with progress polling
+- Download of consolidated results
 
-### Relatório técnico PDF
+### Technical PDF report
 
-Gerado para cada análise:
+Generated for every analysis:
 
-- Score, confiança e categorias
-- Dados financeiros submetidos
-- Análise interpretável
-- Recomendações práticas
-- Metadados do modelo usado
+- Score, confidence, and categories
+- Submitted financial data
+- Interpretable analysis
+- Actionable recommendations
+- Metadata of the model used
 
-### Pitch deck PDF (slides para investidores)
+### PDF pitch deck (investor slides)
 
-- 1 página = 1 slide
-- Capa executiva, narrativa estruturada, conclusão
-- **Design automático por contexto** (recomendado): o sistema escolhe o template com base na indústria e dados
-- **Design premium manual**: o utilizador escolhe entre 6 templates — Orbit, Grid, Wave, Diagonal, Aurora, Ribbon
+- 1 page = 1 slide
+- Executive cover, structured narrative, conclusion
+- **Automatic context-based design** (recommended): the system chooses the template based on industry and data
+- **Manual premium design**: the user picks from 6 templates — Orbit, Grid, Wave, Diagonal, Aurora, Ribbon
 
-### Vídeo explicativo com IA
+### AI explainer video
 
-Gerado a partir do resultado da análise:
+Generated from the analysis result:
 
-- **Modo `auto`**: tenta D-ID API (apresentador realista) com fallback para vídeo local
-- **Modo `did_only`**: apenas D-ID (falha se API indisponível)
-- **Modo `local_only`**: moviepy + TTS local (sem dependências externas)
-- Duração entre 1 e 3 minutos
-- Progresso em tempo real via polling
-- Suporte a detecção de género do apresentador (deepface)
+- **`auto` mode**: tries the D-ID API (realistic presenter) with fallback to a local video
+- **`did_only` mode**: D-ID only (fails if the API is unavailable)
+- **`local_only` mode**: moviepy + local TTS (no external dependencies)
+- Duration between 1 and 3 minutes
+- Real-time progress via polling
+- Support for presenter gender detection (deepface)
 
-### Construtor de ideias (pitch builder)
+### Idea builder (pitch builder)
 
-- Formulário guiado: problema, solução, cliente-alvo, mercado, modelo de negócio, vantagem competitiva, tracção, equipa, financiamento
-- Geração automática do pitch narrativo (local ou GPT)
-- Exportação como PDF
-- Publicação como ideia pública para receber feedback da comunidade
+- Guided form: problem, solution, target customer, market, business model, competitive advantage, traction, team, funding
+- Automatic generation of the narrative pitch (local or GPT)
+- Export as PDF
+- Publish as a public idea to receive community feedback
 
-### Conexões investidor-startup
+### Investor-startup connections
 
-- Investidor expressa interesse numa análise com mensagem
-- Empreendedor vê o interesse no hub de conexões
-- Ciclo de resposta: `pending → reviewing → connected / rejected`
+- Investor expresses interest in an analysis with a message
+- Entrepreneur sees the interest in the connections hub
+- Response cycle: `pending → reviewing → connected / rejected`
 
-### Sistema de subscrições (Stripe)
+### Subscription system (Stripe)
 
-- Três tiers: **Trial** (7 dias grátis), **Basic** ($50/mês ou $400/ano), **Pro** ($150/mês ou $1 200/ano)
-- **Multi-moeda**: preços exibidos em USD, EUR e AOA — o utilizador selecciona a moeda preferida na página de planos; o valor é guardado em `localStorage` e não requer qualquer pedido ao servidor
-- Checkout via Stripe Checkout Session com suporte a customer existente
-- Portal de gestão de faturação via Stripe Billing Portal
-- Webhooks Stripe: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_*` → actualizam automaticamente o modelo `Subscription` na BD
-- Fallback para payment links estáticos quando `STRIPE_SECRET_KEY` não está configurado
+- Three tiers: **Trial** (7-day free trial), **Basic** ($50/month or $400/year), **Pro** ($150/month or $1,200/year)
+- **Multi-currency**: prices shown in USD, EUR, and AOA — the user selects the preferred currency on the plans page; the value is stored in `localStorage` and requires no server request
+- Checkout via Stripe Checkout Session with support for an existing customer
+- Billing management portal via Stripe Billing Portal
+- Stripe webhooks: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_*` → automatically update the `Subscription` model in the DB
+- Fallback to static payment links when `STRIPE_SECRET_KEY` is not configured
 
-### Notificações por email
+### Email notifications
 
-Todos os eventos importantes enviam email ao utilizador **e** ao administrador (`hangaloandre@gmail.com` em BCC):
+Every important event sends an email to the user **and** to the administrator (`hangaloandre@gmail.com` in BCC):
 
-| Evento | Função |
+| Event | Function |
 |---|---|
-| Conta criada | `send_account_created(user, trial_end)` |
-| Trial activado | `send_trial_started(user, trial_end)` |
-| Subscrição paga activada | `send_subscription_activated(user, plan)` |
-| Plano actualizado | `send_subscription_updated(user, old_plan, new_plan)` |
-| Subscrição cancelada | `send_subscription_canceled(user, plan_name)` |
-| Falha de pagamento | `send_payment_failed(user, plan_name)` |
+| Account created | `send_account_created(user, trial_end)` |
+| Trial started | `send_trial_started(user, trial_end)` |
+| Paid subscription activated | `send_subscription_activated(user, plan)` |
+| Plan updated | `send_subscription_updated(user, old_plan, new_plan)` |
+| Subscription canceled | `send_subscription_canceled(user, plan_name)` |
+| Payment failed | `send_payment_failed(user, plan_name)` |
 
-### Gestão de modelos de ML
+### ML model management
 
-- Upload de datasets personalizados (pitches + financeiros)
-- Treino e retreino com progresso em tempo real
-- Ativação de modelo específico
-- Edição de metadados e remoção de modelos
-- Importação de datasets externos
+- Upload of custom datasets (pitches + financials)
+- Training and retraining with real-time progress
+- Activation of a specific model
+- Metadata editing and model removal
+- Import of external datasets
 
 ---
 
-## 3. Arquitectura técnica
+## 3. Technical architecture
 
 ### Stack
 
-| Camada | Tecnologia |
+| Layer | Technology |
 |---|---|
-| Framework web | Django 6 + Django REST Framework |
+| Web framework | Django 6 + Django REST Framework |
 | Frontend | Django Templates + Bootstrap + Chart.js |
-| Base de dados | SQLite (dev) / PostgreSQL (prod) |
-| Cache e filas | Redis + Celery |
-| ML / IA | scikit-learn, XGBoost, pandas, numpy |
+| Database | SQLite (dev) / PostgreSQL (prod) |
+| Cache and queues | Redis + Celery |
+| ML / AI | scikit-learn, XGBoost, pandas, numpy |
 | LLM | OpenAI SDK (GPT) |
-| Vídeo | moviepy, OpenCV, deepface, D-ID API |
-| Áudio / TTS | Whisper, librosa, gTTS, edge-tts |
+| Video | moviepy, OpenCV, deepface, D-ID API |
+| Audio / TTS | Whisper, librosa, gTTS, edge-tts |
 | PDF | ReportLab, pypdf, python-docx |
-| Servidor | Gunicorn + WhiteNoise |
-| Deploy | Docker, Render.com, Kubernetes (opcional) |
+| Server | Gunicorn + WhiteNoise |
+| Deploy | Docker, Render.com, Kubernetes (optional) |
 
-### Fluxo de dados
-
-```
-Utilizador
-    │
-    ▼
-Formulário web / API
-    │
-    ▼
-Extração multimodal (pitch_input.py)
-  ├── Texto directo
-  ├── PDF / DOCX / CSV / TXT → texto
-  ├── Áudio → Whisper → texto
-  └── Vídeo / YouTube → áudio → Whisper → texto
-    │
-    ▼
-Feature engineering + dados financeiros
-    │
-    ▼
-Motor de IA
-  ├── Modelo local (scikit-learn / XGBoost)
-  └── GPT (fallback / alternativo)
-    │
-    ▼
-PitchAnalysis guardado na BD
-    │
-    ├── Relatório técnico PDF (report_export.py)
-    ├── Pitch deck PDF (pitch_builder.py)
-    └── Vídeo narrado (pitch_video.py)
-```
-
-### Componentes assíncronos
-
-Treino de modelos e geração de vídeo correm como jobs assíncronos. O frontend faz polling dos endpoints de progresso até conclusão.
+### Data flow
 
 ```
-Cliente → POST /model/retrain/ → cria job_id → retorna imediatamente
-Cliente → GET /models/training/progress/<job_id>/ → estado do job
-                                  (repete até status=completed)
+User
+    │
+    ▼
+Web form / API
+    │
+    ▼
+Multimodal extraction (pitch_input.py)
+  ├── Direct text
+  ├── PDF / DOCX / CSV / TXT → text
+  ├── Audio → Whisper → text
+  └── Video / YouTube → audio → Whisper → text
+    │
+    ▼
+Feature engineering + financial data
+    │
+    ▼
+AI engine
+  ├── Local model (scikit-learn / XGBoost)
+  └── GPT (fallback / alternative)
+    │
+    ▼
+PitchAnalysis saved to the DB
+    │
+    ├── Technical PDF report (report_export.py)
+    ├── PDF pitch deck (pitch_builder.py)
+    └── Narrated video (pitch_video.py)
+```
+
+### Asynchronous components
+
+Model training and video generation run as asynchronous jobs. The frontend polls the progress endpoints until completion.
+
+```
+Client → POST /model/retrain/ → creates job_id → returns immediately
+Client → GET /models/training/progress/<job_id>/ → job status
+                                  (repeats until status=completed)
 ```
 
 ---
 
-## 4. Papéis de utilizador
+## 4. User roles
 
-O sistema usa um modelo de controlo de acesso baseado em papéis (RBAC).
+The system uses a role-based access control (RBAC) model.
 
-| Papel | Registo público | Capacidades |
+| Role | Public sign-up | Capabilities |
 |---|---|---|
-| `admin` | Não (superuser Django) | Tudo, incluindo gestão de utilizadores e modelos |
-| `analista` | Sim | Dashboard, avaliação, lote, gestão de modelos |
-| `empreendedor` | Sim | Dashboard, submissão de pitch, construtor de ideias, conexões |
-| `investidor` | Sim | Dashboard investidor, expressar interesse, hub de conexões |
-| `publico_geral` | Sim (default) | Navegar ideias públicas, dar feedback |
+| `admin` | No (Django superuser) | Everything, including user and model management |
+| `analista` (analyst) | Yes | Dashboard, evaluation, batch, model management |
+| `empreendedor` (entrepreneur) | Yes | Dashboard, pitch submission, idea builder, connections |
+| `investidor` (investor) | Yes | Investor dashboard, express interest, connections hub |
+| `publico_geral` (general public) | Yes (default) | Browse public ideas, give feedback |
 
-Ao registar, o utilizador escolhe o seu papel. Administradores são criados via `createsuperuser` ou pela interface de admin Django em `/admin/`.
+When registering, the user chooses their role. Administrators are created via `createsuperuser` or through the Django admin interface at `/admin/`.
 
 ---
 
-## 5. Modelos de dados
+## 5. Data models
 
 ### PitchAnalysis
 
-Registo central de cada avaliação.
+The central record for every evaluation.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
-| `user` | FK User (nullable) | Utilizador que submeteu |
-| `startup_name` | CharField | Nome da startup |
+| `user` | FK User (nullable) | User who submitted it |
+| `startup_name` | CharField | Startup name |
 | `industry` | CharField | Sector (tech, health, finance, education, ecommerce, other) |
-| `contact_email` | EmailField | Email de contacto |
-| `text` | TextField | Pitch em texto |
-| `audio_file` | FileField | Áudio enviado |
-| `video_file` | FileField | Vídeo enviado |
-| `document_file` | FileField | Documento enviado |
-| `presenter_face_image_file` | FileField | Foto do apresentador |
-| `youtube_url` | URLField | Link YouTube |
-| `revenue` | DecimalField | Receita (AOA) |
-| `growth_rate` | FloatField | Taxa de crescimento (%) |
-| `profit_margin` | FloatField | Margem de lucro (%) |
-| `burn_rate` | DecimalField | Burn rate mensal |
-| `success_score` | FloatField | Score final 0–10 |
-| `confidence` | FloatField | Confiança da previsão (%) |
-| `report` | JSONField | Relatório estruturado completo |
+| `contact_email` | EmailField | Contact email |
+| `text` | TextField | Pitch text |
+| `audio_file` | FileField | Uploaded audio |
+| `video_file` | FileField | Uploaded video |
+| `document_file` | FileField | Uploaded document |
+| `presenter_face_image_file` | FileField | Presenter photo |
+| `youtube_url` | URLField | YouTube link |
+| `revenue` | DecimalField | Revenue (AOA) |
+| `growth_rate` | FloatField | Growth rate (%) |
+| `profit_margin` | FloatField | Profit margin (%) |
+| `burn_rate` | DecimalField | Monthly burn rate |
+| `success_score` | FloatField | Final score 0–10 |
+| `confidence` | FloatField | Prediction confidence (%) |
+| `report` | JSONField | Full structured report |
 | `status` | CharField | pending / processing / completed / failed |
-| `model_version` | CharField | Versão do modelo usado |
-| `processing_time` | FloatField | Tempo de processamento (s) |
+| `model_version` | CharField | Version of the model used |
+| `processing_time` | FloatField | Processing time (s) |
 
 ### UserProfile
 
-Extende o utilizador Django com papel.
+Extends the Django user with a role.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
-| `user` | OneToOneField | Utilizador Django |
-| `role` | CharField | Um dos 5 papéis |
+| `user` | OneToOneField | Django user |
+| `role` | CharField | One of the 5 roles |
 
 ### IdeaPitchSubmission
 
-Ideia de negócio no construtor.
+Business idea in the builder.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
-| `startup_name` | CharField | Nome |
-| `one_liner` | CharField | Pitch de uma frase |
-| `problem` | TextField | Problema que resolve |
-| `solution` | TextField | Solução proposta |
-| `target_customer` | TextField | Cliente-alvo |
-| `market_size` | TextField | Tamanho do mercado |
-| `business_model` | TextField | Modelo de negócio |
-| `competitive_advantage` | TextField | Diferencial competitivo |
-| `traction` | TextField | Tracção actual |
-| `team` | TextField | Equipa |
-| `funding_goal` | CharField | Meta de financiamento |
-| `use_of_funds` | TextField | Uso dos fundos |
+| `startup_name` | CharField | Name |
+| `one_liner` | CharField | One-sentence pitch |
+| `problem` | TextField | Problem it solves |
+| `solution` | TextField | Proposed solution |
+| `target_customer` | TextField | Target customer |
+| `market_size` | TextField | Market size |
+| `business_model` | TextField | Business model |
+| `competitive_advantage` | TextField | Competitive edge |
+| `traction` | TextField | Current traction |
+| `team` | TextField | Team |
+| `funding_goal` | CharField | Funding goal |
+| `use_of_funds` | TextField | Use of funds |
 | `model_source` | CharField | local / gpt |
 | `status` | CharField | draft / generated |
-| `generated_pitch` | JSONField | Pitch gerado |
+| `generated_pitch` | JSONField | Generated pitch |
 
 ### InvestorConnectionInterest
 
-Interesse de um investidor numa startup.
+An investor's interest in a startup.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
-| `analysis` | FK PitchAnalysis | Análise de interesse |
-| `investor` | FK User | Investidor |
-| `entrepreneur` | FK User (nullable) | Empreendedor destinatário |
+| `analysis` | FK PitchAnalysis | Analysis of interest |
+| `investor` | FK User | Investor |
+| `entrepreneur` | FK User (nullable) | Recipient entrepreneur |
 | `status` | CharField | pending / reviewing / connected / rejected / withdrawn |
-| `investor_message` | TextField | Mensagem do investidor |
-| `entrepreneur_reply` | TextField | Resposta do empreendedor |
+| `investor_message` | TextField | Investor's message |
+| `entrepreneur_reply` | TextField | Entrepreneur's reply |
 
 ### SubscriptionPlan
 
-Define os planos disponíveis.
+Defines the available plans.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
 | `tier` | CharField | `trial` / `basic` / `pro` |
 | `interval` | CharField | `month` / `year` / `once` |
-| `price_usd` | DecimalField | Preço em dólares americanos |
-| `price_eur` | DecimalField | Preço em euros (0 = calculado automaticamente: USD × 0.92) |
-| `price_aoa` | DecimalField | Preço em kwanzas (0 = calculado automaticamente: USD × 912) |
-| `stripe_price_id` | CharField | ID do price no Stripe |
-| `analyses_per_month` | IntegerField | Análises/mês (0 = ilimitado) |
-| `gpt_analysis` | BooleanField | Acesso ao motor GPT |
-| `investor_dashboard` | BooleanField | Acesso ao dashboard de investidores |
+| `price_usd` | DecimalField | Price in US dollars |
+| `price_eur` | DecimalField | Price in euros (0 = auto-calculated: USD × 0.92) |
+| `price_aoa` | DecimalField | Price in kwanzas (0 = auto-calculated: USD × 912) |
+| `stripe_price_id` | CharField | Stripe price ID |
+| `analyses_per_month` | IntegerField | Analyses/month (0 = unlimited) |
+| `gpt_analysis` | BooleanField | Access to the GPT engine |
+| `investor_dashboard` | BooleanField | Access to the investor dashboard |
 
 ### Subscription
 
-Liga utilizadores a planos.
+Links users to plans.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
-| `user` | OneToOneField | Utilizador Django |
-| `plan` | FK SubscriptionPlan | Plano activo |
+| `user` | OneToOneField | Django user |
+| `plan` | FK SubscriptionPlan | Active plan |
 | `status` | CharField | `trialing` / `active` / `past_due` / `canceled` / `incomplete` / `inactive` |
-| `stripe_customer_id` | CharField | ID de cliente Stripe |
-| `stripe_subscription_id` | CharField | ID de subscrição Stripe |
-| `trial_end` | DateTimeField | Data de expiração do trial |
-| `cancel_at_period_end` | BooleanField | Marcado para cancelar no fim do período |
+| `stripe_customer_id` | CharField | Stripe customer ID |
+| `stripe_subscription_id` | CharField | Stripe subscription ID |
+| `trial_end` | DateTimeField | Trial expiration date |
+| `cancel_at_period_end` | BooleanField | Marked to cancel at period end |
 
 ### IdeaPublicFeedback
 
-Avaliação da comunidade sobre ideias públicas.
+Community rating of public ideas.
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |---|---|---|
-| `submission` | FK IdeaPitchSubmission | Ideia avaliada |
-| `author` | FK User | Quem avaliou |
-| `stars` | IntegerField | 1 a 5 estrelas |
+| `submission` | FK IdeaPitchSubmission | Idea being rated |
+| `author` | FK User | Who rated it |
+| `stars` | IntegerField | 1 to 5 stars |
 | `endorsed` | BooleanField | Endorsement |
-| `comment` | TextField | Comentário |
+| `comment` | TextField | Comment |
 
 ---
 
-## 6. Pré-requisitos
+## 6. Prerequisites
 
-Antes de começar, garante que tens o seguinte instalado:
+Before you start, make sure you have the following installed:
 
 - **Python 3.10+** — `python --version`
-- **pip** — incluído com Python
-- **Git** — para clonar o repositório
-- **Redis** (opcional, para Celery) — necessário apenas para jobs assíncronos de treino e vídeo
-- **FFmpeg** (opcional) — necessário para geração de vídeo local
+- **pip** — included with Python
+- **Git** — to clone the repository
+- **Redis** (optional, for Celery) — needed only for asynchronous training and video jobs
+- **FFmpeg** (optional) — needed for local video generation
 
-Para verificar:
+To verify:
 
 ```bash
-python --version      # Python 3.10.x ou superior
+python --version      # Python 3.10.x or higher
 pip --version
 git --version
-redis-cli ping        # PONG (se instalado)
-ffmpeg -version       # (se instalado)
+redis-cli ping        # PONG (if installed)
+ffmpeg -version       # (if installed)
 ```
 
-> **Nota:** O sistema funciona sem Redis e FFmpeg em modo básico (avaliação, relatório PDF). Vídeo local e processamento assíncrono requerem ambos.
+> **Note:** The system works without Redis and FFmpeg in basic mode (evaluation, PDF report). Local video and asynchronous processing require both.
 
 ---
 
-## 7. Setup local passo a passo
+## 7. Step-by-step local setup
 
-### 7.1 Clonar o repositório
+### 7.1 Clone the repository
 
 ```bash
 git clone https://github.com/rickdeu/startupscan-backend.git
 cd startupscan-backend
 ```
 
-### 7.2 Criar e activar ambiente virtual
+### 7.2 Create and activate a virtual environment
 
 ```bash
-# Criar ambiente virtual
+# Create the virtual environment
 python -m venv .venv
 
-# Activar (Linux / macOS)
+# Activate (Linux / macOS)
 source .venv/bin/activate
 
-# Activar (Windows PowerShell)
+# Activate (Windows PowerShell)
 .venv\Scripts\Activate.ps1
 
-# Activar (Windows cmd)
+# Activate (Windows cmd)
 .venv\Scripts\activate.bat
 ```
 
-O prompt deve mostrar `(.venv)` à esquerda quando o ambiente está activo.
+The prompt should show `(.venv)` on the left when the environment is active.
 
-### 7.3 Instalar dependências
+### 7.3 Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-> A instalação pode demorar alguns minutos — o projecto tem dependências pesadas como scikit-learn, moviepy, deepface e transformers.
+> Installation may take a few minutes — the project has heavy dependencies such as scikit-learn, moviepy, deepface, and transformers.
 
-### 7.4 Configurar variáveis de ambiente
+### 7.4 Configure environment variables
 
-Cria um ficheiro `.env` na raiz do projecto:
+Create a `.env` file at the project root:
 
 ```bash
-cp .env.example .env   # se existir exemplo
-# ou cria manualmente
+cp .env.example .env   # if an example exists
+# or create it manually
 ```
 
-Conteúdo mínimo para desenvolvimento local:
+Minimal content for local development:
 
 ```env
-SECRET_KEY=django-insecure-muda-esta-chave-em-producao
+SECRET_KEY=django-insecure-change-this-key-in-production
 DJANGO_DEBUG=1
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
-Ver a secção [8. Variáveis de ambiente](#8-variáveis-de-ambiente) para a lista completa.
+See section [8. Environment variables](#8-environment-variables) for the full list.
 
-### 7.5 Aplicar migrações da base de dados
+### 7.5 Apply database migrations
 
 ```bash
 python manage.py migrate
 ```
 
-Isto cria o ficheiro `db.sqlite3` com todas as tabelas.
+This creates the `db.sqlite3` file with all the tables.
 
-### 7.6 Criar conta de administrador
+### 7.6 Create an administrator account
 
 ```bash
 python manage.py createsuperuser
 ```
 
-Segue as instruções no terminal (username, email, password). Esta conta tem acesso total à plataforma e ao painel de admin em `/admin/`.
+Follow the terminal prompts (username, email, password). This account has full access to the platform and to the admin panel at `/admin/`.
 
-### 7.7 Recolher ficheiros estáticos
+### 7.7 Collect static files
 
 ```bash
 python manage.py collectstatic --noinput
 ```
 
-### 7.8 (Opcional) Treinar o modelo de ML inicial
+### 7.8 (Optional) Train the initial ML model
 
-O sistema consegue avaliar pitches sem modelo pré-treinado (cria um em runtime), mas para melhores resultados treina explicitamente:
+The system can evaluate pitches without a pre-trained model (it creates one at runtime), but for better results, train explicitly:
 
 ```bash
 python manage.py train_model --model-output ai_models/pitch_model.pkl
 ```
 
-Ver a secção [9. Treino do modelo de IA](#9-treino-do-modelo-de-ia) para opções avançadas.
+See section [9. Training the AI model](#9-training-the-ai-model) for advanced options.
 
-### 7.9 Iniciar o servidor de desenvolvimento
+### 7.9 Start the development server
 
 ```bash
 python manage.py runserver 0.0.0.0:8000
 ```
 
-Acede em: **http://localhost:8000**
+Visit: **http://localhost:8000**
 
-### 7.8 (Opcional) Configurar planos de subscrição
+### 7.8 (Optional) Configure subscription plans
 
 ```bash
-# Cria / actualiza os planos na BD e sincroniza com Stripe
+# Create / update plans in the DB and sync with Stripe
 python manage.py setup_subscription_plans
 
-# Sem sincronização Stripe (para ambientes sem API key)
+# Without Stripe sync (for environments without an API key)
 python manage.py setup_subscription_plans --no-sync-stripe
 ```
 
-### Resumo dos comandos
+### Command summary
 
 ```bash
 git clone https://github.com/rickdeu/startupscan-backend.git
 cd startupscan-backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# configura o .env (incluindo STRIPE_* e DJANGO_DEBUG=1)
+# configure .env (including STRIPE_* and DJANGO_DEBUG=1)
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py setup_subscription_plans
@@ -484,136 +484,136 @@ python manage.py runserver 0.0.0.0:8000
 
 ---
 
-## 8. Variáveis de ambiente
+## 8. Environment variables
 
-### Obrigatórias
+### Required
 
-| Variável | Descrição | Exemplo |
+| Variable | Description | Example |
 |---|---|---|
-| `SECRET_KEY` | Chave secreta Django (OBRIGATÓRIA em produção) | `django-insecure-...` |
-| `DJANGO_DEBUG` | Modo debug: `1` para dev, `0` para prod | `1` |
+| `SECRET_KEY` | Django secret key (REQUIRED in production) | `django-insecure-...` |
+| `DJANGO_DEBUG` | Debug mode: `1` for dev, `0` for prod | `1` |
 
-### Opcionais — Django
+### Optional — Django
 
-| Variável | Descrição | Default |
+| Variable | Description | Default |
 |---|---|---|
-| `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por vírgula | `localhost,127.0.0.1` |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | Origins CSRF confiáveis | — |
-| `CORS_ALLOWED_ORIGINS` | Origins CORS permitidas | — |
+| `DJANGO_ALLOWED_HOSTS` | Allowed hosts, comma-separated | `localhost,127.0.0.1` |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Trusted CSRF origins | — |
+| `CORS_ALLOWED_ORIGINS` | Allowed CORS origins | — |
 
-### Opcionais — Base de dados
+### Optional — Database
 
-Por omissão o sistema usa SQLite. Para usar PostgreSQL em produção:
+By default the system uses SQLite. To use PostgreSQL in production:
 
-| Variável | Descrição | Exemplo |
+| Variable | Description | Example |
 |---|---|---|
-| `DATABASE_URL` | URL completa de conexão PostgreSQL | `postgres://user:pass@host:5432/db` |
-| `POSTGRES_USER` | Utilizador PostgreSQL | `startupscan` |
-| `POSTGRES_PASSWORD` | Password PostgreSQL | `password123` |
-| `POSTGRES_DB` | Nome da base de dados | `startupscan` |
-| `POSTGRES_HOST` | Host PostgreSQL | `localhost` |
-| `POSTGRES_PORT` | Porta PostgreSQL | `5432` |
-| `DB_IGNORE_SSL` | Ignorar SSL na conexão BD: `1` / `0` | `0` |
+| `DATABASE_URL` | Full PostgreSQL connection URL | `postgres://user:pass@host:5432/db` |
+| `POSTGRES_USER` | PostgreSQL user | `startupscan` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `password123` |
+| `POSTGRES_DB` | Database name | `startupscan` |
+| `POSTGRES_HOST` | PostgreSQL host | `localhost` |
+| `POSTGRES_PORT` | PostgreSQL port | `5432` |
+| `DB_IGNORE_SSL` | Ignore SSL on the DB connection: `1` / `0` | `0` |
 
-### Opcionais — Cache e filas (Celery)
+### Optional — Cache and queues (Celery)
 
-| Variável | Descrição | Default |
+| Variable | Description | Default |
 |---|---|---|
-| `CELERY_BROKER_URL` | URL do broker Redis para Celery | `redis://localhost:6379/0` |
-| `CELERY_RESULT_BACKEND` | Backend de resultados Celery | `redis://localhost:6379/0` |
+| `CELERY_BROKER_URL` | Redis broker URL for Celery | `redis://localhost:6379/0` |
+| `CELERY_RESULT_BACKEND` | Celery result backend | `redis://localhost:6379/0` |
 
-### Stripe (subscrições e pagamentos)
+### Stripe (subscriptions and payments)
 
-| Variável | Descrição | Default |
+| Variable | Description | Default |
 |---|---|---|
-| `STRIPE_SECRET_KEY` | Chave secreta Stripe (sk_live_* ou sk_test_*) | — |
-| `STRIPE_PUBLISHABLE_KEY` | Chave pública Stripe (pk_live_* ou pk_test_*) | — |
-| `STRIPE_WEBHOOK_SECRET` | Segredo de validação de webhooks (whsec_*) | — |
-| `STRIPE_PAYMENT_LINK_BASIC` | URL de payment link estático para plano Basic | — |
-| `STRIPE_PAYMENT_LINK_PRO` | URL de payment link estático para plano Pro | — |
+| `STRIPE_SECRET_KEY` | Stripe secret key (sk_live_* or sk_test_*) | — |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (pk_live_* or pk_test_*) | — |
+| `STRIPE_WEBHOOK_SECRET` | Webhook validation secret (whsec_*) | — |
+| `STRIPE_PAYMENT_LINK_BASIC` | Static payment link URL for the Basic plan | — |
+| `STRIPE_PAYMENT_LINK_PRO` | Static payment link URL for the Pro plan | — |
 
-> **Sem `STRIPE_SECRET_KEY`:** o checkout usa os payment links estáticos se configurados. Sem nenhum dos dois, é exibida uma mensagem de erro ao utilizador.
+> **Without `STRIPE_SECRET_KEY`:** checkout uses the static payment links if configured. Without either one, an error message is shown to the user.
 
 ### Email
 
-| Variável | Descrição | Default |
+| Variable | Description | Default |
 |---|---|---|
-| `EMAIL_HOST` | Servidor SMTP | `smtp.gmail.com` |
-| `EMAIL_PORT` | Porta SMTP | `587` |
-| `EMAIL_HOST_USER` | Email remetente | — |
-| `EMAIL_HOST_PASSWORD` | Password do email | — |
-| `SITE_URL` | URL base do site (usado nos emails) | `https://startupscan.io` |
+| `EMAIL_HOST` | SMTP server | `smtp.gmail.com` |
+| `EMAIL_PORT` | SMTP port | `587` |
+| `EMAIL_HOST_USER` | Sender email | — |
+| `EMAIL_HOST_PASSWORD` | Email password | — |
+| `SITE_URL` | Base site URL (used in emails) | `https://startupscan.io` |
 
-### Opcionais — IA e APIs externas
+### Optional — AI and external APIs
 
-| Variável | Descrição | Efeito sem a chave |
+| Variable | Description | Effect without the key |
 |---|---|---|
-| `OPENAI_API_KEY` | Chave API OpenAI | Sistema usa modelo local |
-| `OPENAI_MODEL` | Modelo GPT a usar | `gpt-4.1-mini` |
-| `DID_API_KEY` | Chave API D-ID (vídeo realista) | Usa geração de vídeo local |
-| `DID_API_BASE_URL` | Endpoint D-ID | `https://api.d-id.com` |
-| `DID_VOICE_ID` | ID de voz D-ID | — |
-| `EDGE_TTS_VOICE_PT_AO` | Voz TTS em português (Angola) | Voz default edge-tts |
-| `WHISPER_MODEL` | Tamanho do modelo Whisper | `base` |
+| `OPENAI_API_KEY` | OpenAI API key | System uses the local model |
+| `OPENAI_MODEL` | GPT model to use | `gpt-4.1-mini` |
+| `DID_API_KEY` | D-ID API key (realistic video) | Uses local video generation |
+| `DID_API_BASE_URL` | D-ID endpoint | `https://api.d-id.com` |
+| `DID_VOICE_ID` | D-ID voice ID | — |
+| `EDGE_TTS_VOICE_PT_AO` | Portuguese (Angola) TTS voice | Default edge-tts voice |
+| `WHISPER_MODEL` | Whisper model size | `base` |
 
-### Opcionais — Paths
+### Optional — Paths
 
-| Variável | Descrição | Default |
+| Variable | Description | Default |
 |---|---|---|
-| `AI_MODELS_DIR` | Directório para modelos treinados | `<BASE_DIR>/ai_models` |
-| `DATA_DIR` | Directório para datasets | `<BASE_DIR>/data` |
+| `AI_MODELS_DIR` | Directory for trained models | `<BASE_DIR>/ai_models` |
+| `DATA_DIR` | Directory for datasets | `<BASE_DIR>/data` |
 
-> **Dica:** Em desenvolvimento, sem nenhuma API key, todas as funcionalidades de fallback local funcionam. Consegues avaliar pitches, gerar PDFs e vídeos locais sem qualquer custo externo.
+> **Tip:** In development, with no API key at all, every local fallback feature still works. You can evaluate pitches and generate PDFs and local videos at no external cost.
 
 ---
 
-## 9. Treino do modelo de IA
+## 9. Training the AI model
 
-### Como funciona
+### How it works
 
-O pipeline de ML usa scikit-learn com os seguintes passos:
+The ML pipeline uses scikit-learn with the following steps:
 
-1. **Carregamento de dados**: datasets CSV de pitches e dados financeiros
-2. **Feature engineering**: TF-IDF sobre texto + features financeiras normalizadas
-3. **Ensemble**: RandomForest + GradientBoosting + ExtraTrees (votação)
-4. **Validação cruzada**: 5-fold KFold
-5. **Augmentação**: 60x jitter para enriquecer dados escassos
-6. **Serialização**: joblib (`.pkl`)
+1. **Data loading**: CSV datasets of pitches and financial data
+2. **Feature engineering**: TF-IDF over text + normalized financial features
+3. **Ensemble**: RandomForest + GradientBoosting + ExtraTrees (voting)
+4. **Cross-validation**: 5-fold KFold
+5. **Augmentation**: 60x jitter to enrich scarce data
+6. **Serialization**: joblib (`.pkl`)
 
-### Treinar com datasets default
+### Training with the default datasets
 
 ```bash
 python manage.py train_model --model-output ai_models/pitch_model.pkl
 ```
 
-### Treinar com datasets personalizados
+### Training with custom datasets
 
 ```bash
 python manage.py train_model \
-  --model-output ai_models/meu_modelo.pkl \
-  --pitches-data data/meus_pitches.csv \
-  --financials-data data/meus_financeiros.csv
+  --model-output ai_models/my_model.pkl \
+  --pitches-data data/my_pitches.csv \
+  --financials-data data/my_financials.csv
 ```
 
-### Retreinar via interface web
+### Retraining via the web interface
 
-Vai a `/models/` (requer papel `analista` ou `admin`):
+Go to `/models/` (requires the `analista` or `admin` role):
 
-1. Faz upload dos datasets CSV
-2. Clica em "Retreinar modelo"
-3. O progresso aparece em tempo real
-4. Ao concluir, o novo modelo pode ser activado
+1. Upload the CSV datasets
+2. Click "Retrain model"
+3. Progress appears in real time
+4. Once finished, the new model can be activated
 
-### Estrutura esperada dos datasets
+### Expected dataset structure
 
-**pitches.csv** (mínimo):
+**pitches.csv** (minimum):
 ```csv
 text,success_score
-"A nossa plataforma conecta...",7.5
-"Desenvolvemos uma solução...",6.2
+"Our platform connects...",7.5
+"We built a solution...",6.2
 ```
 
-**financials.csv** (mínimo):
+**financials.csv** (minimum):
 ```csv
 revenue,growth_rate,profit_margin,burn_rate
 150000,0.25,0.15,8000
@@ -621,365 +621,365 @@ revenue,growth_rate,profit_margin,burn_rate
 
 ---
 
-## 10. Uso da plataforma
+## 10. Using the platform
 
-### Registo e login
+### Sign-up and login
 
-1. Acede a `http://localhost:8000/register/`
-2. Preenche nome, email, password e **escolhe o teu papel** (empreendedor, investidor, analista, público)
-3. Após registo, serás redirecionado para o dashboard do teu papel
-4. Para entrar novamente: `http://localhost:8000/login/`
+1. Go to `http://localhost:8000/register/`
+2. Fill in name, email, password, and **choose your role** (entrepreneur, investor, analyst, general public)
+3. After registering, you'll be redirected to your role's dashboard
+4. To log in again: `http://localhost:8000/login/`
 
-### Como empreendedor
+### As an entrepreneur
 
-#### Submeter uma análise
+#### Submit an analysis
 
-1. Vai ao menu e clica em **"Analisar Pitch"** ou acede a `/analyze/form/`
-2. Preenche:
-   - Nome da startup e indústria
-   - Texto do pitch (ou faz upload de documento/áudio/vídeo)
-   - Dados financeiros (receita, crescimento, margem)
-3. Clica em **"Analisar"** e aguarda (tipicamente 5–15 segundos)
-4. Vais ser redirecionado para a página de resultados com o score e o relatório
+1. Go to the menu and click **"Analyze Pitch"** or visit `/analyze/form/`
+2. Fill in:
+   - Startup name and industry
+   - Pitch text (or upload a document/audio/video)
+   - Financial data (revenue, growth, margin)
+3. Click **"Analyze"** and wait (typically 5–15 seconds)
+4. You'll be redirected to the results page with the score and the report
 
-#### Ver resultados
+#### View results
 
-Na página de resultados (`/results/<id>/`) encontras:
+On the results page (`/results/<id>/`) you'll find:
 
-- **Score de sucesso** (0–10) com gráfico visual
-- **Nível de confiança** da previsão
-- **8 categorias** avaliadas individualmente
-- **Pontos fortes e fracos** identificados pelo modelo
-- **Recomendações** práticas de melhoria
+- **Success score** (0–10) with a visual chart
+- **Confidence level** of the prediction
+- **8 categories** evaluated individually
+- **Strengths and weaknesses** identified by the model
+- Actionable **recommendations** for improvement
 
-#### Descarregar artefactos
+#### Download artifacts
 
-- **Relatório técnico PDF**: botão "Descarregar Relatório" → `/results/<id>/pdf/`
-- **Pitch deck PDF**: botão "Gerar Pitch Deck" → `/results/<id>/pitch/pdf/`
+- **Technical PDF report**: "Download Report" button → `/results/<id>/pdf/`
+- **PDF pitch deck**: "Generate Pitch Deck" button → `/results/<id>/pitch/pdf/`
 
-#### Gerar vídeo explicativo
+#### Generate an explainer video
 
-1. Na página de resultados, vai à secção de vídeo
-2. Escolhe o modo: `auto`, `did_only`, ou `local_only`
-3. (Opcional) Faz upload da foto do apresentador para detecção de género
-4. Clica em **"Gerar Vídeo"** — o progresso actualiza-se em tempo real
-5. Quando concluído, o vídeo está disponível para reprodução e download
+1. On the results page, go to the video section
+2. Choose the mode: `auto`, `did_only`, or `local_only`
+3. (Optional) Upload the presenter's photo for gender detection
+4. Click **"Generate Video"** — progress updates in real time
+5. Once finished, the video is available for playback and download
 
-#### Construtor de ideias
+#### Idea builder
 
-1. Acede a `/pitch/builder/`
-2. Preenche todos os campos da ideia (problema, solução, mercado, etc.)
-3. Clica em **"Gerar Pitch"** — o sistema cria o conteúdo narrativo
-4. Exporta como PDF ou torna a ideia pública para feedback da comunidade
+1. Go to `/pitch/builder/`
+2. Fill in all the idea fields (problem, solution, market, etc.)
+3. Click **"Generate Pitch"** — the system creates the narrative content
+4. Export as PDF or make the idea public for community feedback
 
-### Como investidor
+### As an investor
 
-1. Acede ao dashboard de investidor em `/investors/`
-2. Navega pelas startups disponíveis com os seus scores
-3. Clica em **"Expressar Interesse"** numa startup que te interessa
-4. Escreve uma mensagem para o empreendedor
-5. Acompanha o estado da conexão em `/connections/`
+1. Go to the investor dashboard at `/investors/`
+2. Browse the available startups with their scores
+3. Click **"Express Interest"** on a startup you're interested in
+4. Write a message to the entrepreneur
+5. Track the connection status at `/connections/`
 
-### Como analista
+### As an analyst
 
-1. Usa o dashboard principal para ver todas as análises
-2. Submete análises individuais ou em lote (upload CSV em `/batch/analyze/`)
-3. Gere modelos de ML em `/models/`
-4. Monitoriza o progresso de treino em tempo real
+1. Use the main dashboard to see all analyses
+2. Submit individual or batch analyses (CSV upload at `/batch/analyze/`)
+3. Manage ML models at `/models/`
+4. Monitor training progress in real time
 
-### Como público
+### As a general public user
 
-1. Navega as ideias públicas em `/ideas/`
-2. Abre uma ideia para ver os detalhes
-3. Dá feedback com estrelas (1–5), endosso e comentário
-
----
-
-## 11. Referência de endpoints
-
-### Autenticação
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/login/` | Página de login |
-| POST | `/login/` | Autenticar |
-| GET | `/logout/` | Terminar sessão |
-| GET | `/register/` | Página de registo |
-| POST | `/register/` | Criar conta |
-| POST | `/set-language/` | Mudar idioma da interface |
-
-### Dashboard e navegação
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/` | Dashboard (redireciona por papel) |
-| GET | `/home/` | Home baseada no papel |
-| GET | `/investors/` | Dashboard investidor |
-
-### Análise de pitch
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/analyze/form/` | Formulário de submissão |
-| POST | `/analyze/form/` | Submeter pitch para análise |
-| POST | `/analyze/` | API REST de análise |
-| GET | `/results/<id>/` | Página de resultados |
-| GET | `/results/<id>/pdf/` | Relatório técnico PDF |
-| GET | `/results/<id>/pitch/pdf/` | Pitch deck PDF |
-
-### Vídeo explicativo
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/results/<id>/video/generate/` | Iniciar geração de vídeo |
-| POST | `/results/<id>/video/detect-gender/` | Detectar género do apresentador |
-| GET | `/results/<id>/video/progress/<job_id>/` | Polling do progresso |
-
-### Processamento em lote
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/batch/analyze/` | Submeter CSV para análise em lote |
-| GET | `/batch/status/<batch_id>/` | Estado do lote |
-| GET | `/batch/results/<batch_id>/` | Descarregar resultados |
-
-### Gestão de modelos (analista / admin)
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/models/` | Painel de modelos |
-| POST | `/model/retrain/` | Iniciar treino |
-| GET | `/models/training/progress/<job_id>/` | Progresso do treino |
-| GET | `/training/status/<task_id>/` | Estado da task Celery |
-
-### Construtor de ideias
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/pitch/builder/` | Formulário de ideia |
-| POST | `/pitch/builder/` | Submeter ideia |
-| GET | `/pitch/builder/<id>/` | Ver / editar ideia |
-| GET | `/pitch/builder/<id>/pdf/` | Exportar ideia como PDF |
-
-### Ideias públicas
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/ideas/` | Lista de ideias públicas |
-| GET | `/ideas/<id>/` | Detalhe de ideia pública |
-| POST | `/ideas/<id>/feedback/` | Submeter feedback |
-
-### Conexões
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/investors/interest/<analysis_id>/` | Expressar interesse |
-| GET | `/connections/` | Hub de conexões |
-| POST | `/connections/<interest_id>/update/` | Actualizar estado de conexão |
-
-### Subscrições
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/subscription/plans/` | Página de planos (USD / EUR / AOA) |
-| POST | `/subscription/checkout/` | Iniciar checkout Stripe |
-| GET | `/subscription/checkout/success/` | Página pós-pagamento |
-| GET | `/subscription/checkout/cancel/` | Página de cancelamento do checkout |
-| GET | `/subscription/billing-portal/` | Portal Stripe de gestão de faturação |
-| POST | `/subscription/webhook/stripe/` | Webhook Stripe (CSRF exempt) |
-| GET | `/subscription/status/` | JSON com estado actual da subscrição |
+1. Browse public ideas at `/ideas/`
+2. Open an idea to see the details
+3. Give feedback with stars (1–5), an endorsement, and a comment
 
 ---
 
-## 12. Execução com Docker Compose
+## 11. Endpoint reference
 
-O Docker Compose levanta o stack completo: aplicação web, PostgreSQL, Redis, worker Celery e scheduler Celery Beat.
+### Authentication
 
-### Pré-requisitos
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/login/` | Login page |
+| POST | `/login/` | Authenticate |
+| GET | `/logout/` | Log out |
+| GET | `/register/` | Registration page |
+| POST | `/register/` | Create account |
+| POST | `/set-language/` | Change interface language |
 
-- Docker Desktop instalado e em execução
-- Ficheiro `.env` configurado (ver secção 8)
+### Dashboard and navigation
 
-### Iniciar todos os serviços
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Dashboard (redirects by role) |
+| GET | `/home/` | Role-based home |
+| GET | `/investors/` | Investor dashboard |
+
+### Pitch analysis
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/analyze/form/` | Submission form |
+| POST | `/analyze/form/` | Submit pitch for analysis |
+| POST | `/analyze/` | Analysis REST API |
+| GET | `/results/<id>/` | Results page |
+| GET | `/results/<id>/pdf/` | Technical PDF report |
+| GET | `/results/<id>/pitch/pdf/` | PDF pitch deck |
+
+### Explainer video
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/results/<id>/video/generate/` | Start video generation |
+| POST | `/results/<id>/video/detect-gender/` | Detect presenter gender |
+| GET | `/results/<id>/video/progress/<job_id>/` | Progress polling |
+
+### Batch processing
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/batch/analyze/` | Submit CSV for batch analysis |
+| GET | `/batch/status/<batch_id>/` | Batch status |
+| GET | `/batch/results/<batch_id>/` | Download results |
+
+### Model management (analyst / admin)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/models/` | Models panel |
+| POST | `/model/retrain/` | Start training |
+| GET | `/models/training/progress/<job_id>/` | Training progress |
+| GET | `/training/status/<task_id>/` | Celery task status |
+
+### Idea builder
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/pitch/builder/` | Idea form |
+| POST | `/pitch/builder/` | Submit idea |
+| GET | `/pitch/builder/<id>/` | View / edit idea |
+| GET | `/pitch/builder/<id>/pdf/` | Export idea as PDF |
+
+### Public ideas
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/ideas/` | List of public ideas |
+| GET | `/ideas/<id>/` | Public idea detail |
+| POST | `/ideas/<id>/feedback/` | Submit feedback |
+
+### Connections
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/investors/interest/<analysis_id>/` | Express interest |
+| GET | `/connections/` | Connections hub |
+| POST | `/connections/<interest_id>/update/` | Update connection status |
+
+### Subscriptions
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/subscription/plans/` | Plans page (USD / EUR / AOA) |
+| POST | `/subscription/checkout/` | Start Stripe checkout |
+| GET | `/subscription/checkout/success/` | Post-payment page |
+| GET | `/subscription/checkout/cancel/` | Checkout cancellation page |
+| GET | `/subscription/billing-portal/` | Stripe billing management portal |
+| POST | `/subscription/webhook/stripe/` | Stripe webhook (CSRF exempt) |
+| GET | `/subscription/status/` | JSON with current subscription status |
+
+---
+
+## 12. Running with Docker Compose
+
+Docker Compose brings up the full stack: web app, PostgreSQL, Redis, a Celery worker, and Celery Beat scheduler.
+
+### Prerequisites
+
+- Docker Desktop installed and running
+- `.env` file configured (see section 8)
+
+### Start all services
 
 ```bash
 docker-compose up -d
 ```
 
-Serviços iniciados:
+Services started:
 
-| Serviço | Porta | Descrição |
+| Service | Port | Description |
 |---|---|---|
-| `web` | 8000 | Aplicação Django (Gunicorn) |
+| `web` | 8000 | Django app (Gunicorn) |
 | `db` | 5432 | PostgreSQL 15 |
-| `redis` | 6379 | Redis (cache + broker Celery) |
-| `celery-worker` | — | Worker para jobs assíncronos |
-| `celery-beat` | — | Scheduler de tarefas periódicas |
+| `redis` | 6379 | Redis (cache + Celery broker) |
+| `celery-worker` | — | Worker for asynchronous jobs |
+| `celery-beat` | — | Periodic task scheduler |
 
-Acede em: **http://localhost:8000**
+Visit: **http://localhost:8000**
 
-### Comandos úteis
+### Useful commands
 
 ```bash
-# Ver logs da aplicação em tempo real
+# View app logs in real time
 docker-compose logs -f web
 
-# Entrar no container da aplicação
+# Enter the app container
 docker-compose exec web bash
 
-# Aplicar migrações
+# Apply migrations
 docker-compose exec web python manage.py migrate
 
-# Criar superuser
+# Create a superuser
 docker-compose exec web python manage.py createsuperuser
 
-# Treinar modelo inicial
+# Train the initial model
 docker-compose exec web python manage.py train_model \
   --model-output ai_models/pitch_model.pkl
 
-# Parar todos os serviços
+# Stop all services
 docker-compose down
 
-# Parar e remover todos os volumes (apaga dados)
+# Stop and remove all volumes (deletes data)
 docker-compose down -v
 ```
 
-### Volumes persistentes
+### Persistent volumes
 
-| Volume | Conteúdo |
+| Volume | Content |
 |---|---|
-| `postgres_data` | Dados PostgreSQL |
-| `redis_data` | Dados Redis |
-| `media_volume` | Uploads de utilizadores |
-| `static_volume` | Ficheiros estáticos recolhidos |
-| `ai_models_volume` | Modelos ML treinados |
+| `postgres_data` | PostgreSQL data |
+| `redis_data` | Redis data |
+| `media_volume` | User uploads |
+| `static_volume` | Collected static files |
+| `ai_models_volume` | Trained ML models |
 
 ---
 
-## 13. Deploy na Render (CI/CD)
+## 13. Deploying to Render (CI/CD)
 
-O projecto tem deploy automático configurado para a [Render.com](https://render.com) via GitHub Actions.
+The project has automatic deployment configured to [Render.com](https://render.com) via GitHub Actions.
 
-### Configuração inicial
+### Initial setup
 
-1. Cria um serviço Web na Render apontando para este repositório
-2. A Render detecta automaticamente o `render.yaml` e configura o serviço
-3. Copia o **Deploy Hook URL** das definições do serviço Render
+1. Create a Web service on Render pointing to this repository
+2. Render automatically detects `render.yaml` and configures the service
+3. Copy the **Deploy Hook URL** from the Render service settings
 
-### Configurar GitHub Secrets
+### Configure GitHub Secrets
 
-No repositório GitHub, vai a **Settings → Secrets → Actions** e adiciona:
+In the GitHub repository, go to **Settings → Secrets → Actions** and add:
 
-| Secret | Valor |
+| Secret | Value |
 |---|---|
-| `RENDER_DEPLOY_HOOK_URL` | URL do deploy hook da Render (obrigatório) |
-| `RENDER_HEALTHCHECK_URL` | `https://<app>.onrender.com/login/` (opcional) |
+| `RENDER_DEPLOY_HOOK_URL` | Render deploy hook URL (required) |
+| `RENDER_HEALTHCHECK_URL` | `https://<app>.onrender.com/login/` (optional) |
 
-### Configurar variáveis de ambiente na Render
+### Configure environment variables on Render
 
-No painel da Render, adiciona as variáveis de ambiente necessárias:
+In the Render dashboard, add the required environment variables:
 
 ```
-SECRET_KEY=<chave-forte-aleatória>
+SECRET_KEY=<strong-random-key>
 DJANGO_DEBUG=0
-DATABASE_URL=<gerado-automaticamente-pela-render>
-OPENAI_API_KEY=<opcional>
-DID_API_KEY=<opcional>
+DATABASE_URL=<auto-generated-by-render>
+OPENAI_API_KEY=<optional>
+DID_API_KEY=<optional>
 ```
 
-### Fluxo de deploy
+### Deploy flow
 
-1. Faz push para a branch `main`
-2. O GitHub Action (`.github/workflows/deploy-render-main.yml`) é activado
-3. Executa testes e verificações
-4. Chama o deploy hook da Render
-5. A Render faz pull do código, instala dependências e reinicia o serviço
+1. Push to the `main` branch
+2. The GitHub Action (`.github/workflows/deploy-render-main.yml`) is triggered
+3. Runs tests and checks
+4. Calls the Render deploy hook
+5. Render pulls the code, installs dependencies, and restarts the service
 
-### Exposição externa gratuita (Cloudflare Tunnel)
+### Free external exposure (Cloudflare Tunnel)
 
-Para expor o servidor local sem deploy:
+To expose the local server without deploying:
 
 ```bash
-# Instalar cloudflared
+# Install cloudflared
 # https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
 
-# Criar túnel
+# Create the tunnel
 cloudflared tunnel create startupscan
 
-# Correr túnel
+# Run the tunnel
 cloudflared tunnel run startupscan
 ```
 
-Adiciona o subdomínio gerado a `DJANGO_ALLOWED_HOSTS` e `DJANGO_CSRF_TRUSTED_ORIGINS`.
+Add the generated subdomain to `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`.
 
 ---
 
-## 14. Testes e validação
+## 14. Testing and validation
 
-### Executar testes automáticos
+### Run automated tests
 
 ```bash
 python manage.py test
 ```
 
-### Verificar configuração Django
+### Check the Django configuration
 
 ```bash
 python manage.py check
 ```
 
-### Checklist de validação funcional
+### Functional validation checklist
 
-Após setup, valida os fluxos principais:
+After setup, validate the main flows:
 
-- [ ] Login e registo com cada papel
-- [ ] Submissão de pitch com texto simples → score gerado
-- [ ] Submissão de pitch com documento PDF
-- [ ] Download de relatório técnico PDF
-- [ ] Geração de pitch deck PDF (design automático)
-- [ ] Geração de vídeo em modo `local_only`
-- [ ] Treino de modelo pelo painel (analista/admin)
-- [ ] Progresso em tempo real de treino e vídeo
-- [ ] Construtor de ideias → geração → export PDF
-- [ ] Fluxo de conexão investidor → empreendedor
+- [ ] Login and registration for each role
+- [ ] Pitch submission with plain text → score generated
+- [ ] Pitch submission with a PDF document
+- [ ] Download the technical PDF report
+- [ ] Generate the PDF pitch deck (automatic design)
+- [ ] Generate a video in `local_only` mode
+- [ ] Train a model from the panel (analyst/admin)
+- [ ] Real-time progress for training and video
+- [ ] Idea builder → generation → PDF export
+- [ ] Investor → entrepreneur connection flow
 
 ---
 
 ## 15. Troubleshooting
 
-### Erro: `SECRET_KEY environment variable must be set in production`
+### Error: `SECRET_KEY environment variable must be set in production`
 
-Estás a correr com `DJANGO_DEBUG=0` sem definir `SECRET_KEY`. Adiciona ao `.env`:
+You're running with `DJANGO_DEBUG=0` without setting `SECRET_KEY`. Add to `.env`:
 
 ```env
-SECRET_KEY=qualquer-chave-longa-e-aleatoria
+SECRET_KEY=any-long-random-key
 DJANGO_DEBUG=1
 ```
 
-### Vídeo D-ID falha
+### D-ID video fails
 
-1. Verifica que `DID_API_KEY` está definida e tem créditos
-2. A imagem do apresentador deve ser acessível via HTTPS (não local)
-3. Testa com `local_only` para confirmar que o problema é só na API D-ID:
+1. Check that `DID_API_KEY` is set and has credits
+2. The presenter's image must be reachable via HTTPS (not local)
+3. Test with `local_only` to confirm the issue is only with the D-ID API:
    ```
-   modo: local_only
+   mode: local_only
    ```
 
-### PDF não gera
+### PDF doesn't generate
 
 ```bash
-pip show reportlab   # deve mostrar versão instalada
+pip show reportlab   # should show the installed version
 ```
 
-Verifica também que o directório `MEDIA_ROOT` tem permissão de escrita:
+Also check that the `MEDIA_ROOT` directory has write permission:
 
 ```bash
-ls -la media/        # deve ter permissões rw
+ls -la media/        # should have rw permissions
 ```
 
-### GPT não está a ser usado
+### GPT isn't being used
 
-Confirma que `OPENAI_API_KEY` está definida:
+Confirm that `OPENAI_API_KEY` is set:
 
 ```bash
 python manage.py shell
@@ -987,35 +987,35 @@ python manage.py shell
 True
 ```
 
-### Migração falha
+### Migration fails
 
 ```bash
 python manage.py migrate --run-syncdb
-# ou
+# or
 python manage.py migrate --fake-initial
 ```
 
-### Overlay de submissão não desaparece
+### Submission overlay doesn't disappear
 
-Limpa o cache do browser (`Ctrl + Shift + R`). O reset do overlay está implementado no `base.html`.
+Clear the browser cache (`Ctrl + Shift + R`). The overlay reset is implemented in `base.html`.
 
-### Celery não processa jobs
+### Celery isn't processing jobs
 
-Confirma que Redis está a correr:
+Confirm Redis is running:
 
 ```bash
-redis-cli ping   # deve responder PONG
+redis-cli ping   # should reply PONG
 ```
 
-Inicia o worker manualmente:
+Start the worker manually:
 
 ```bash
 celery -A startupscan worker --loglevel=info
 ```
 
-### `ModuleNotFoundError` ao importar dependências
+### `ModuleNotFoundError` when importing dependencies
 
-O ambiente virtual pode não estar activado:
+The virtual environment may not be activated:
 
 ```bash
 source .venv/bin/activate   # Linux/macOS
@@ -1025,37 +1025,45 @@ pip install -r requirements.txt
 
 ---
 
-## 16. Documentação técnica adicional
+## 16. Additional technical documentation
 
-O directório `docs/` contém scripts para gerar documentação técnica detalhada.
+The `docs/` directory contains scripts to generate detailed technical documentation.
 
-### Gerar PDF de engenharia de software
+### Generate the software engineering PDF
 
 ```bash
 python docs/generate_engineering_pdf.py
 ```
 
-Cria: `docs/Documentacao_Engenharia_Software.pdf`
+Creates: `docs/Software_Engineering_Documentation.pdf`
 
-### Gerar DOCX de engenharia de software
+### Generate the software engineering DOCX
 
 ```bash
 python docs/generate_engineering_docx.py
 ```
 
-Cria: `docs/Documentacao_Engenharia_Software.docx`
+Creates: `docs/Software_Engineering_Documentation.docx`
+
+### Generate the technical report DOCX
+
+```bash
+python docs/generate_technical_report.py
+```
+
+Creates: `docs/StartupScan_Technical_Report.docx`
 
 ---
 
-## Contribuição
+## Contributing
 
-1. Faz fork do repositório
-2. Cria uma branch descritiva: `git checkout -b feat/minha-funcionalidade`
-3. Faz as alterações e testa
-4. Faz push e abre um Pull Request para `main`
+1. Fork the repository
+2. Create a descriptive branch: `git checkout -b feat/my-feature`
+3. Make your changes and test them
+4. Push and open a Pull Request against `main`
 
 ---
 
-## Licença
+## License
 
-Ver ficheiro `LICENSE` na raiz do repositório.
+See the `LICENSE` file at the root of the repository.

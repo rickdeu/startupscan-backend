@@ -1,7 +1,7 @@
 """
-Cria ou atualiza os planos de subscrição iniciais na BD e sincroniza com Stripe.
+Creates or updates the initial subscription plans in the DB and syncs them with Stripe.
 
-Uso:
+Usage:
     python manage.py setup_subscription_plans
     python manage.py setup_subscription_plans --sync-stripe
 """
@@ -44,7 +44,7 @@ PLANS = [
         'video_generation': False,
     },
     {
-        'name': 'Basic Mensal',
+        'name': 'Basic Monthly',
         'tier': SubscriptionPlan.TIER_BASIC,
         'interval': SubscriptionPlan.INTERVAL_MONTH,
         'price_usd': 50,
@@ -71,7 +71,7 @@ PLANS = [
         'video_generation': False,
     },
     {
-        'name': 'Basic Anual',
+        'name': 'Basic Yearly',
         'tier': SubscriptionPlan.TIER_BASIC,
         'interval': SubscriptionPlan.INTERVAL_YEAR,
         'price_usd': 400,
@@ -98,7 +98,7 @@ PLANS = [
         'video_generation': False,
     },
     {
-        'name': 'Pro Mensal',
+        'name': 'Pro Monthly',
         'tier': SubscriptionPlan.TIER_PRO,
         'interval': SubscriptionPlan.INTERVAL_MONTH,
         'price_usd': 150,
@@ -123,9 +123,10 @@ PLANS = [
         'batch_analysis': True,
         'investor_dashboard': True,
         'video_generation': True,
+        'business_model_canvas': True,
     },
     {
-        'name': 'Pro Anual',
+        'name': 'Pro Yearly',
         'tier': SubscriptionPlan.TIER_PRO,
         'interval': SubscriptionPlan.INTERVAL_YEAR,
         'price_usd': 1200,
@@ -150,19 +151,20 @@ PLANS = [
         'batch_analysis': True,
         'investor_dashboard': True,
         'video_generation': True,
+        'business_model_canvas': True,
     },
 ]
 
 
 class Command(BaseCommand):
-    help = 'Cria ou atualiza os planos de subscrição iniciais e sincroniza com Stripe'
+    help = 'Creates or updates the initial subscription plans and syncs them with Stripe'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--sync-stripe',
             action='store_true',
             default=True,
-            help='Sincronizar planos pagos com Stripe (default: True)',
+            help='Sync paid plans with Stripe (default: True)',
         )
         parser.add_argument(
             '--no-sync-stripe',
@@ -183,16 +185,16 @@ class Command(BaseCommand):
             )
             if created:
                 created_count += 1
-                self.stdout.write(self.style.SUCCESS(f'  Criado: {plan.name}'))
+                self.stdout.write(self.style.SUCCESS(f'  Created: {plan.name}'))
             else:
                 updated_count += 1
-                self.stdout.write(f'  Atualizado: {plan.name}')
+                self.stdout.write(f'  Updated: {plan.name}')
 
             if sync and plan.price_usd > 0:
                 ok = sync_plan_to_stripe(plan)
-                status = 'OK' if ok else 'FALHOU (verifique STRIPE_SECRET_KEY)'
+                status = 'OK' if ok else 'FAILED (check STRIPE_SECRET_KEY)'
                 self.stdout.write(f'    Stripe sync: {status}')
 
         self.stdout.write(self.style.SUCCESS(
-            f'\nConcluído: {created_count} criados, {updated_count} atualizados.'
+            f'\nDone: {created_count} created, {updated_count} updated.'
         ))

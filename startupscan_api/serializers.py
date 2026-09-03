@@ -26,11 +26,11 @@ class BatchAnalysisSerializer(serializers.Serializer):
     file = serializers.FileField(required=True)
     
     def validate_file(self, value):
-        """Validar o arquivo de entrada"""
+        """Validate the input file"""
         if not value.name.endswith('.csv'):
             raise serializers.ValidationError("Only CSV files are accepted")
-        
-        # Verificar tamanho máximo (10MB)
+
+        # Check maximum size (10MB)
         max_size = 10 * 1024 * 1024
         if value.size > max_size:
             raise serializers.ValidationError(f"File too large. Max size is {max_size} bytes")

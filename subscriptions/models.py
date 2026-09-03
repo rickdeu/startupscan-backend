@@ -17,82 +17,83 @@ class SubscriptionPlan(models.Model):
     INTERVAL_YEAR = 'year'
     INTERVAL_ONCE = 'once'
     INTERVAL_CHOICES = [
-        (INTERVAL_MONTH, 'Mensal'),
-        (INTERVAL_YEAR, 'Anual'),
-        (INTERVAL_ONCE, 'Único (Trial)'),
+        (INTERVAL_MONTH, 'Monthly'),
+        (INTERVAL_YEAR, 'Yearly'),
+        (INTERVAL_ONCE, 'One-time (Trial)'),
     ]
 
-    name = models.CharField(max_length=100, verbose_name='Nome')
+    name = models.CharField(max_length=100, verbose_name='Name')
     tier = models.CharField(max_length=20, choices=TIER_CHOICES, verbose_name='Tier')
     interval = models.CharField(
         max_length=10, choices=INTERVAL_CHOICES,
-        default=INTERVAL_MONTH, verbose_name='Intervalo',
+        default=INTERVAL_MONTH, verbose_name='Interval',
     )
     price_usd = models.DecimalField(
         max_digits=10, decimal_places=2, default=0,
-        verbose_name='Preço (USD)',
+        verbose_name='Price (USD)',
     )
     price_eur = models.DecimalField(
         max_digits=10, decimal_places=2, default=0,
-        verbose_name='Preço (EUR)',
+        verbose_name='Price (EUR)',
     )
     price_aoa = models.DecimalField(
         max_digits=14, decimal_places=2, default=0,
-        verbose_name='Preço (AOA)',
+        verbose_name='Price (AOA)',
     )
-    is_active = models.BooleanField(default=True, verbose_name='Ativo')
+    is_active = models.BooleanField(default=True, verbose_name='Active')
     trial_days = models.IntegerField(
-        default=7, verbose_name='Dias de trial',
-        help_text='Apenas relevante para planos Trial',
+        default=7, verbose_name='Trial days',
+        help_text='Only relevant for Trial plans',
     )
 
     # Stripe sync
     stripe_product_id = models.CharField(max_length=100, blank=True, verbose_name='Stripe Product ID')
     stripe_price_id = models.CharField(max_length=100, blank=True, verbose_name='Stripe Price ID')
 
-    # Limites de uso mensal (0 = ilimitado)
+    # Monthly usage limits (0 = unlimited)
     analyses_per_month = models.IntegerField(
-        default=3, verbose_name='Análises/mês',
-        help_text='0 = ilimitado',
+        default=3, verbose_name='Analyses/month',
+        help_text='0 = unlimited',
     )
     videos_per_month = models.IntegerField(
-        default=0, verbose_name='Vídeos IA/mês',
-        help_text='0 = ilimitado',
+        default=0, verbose_name='AI videos/month',
+        help_text='0 = unlimited',
     )
     investor_interests_per_month = models.IntegerField(
-        default=0, verbose_name='Interesses de investidor/mês',
-        help_text='0 = ilimitado',
+        default=0, verbose_name='Investor interests/month',
+        help_text='0 = unlimited',
     )
     batch_max_rows = models.IntegerField(
-        default=0, verbose_name='Máx. linhas por batch',
-        help_text='0 = ilimitado',
+        default=0, verbose_name='Max rows per batch',
+        help_text='0 = unlimited',
     )
 
-    # Funcionalidades booleanas
-    gpt_analysis = models.BooleanField(default=False, verbose_name='Análise via GPT')
-    audio_upload = models.BooleanField(default=False, verbose_name='Upload de áudio')
-    video_upload = models.BooleanField(default=False, verbose_name='Upload de vídeo')
-    youtube_url = models.BooleanField(default=False, verbose_name='URL YouTube')
-    financial_data = models.BooleanField(default=False, verbose_name='Dados financeiros')
-    pdf_report = models.BooleanField(default=False, verbose_name='PDF relatório de análise')
-    pdf_investor = models.BooleanField(default=False, verbose_name='PDF pitch para investidor')
-    pitch_template_choice = models.BooleanField(default=False, verbose_name='Escolha de template de pitch')
-    pitch_gpt = models.BooleanField(default=False, verbose_name='Gerar pitch via GPT')
-    pitch_pdf = models.BooleanField(default=False, verbose_name='Exportar pitch PDF')
-    batch_analysis = models.BooleanField(default=False, verbose_name='Análise em lote (CSV)')
-    investor_dashboard = models.BooleanField(default=False, verbose_name='Dashboard de investidores')
-    video_generation = models.BooleanField(default=False, verbose_name='Gerar vídeo explicativo IA')
+    # Boolean features
+    gpt_analysis = models.BooleanField(default=False, verbose_name='GPT analysis')
+    audio_upload = models.BooleanField(default=False, verbose_name='Audio upload')
+    video_upload = models.BooleanField(default=False, verbose_name='Video upload')
+    youtube_url = models.BooleanField(default=False, verbose_name='YouTube URL')
+    financial_data = models.BooleanField(default=False, verbose_name='Financial data')
+    pdf_report = models.BooleanField(default=False, verbose_name='Analysis report PDF')
+    pdf_investor = models.BooleanField(default=False, verbose_name='Investor pitch PDF')
+    pitch_template_choice = models.BooleanField(default=False, verbose_name='Pitch template choice')
+    pitch_gpt = models.BooleanField(default=False, verbose_name='Generate pitch via GPT')
+    pitch_pdf = models.BooleanField(default=False, verbose_name='Export pitch PDF')
+    batch_analysis = models.BooleanField(default=False, verbose_name='Batch analysis (CSV)')
+    investor_dashboard = models.BooleanField(default=False, verbose_name='Investor dashboard')
+    video_generation = models.BooleanField(default=False, verbose_name='Generate AI explainer video')
+    business_model_canvas = models.BooleanField(default=False, verbose_name='Business Model Canvas in report')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Plano de Subscrição'
-        verbose_name_plural = 'Planos de Subscrição'
+        verbose_name = 'Subscription Plan'
+        verbose_name_plural = 'Subscription Plans'
         ordering = ['price_usd']
 
     def __str__(self):
-        interval_label = {'month': 'mês', 'year': 'ano', 'once': 'trial'}.get(self.interval, self.interval)
+        interval_label = {'month': 'month', 'year': 'year', 'once': 'trial'}.get(self.interval, self.interval)
         return f'{self.name} (${self.price_usd}/{interval_label})'
 
     # Exchange rate fallbacks when EUR/AOA prices are not explicitly set
@@ -136,22 +137,22 @@ class Subscription(models.Model):
     STATUS_INACTIVE = 'inactive'
 
     STATUS_CHOICES = [
-        (STATUS_TRIALING, 'Em trial'),
-        (STATUS_ACTIVE, 'Ativa'),
-        (STATUS_PAST_DUE, 'Pagamento em atraso'),
-        (STATUS_CANCELED, 'Cancelada'),
-        (STATUS_INCOMPLETE, 'Incompleta'),
-        (STATUS_INACTIVE, 'Inativa'),
+        (STATUS_TRIALING, 'Trialing'),
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_PAST_DUE, 'Past due'),
+        (STATUS_CANCELED, 'Canceled'),
+        (STATUS_INCOMPLETE, 'Incomplete'),
+        (STATUS_INACTIVE, 'Inactive'),
     ]
 
     user = models.OneToOneField(
         User, on_delete=models.CASCADE,
-        related_name='subscription', verbose_name='Usuário',
+        related_name='subscription', verbose_name='User',
     )
     plan = models.ForeignKey(
         SubscriptionPlan, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='subscriptions',
-        verbose_name='Plano',
+        verbose_name='Plan',
     )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES,
@@ -168,21 +169,21 @@ class Subscription(models.Model):
         verbose_name='Stripe Subscription ID',
     )
 
-    trial_end = models.DateTimeField(null=True, blank=True, verbose_name='Fim do trial')
-    current_period_start = models.DateTimeField(null=True, blank=True, verbose_name='Início do período')
-    current_period_end = models.DateTimeField(null=True, blank=True, verbose_name='Fim do período')
-    cancel_at_period_end = models.BooleanField(default=False, verbose_name='Cancelar no fim do período')
+    trial_end = models.DateTimeField(null=True, blank=True, verbose_name='Trial end')
+    current_period_start = models.DateTimeField(null=True, blank=True, verbose_name='Period start')
+    current_period_end = models.DateTimeField(null=True, blank=True, verbose_name='Period end')
+    cancel_at_period_end = models.BooleanField(default=False, verbose_name='Cancel at period end')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Subscrição'
-        verbose_name_plural = 'Subscrições'
+        verbose_name = 'Subscription'
+        verbose_name_plural = 'Subscriptions'
 
     def __str__(self):
-        plan_name = self.plan.name if self.plan else 'Sem plano'
-        return f'{self.user.username} – {plan_name} ({self.get_status_display()})'
+        plan_name = self.plan.name if self.plan else 'No plan'
+        return f'{self.user.username} - {plan_name} ({self.get_status_display()})'
 
     @property
     def is_active(self) -> bool:
@@ -207,21 +208,21 @@ class Subscription(models.Model):
 class MonthlyUsage(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='monthly_usages', verbose_name='Usuário',
+        related_name='monthly_usages', verbose_name='User',
     )
-    year = models.IntegerField(verbose_name='Ano')
-    month = models.IntegerField(verbose_name='Mês')
-    analyses_count = models.IntegerField(default=0, verbose_name='Análises realizadas')
-    videos_count = models.IntegerField(default=0, verbose_name='Vídeos gerados')
-    investor_interests_count = models.IntegerField(default=0, verbose_name='Interesses enviados')
+    year = models.IntegerField(verbose_name='Year')
+    month = models.IntegerField(verbose_name='Month')
+    analyses_count = models.IntegerField(default=0, verbose_name='Analyses performed')
+    videos_count = models.IntegerField(default=0, verbose_name='Videos generated')
+    investor_interests_count = models.IntegerField(default=0, verbose_name='Interests sent')
 
     class Meta:
-        verbose_name = 'Uso Mensal'
-        verbose_name_plural = 'Usos Mensais'
+        verbose_name = 'Monthly Usage'
+        verbose_name_plural = 'Monthly Usages'
         unique_together = [('user', 'year', 'month')]
 
     def __str__(self):
-        return f'{self.user.username} – {self.year}/{self.month:02d}'
+        return f'{self.user.username} - {self.year}/{self.month:02d}'
 
     @classmethod
     def get_or_create_current(cls, user):

@@ -15,21 +15,21 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     readonly_fields = ['stripe_product_id', 'stripe_price_id', 'created_at', 'updated_at']
 
     fieldsets = [
-        ('Identificação', {
+        ('Identification', {
             'fields': ['name', 'tier', 'interval', 'price_usd', 'is_active', 'trial_days'],
         }),
-        ('Stripe (sincronização automática)', {
+        ('Stripe (automatic sync)', {
             'fields': ['stripe_product_id', 'stripe_price_id'],
             'classes': ['collapse'],
         }),
-        ('Limites de uso mensal', {
+        ('Monthly usage limits', {
             'fields': [
                 'analyses_per_month', 'videos_per_month',
                 'investor_interests_per_month', 'batch_max_rows',
             ],
-            'description': '0 = ilimitado',
+            'description': '0 = unlimited',
         }),
-        ('Funcionalidades incluídas', {
+        ('Included features', {
             'fields': [
                 'gpt_analysis', 'audio_upload', 'video_upload', 'youtube_url',
                 'financial_data', 'pdf_report', 'pdf_investor',
@@ -37,7 +37,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
                 'batch_analysis', 'investor_dashboard', 'video_generation',
             ],
         }),
-        ('Datas', {
+        ('Dates', {
             'fields': ['created_at', 'updated_at'],
             'classes': ['collapse'],
         }),
@@ -55,19 +55,19 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
             )
         return '—'
 
-    @admin.action(description='Sincronizar com Stripe')
+    @admin.action(description='Sync with Stripe')
     def sync_to_stripe(self, request, queryset):
         synced = 0
         for plan in queryset:
             if sync_plan_to_stripe(plan):
                 synced += 1
-        self.message_user(request, f'{synced} plano(s) sincronizado(s) com o Stripe.')
+        self.message_user(request, f'{synced} plan(s) synced with Stripe.')
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         synced = sync_plan_to_stripe(obj)
         if synced:
-            self.message_user(request, f'Plano "{obj.name}" sincronizado com Stripe.')
+            self.message_user(request, f'Plan "{obj.name}" synced with Stripe.')
 
 
 @admin.register(Subscription)
@@ -81,7 +81,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     readonly_fields = ['stripe_customer_id', 'stripe_subscription_id', 'created_at', 'updated_at']
     raw_id_fields = ['user', 'plan']
 
-    @admin.display(description='Dias trial restantes')
+    @admin.display(description='Trial days left')
     def trial_days_left_display(self, obj):
         if obj.status == Subscription.STATUS_TRIALING:
             return obj.trial_days_left

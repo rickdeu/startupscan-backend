@@ -13,13 +13,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.models import InvestorConnectionInterest, PitchAnalysis
 from startupscan_api.roles import (
     ROLE_ADMIN,
-    ROLE_ANALISTA,
-    ROLE_EMPREENDEDOR,
-    ROLE_INVESTIDOR,
+    ROLE_ANALYST,
+    ROLE_ENTREPRENEUR,
+    ROLE_INVESTOR,
     get_user_role,
 )
 from startupscan_api.services.model_training import ensure_model_exists, predict_pitch_score
@@ -35,6 +36,7 @@ from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.utils import generate_interpretable_report, prepare_features
 from .helpers import (
     _infer_error_field,
+    _is_meaningful_pitch_text,
     _resolve_pitch_design_selection,
     _safe_exception_message,
 )
@@ -45,7 +47,20 @@ from subscriptions.mixins import SubscriptionGate, check_feature_access, check_l
 logger = logging.getLogger(__name__)
 
 
+def _ui_text_for_request(request):
+    return build_ui_text(normalize_ui_language(getattr(request, "ui_language", None)))
+
+
 def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
+    # NOTE: startupscan_api/services/pitch/generator.py's local fallback
+    # (_local_pitch_fallback) that ultimately consumes this payload is a
+    # rich but Portuguese-only prose generator with no language parameter
+    # of its own. Regenerating analysis.report in another language here
+    # would feed non-Portuguese fragments into its Portuguese connective
+    # sentences, producing worse mixing than today. Keep this payload (and
+    # its fallbacks) in Portuguese until that generator gets its own
+    # multi-language support; only report_export.py's technical report is
+    # fully language-aware end to end for now.
     report = analysis.report or {}
     investor_pitch = report.get("investor_pitch", {}) if isinstance(report, dict) else {}
     strengths = report.get("strengths", []) if isinstance(report, dict) else []
@@ -103,7 +118,7 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
 
 
 class PitchFormView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
         return render(request, 'analyzer/pitch_form.html', {
@@ -126,14 +141,37 @@ class PitchFormView(RoleRequiredMixin, View):
             text = merge_pitch_text(raw_text, extracted_text, youtube_url)
 
             if not text or len(text) < 100:
-                messages.error(request, "O texto do pitch deve ter pelo menos 100 caracteres.", extra_tags="text:Texto muito curto")
+                t = _ui_text_for_request(request)
+                messages.error(
+                    request,
+                    t.get("msg_pitch_text_too_short", "The pitch text must be at least 100 characters long."),
+                    extra_tags=f"text:{t.get('msg_text_too_short_tag', 'Text too short')}",
+                )
+                return self._render_form_with_data(request)
+
+            if not _is_meaningful_pitch_text(text):
+                t = _ui_text_for_request(request)
+                not_meaningful_tag = t.get("msg_pitch_text_not_meaningful_tag", "Text doesn't make sense")
+                messages.error(
+                    request,
+                    t.get(
+                        "msg_pitch_text_not_meaningful",
+                        "The pitch text doesn't look like a real description of the startup. "
+                        "Please write a meaningful description, without repetition or random text.",
+                    ),
+                    extra_tags=f"text:{not_meaningful_tag}",
+                )
                 return self._render_form_with_data(request)
 
             if text_file:
                 allowed = (".txt", ".md", ".csv", ".pdf", ".docx")
                 if not (text_file.name or "").lower().endswith(allowed):
-                    messages.error(request, "Documento de texto inválido. Use TXT, MD, CSV, PDF ou DOCX.",
-                                   extra_tags="text_file:Formato inválido")
+                    t = _ui_text_for_request(request)
+                    messages.error(
+                        request,
+                        t.get("msg_invalid_text_document", "Invalid text document. Use TXT, MD, CSV, PDF, or DOCX."),
+                        extra_tags=f"text_file:{t.get('msg_invalid_format_tag', 'Invalid format')}",
+                    )
                     return self._render_form_with_data(request)
 
             audio_file = request.FILES.get('audio')
@@ -141,22 +179,47 @@ class PitchFormView(RoleRequiredMixin, View):
 
             if audio_file:
                 if not self._is_valid_audio(audio_file):
-                    messages.error(request, "Formato de áudio inválido. Use MP3, WAV ou OGG.", extra_tags="audio_file:Formato inválido")
+                    t = _ui_text_for_request(request)
+                    messages.error(
+                        request,
+                        t.get("msg_invalid_audio_format", "Invalid audio format. Use MP3, WAV, or OGG."),
+                        extra_tags=f"audio_file:{t.get('msg_invalid_format_tag', 'Invalid format')}",
+                    )
                     return self._render_form_with_data(request)
                 if audio_file.size > 50 * 1024 * 1024:
-                    messages.error(request, "O arquivo de áudio não pode exceder 50MB.", extra_tags="audio_file:Tamanho excedido")
+                    t = _ui_text_for_request(request)
+                    messages.error(
+                        request,
+                        t.get("msg_audio_file_too_large", "The audio file cannot exceed 50MB."),
+                        extra_tags=f"audio_file:{t.get('msg_size_exceeded_tag', 'Size exceeded')}",
+                    )
                     return self._render_form_with_data(request)
 
             if video_file:
                 if not self._is_valid_video(video_file):
-                    messages.error(request, "Formato de vídeo inválido. Use MP4, MOV ou AVI.", extra_tags="video_file:Formato inválido")
+                    t = _ui_text_for_request(request)
+                    messages.error(
+                        request,
+                        t.get("msg_invalid_video_format", "Invalid video format. Use MP4, MOV, or AVI."),
+                        extra_tags=f"video_file:{t.get('msg_invalid_format_tag', 'Invalid format')}",
+                    )
                     return self._render_form_with_data(request)
                 if video_file.size > 100 * 1024 * 1024:
-                    messages.error(request, "O arquivo de vídeo não pode exceder 100MB.", extra_tags="video_file:Tamanho excedido")
+                    t = _ui_text_for_request(request)
+                    messages.error(
+                        request,
+                        t.get("msg_video_file_too_large", "The video file cannot exceed 100MB."),
+                        extra_tags=f"video_file:{t.get('msg_size_exceeded_tag', 'Size exceeded')}",
+                    )
                     return self._render_form_with_data(request)
 
             if youtube_url and not youtube_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
-                messages.error(request, "Link do YouTube inválido.", extra_tags="youtube_url:URL inválida")
+                t = _ui_text_for_request(request)
+                messages.error(
+                    request,
+                    t.get("msg_invalid_youtube_link", "Invalid YouTube link."),
+                    extra_tags=f"youtube_url:{t.get('msg_invalid_url_tag', 'Invalid URL')}",
+                )
                 return self._render_form_with_data(request)
 
             try:
@@ -181,7 +244,7 @@ class PitchFormView(RoleRequiredMixin, View):
             if model_source not in {"local", "gpt"}:
                 model_source = "local"
 
-            if request.user.is_authenticated and get_user_role(request.user) != ROLE_ADMIN:
+            if request.user.is_authenticated and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
                 gate = self._check_pitch_gates(
                     request, model_source=model_source,
                     has_audio=bool(audio_file), has_video=bool(video_file),
@@ -217,9 +280,12 @@ class PitchFormView(RoleRequiredMixin, View):
                     prediction = None
                     report = None
                     engine_used = model_source
+                    report_language = normalize_ui_language(getattr(request, "ui_language", None))
 
                     if model_source == "gpt":
-                        prediction, report, engine_used = analyze_with_gpt(text, financial_data, metadata)
+                        prediction, report, engine_used = analyze_with_gpt(
+                            text, financial_data, metadata, language=report_language,
+                        )
 
                     if prediction is None:
                         if model is None:
@@ -230,7 +296,7 @@ class PitchFormView(RoleRequiredMixin, View):
                             model=model, pitch_data=pitch_data,
                             financial_data=financial_data, precomputed_features=features,
                         )
-                        report = generate_interpretable_report(prediction, metadata)
+                        report = generate_interpretable_report(prediction, metadata, language=report_language)
                         engine_used = "local"
 
                     prediction = max(0, min(10, float(prediction)))
@@ -250,7 +316,7 @@ class PitchFormView(RoleRequiredMixin, View):
                         financial_data=financial_data, prediction=prediction,
                         report=report, metadata=metadata,
                     )
-                    if request.user.is_authenticated and get_user_role(request.user) != ROLE_ADMIN:
+                    if request.user.is_authenticated and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
                         from subscriptions.models import MonthlyUsage
                         MonthlyUsage.increment(request.user, 'analyses_count')
                     return redirect('pitch_results', analysis_id=analysis.id)
@@ -337,31 +403,42 @@ class PitchFormView(RoleRequiredMixin, View):
     def _check_pitch_gates(self, request, *, model_source, has_audio, has_video, has_youtube):
         allowed, _ = check_limit_access(request.user, 'analyses_per_month', 'analyses_count')
         if not allowed:
-            messages.warning(request, 'Limite mensal de análises atingido. Faça upgrade para continuar.')
+            messages.warning(request, _ui_text_for_request(request).get(
+                "msg_monthly_analyses_limit_reached",
+                "Monthly analyses limit reached. Upgrade to continue.",
+            ))
             return redirect('subscription_plans')
 
         if model_source == 'gpt':
             allowed, _ = check_feature_access(request.user, 'gpt_analysis')
             if not allowed:
-                messages.warning(request, 'Análise via GPT requer um plano superior.')
+                messages.warning(request, _ui_text_for_request(request).get(
+                    "msg_gpt_analysis_requires_upgrade", "GPT analysis requires a higher plan.",
+                ))
                 return redirect('subscription_plans')
 
         if has_audio:
             allowed, _ = check_feature_access(request.user, 'audio_upload')
             if not allowed:
-                messages.warning(request, 'Upload de áudio requer um plano superior.')
+                messages.warning(request, _ui_text_for_request(request).get(
+                    "msg_audio_upload_requires_upgrade", "Audio upload requires a higher plan.",
+                ))
                 return redirect('subscription_plans')
 
         if has_video:
             allowed, _ = check_feature_access(request.user, 'video_upload')
             if not allowed:
-                messages.warning(request, 'Upload de vídeo requer um plano superior.')
+                messages.warning(request, _ui_text_for_request(request).get(
+                    "msg_video_upload_requires_upgrade", "Video upload requires a higher plan.",
+                ))
                 return redirect('subscription_plans')
 
         if has_youtube:
             allowed, _ = check_feature_access(request.user, 'youtube_url')
             if not allowed:
-                messages.warning(request, 'Processamento de YouTube requer um plano superior.')
+                messages.warning(request, _ui_text_for_request(request).get(
+                    "msg_youtube_requires_upgrade", "YouTube processing requires a higher plan.",
+                ))
                 return redirect('subscription_plans')
 
         return None
@@ -404,7 +481,7 @@ class PitchFormView(RoleRequiredMixin, View):
 
 
 class PitchResultsView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
@@ -417,15 +494,15 @@ class PitchResultsView(RoleRequiredMixin, View):
 
         can_send_interest_on_pitch = (
             request.user.is_authenticated
-            and user_role in {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+            and user_role in {ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
             and bool(analysis.user_id)
             and analysis.user_id != request.user.id
         )
         can_view_received_interests = (
             request.user.is_authenticated
             and (
-                user_role in {ROLE_ADMIN, ROLE_ANALISTA}
-                or (user_role == ROLE_EMPREENDEDOR and analysis.user_id == request.user.id)
+                user_role in {ROLE_ADMIN, ROLE_ANALYST}
+                or (user_role == ROLE_ENTREPRENEUR and analysis.user_id == request.user.id)
             )
         )
         received_interests = list(interests_qs.order_by("-updated_at")) if can_view_received_interests else []
@@ -484,13 +561,13 @@ class PitchResultsView(RoleRequiredMixin, View):
 
 
 class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
     required_feature = 'pdf_report'
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
         if (
-            get_user_role(request.user) != ROLE_ADMIN
+            get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST)
             and analysis.user
             and request.user.is_authenticated
             and analysis.user_id != request.user.id
@@ -507,7 +584,12 @@ class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
         reports_dir = os.path.join(media_root, "reports")
         os.makedirs(reports_dir, exist_ok=True)
         output_path = os.path.join(reports_dir, f"analysis_report_{analysis.id}.pdf")
-        export_analysis_pdf(analysis, output_path)
+        report_language = normalize_ui_language(getattr(request, "ui_language", None))
+        include_canvas, _ = check_feature_access(request.user, 'business_model_canvas')
+        export_analysis_pdf(
+            analysis, output_path, language=report_language,
+            include_business_canvas=include_canvas,
+        )
 
         return FileResponse(
             open(output_path, "rb"),
@@ -518,13 +600,13 @@ class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
 
 
 class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
     required_feature = 'pdf_investor'
 
     def get(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
         if (
-            get_user_role(request.user) != ROLE_ADMIN
+            get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST)
             and analysis.user
             and request.user.is_authenticated
             and analysis.user_id != request.user.id
@@ -541,7 +623,8 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
             design_mode, design_template = _resolve_pitch_design_selection(
                 request, default_mode=PITCH_DESIGN_MODE_AUTO, default_template="orbit"
             )
-            pitch_payload = generate_pitch_from_idea(payload, model_source=model_source)
+            report_language = normalize_ui_language(getattr(request, "ui_language", None))
+            pitch_payload = generate_pitch_from_idea(payload, model_source=model_source, language=report_language)
 
             media_root = settings.MEDIA_ROOT
             try:
@@ -556,7 +639,8 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
             safe_name = "".join(ch if ch.isalnum() else "_" for ch in startup_name).strip("_").lower() or "startup"
             output_path = os.path.join(pitch_dir, f"pitch_resultado_{safe_name}_{analysis.id}.pdf")
 
-            export_pitch_pdf(pitch_payload, output_path, design_mode=design_mode, manual_template=design_template)
+            export_pitch_pdf(pitch_payload, output_path, design_mode=design_mode, manual_template=design_template,
+                              language=report_language)
 
             metadata = analysis.metadata or {}
             metadata["last_generated_pitch_payload"] = {

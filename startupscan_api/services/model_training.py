@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 #def train_model_task(self):
 def train_model_task():
 
-    """Tarefa Celery para treinamento do modelo em background"""
+    """Celery task for training the model in the background"""
     try:
         logger.info("Iniciando treinamento do modelo em background...")
 
@@ -52,8 +52,8 @@ def train_model_task():
 
 def _is_model_ready(model_obj) -> tuple[bool, str]:
     """
-    Executa uma predição sintética para validar se o modelo carregado está ajustado.
-    Evita erros tardios como 'idf vector is not fitted' em produção.
+    Run a synthetic prediction to validate that the loaded model is fitted.
+    Avoids late errors such as 'idf vector is not fitted' in production.
     """
     try:
         probe_pitch = {
@@ -82,14 +82,14 @@ def _is_model_ready(model_obj) -> tuple[bool, str]:
 
 def ensure_model_exists(force_retrain: bool = False):
     """
-    Garante que o modelo existe, treinando um novo se necessário.
-    Retorna o modelo carregado ou None em caso de falha.
+    Ensures the model exists, training a new one if necessary.
+    Returns the loaded model or None on failure.
     """
     active_model_name = get_active_model_name()
     model_path = get_model_path(active_model_name)
     
     try:
-        # Tentar carregar modelo existente.
+        # Try to load the existing model.
         if model_path.exists() and not force_retrain:
             try:
                 loaded_model = joblib.load(model_path)
@@ -105,7 +105,7 @@ def ensure_model_exists(force_retrain: bool = False):
                 except OSError:
                     logger.warning("Could not remove invalid model file: %s", model_path)
             except Exception as load_error:
-                # Modelo incompatível/corrompido: remove e força retreino.
+                # Incompatible/corrupted model: remove it and force retraining.
                 logger.warning(
                     "Failed to load existing model. Retraining a new one. Error: %s",
                     str(load_error),
@@ -116,7 +116,7 @@ def ensure_model_exists(force_retrain: bool = False):
                 except OSError:
                     logger.warning("Could not remove invalid model file: %s", model_path)
         
-        # Se não existir (ou foi removido), treinar novo modelo.
+        # If it doesn't exist (or was removed), train a new model.
         logger.info("Model not found or invalid. Training new model...")
         pitches_path, financials_path = load_training_data()
         pitches_df = pd.read_csv(pitches_path)
@@ -128,7 +128,7 @@ def ensure_model_exists(force_retrain: bool = False):
             
         model, _ = train_and_evaluate(pitches_df, financial_df)
         
-        # Garantir que o diretório existe.
+        # Ensure the directory exists.
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         joblib.dump(model, model_path)
         ready, reason = _is_model_ready(model)
@@ -144,7 +144,7 @@ def ensure_model_exists(force_retrain: bool = False):
 
 def predict_pitch_score(model, pitch_data, financial_data, precomputed_features=None):
     """
-    Wrapper único para predição do score de sucesso, compatível com versões de modelo.
+    Single wrapper for success-score prediction, compatible across model versions.
     """
     try:
         return predict_success_score(

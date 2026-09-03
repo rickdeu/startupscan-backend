@@ -13,7 +13,7 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DOCS_DIR = os.path.join(ROOT_DIR, "docs")
 ASSETS_DIR = os.path.join(DOCS_DIR, "assets")
-PDF_PATH = os.path.join(DOCS_DIR, "Documentacao_Engenharia_Software.pdf")
+PDF_PATH = os.path.join(DOCS_DIR, "Software_Engineering_Documentation.pdf")
 
 
 def _draw_box(ax, x, y, w, h, text, color):
@@ -33,43 +33,43 @@ def _draw_box(ax, x, y, w, h, text, color):
 def generate_visual_assets():
     os.makedirs(ASSETS_DIR, exist_ok=True)
 
-    # 1) Arquitetura macro
+    # 1) Macro architecture
     fig, ax = plt.subplots(figsize=(12, 4.4))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
     _draw_box(ax, 0.02, 0.55, 0.16, 0.3, "Frontend\nTemplates + JS", "#dbeafe")
     _draw_box(ax, 0.21, 0.55, 0.16, 0.3, "Views/API\nDjango + DRF", "#dcfce7")
-    _draw_box(ax, 0.40, 0.55, 0.16, 0.3, "Pipeline IA\nLocal + GPT", "#ede9fe")
-    _draw_box(ax, 0.59, 0.55, 0.16, 0.3, "Video IA\nD-ID/Local", "#fee2e2")
-    _draw_box(ax, 0.78, 0.55, 0.18, 0.3, "Persistencia\nSQLite/PostgreSQL", "#fde68a")
-    _draw_box(ax, 0.26, 0.12, 0.2, 0.25, "Relatorio PDF\nreport_export", "#fef3c7")
+    _draw_box(ax, 0.40, 0.55, 0.16, 0.3, "AI Pipeline\nLocal + GPT", "#ede9fe")
+    _draw_box(ax, 0.59, 0.55, 0.16, 0.3, "AI Video\nD-ID/Local", "#fee2e2")
+    _draw_box(ax, 0.78, 0.55, 0.18, 0.3, "Persistence\nSQLite/PostgreSQL", "#fde68a")
+    _draw_box(ax, 0.26, 0.12, 0.2, 0.25, "PDF Report\nreport_export", "#fef3c7")
     _draw_box(ax, 0.52, 0.12, 0.2, 0.25, "Pitch Deck PDF\npitch_builder", "#ccfbf1")
 
     for x0, x1 in [(0.18, 0.21), (0.37, 0.40), (0.56, 0.59), (0.75, 0.78)]:
         ax.annotate("", xy=(x1, 0.70), xytext=(x0, 0.70), arrowprops=dict(arrowstyle="->", lw=1.5))
     ax.annotate("", xy=(0.36, 0.37), xytext=(0.46, 0.55), arrowprops=dict(arrowstyle="->", lw=1.5))
     ax.annotate("", xy=(0.62, 0.37), xytext=(0.62, 0.55), arrowprops=dict(arrowstyle="->", lw=1.5))
-    ax.set_title("Arquitetura da Plataforma StartupScan", fontsize=12, weight="bold")
-    architecture_path = os.path.join(ASSETS_DIR, "arquitetura_plataforma.png")
+    ax.set_title("StartupScan Platform Architecture", fontsize=12, weight="bold")
+    architecture_path = os.path.join(ASSETS_DIR, "platform_architecture.png")
     fig.tight_layout()
     fig.savefig(architecture_path, dpi=150)
     plt.close(fig)
 
-    # 2) Fluxo funcional principal
+    # 2) Main functional flow
     fig, ax = plt.subplots(figsize=(11, 5))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
     flow_steps = [
-        (0.03, 0.70, "1. Submissao\nmultimodal"),
-        (0.20, 0.70, "2. Extracao de\nfeatures"),
-        (0.37, 0.70, "3. Scoring\nlocal/GPT"),
-        (0.54, 0.70, "4. Resultado\n+ recomendacoes"),
-        (0.71, 0.70, "5. Video IA\n(D-ID/local)"),
+        (0.03, 0.70, "1. Multimodal\nsubmission"),
+        (0.20, 0.70, "2. Feature\nextraction"),
+        (0.37, 0.70, "3. Local/GPT\nscoring"),
+        (0.54, 0.70, "4. Result\n+ recommendations"),
+        (0.71, 0.70, "5. AI video\n(D-ID/local)"),
         (0.86, 0.70, "6. Export\nPDF/Pitch"),
-        (0.29, 0.30, "7. Persistencia\nhistorico/metadata"),
-        (0.56, 0.30, "8. Dashboard\noperacional"),
+        (0.29, 0.30, "7. Persistence\nhistory/metadata"),
+        (0.56, 0.30, "8. Operational\ndashboard"),
     ]
     for x, y, text in flow_steps:
         _draw_box(ax, x, y, 0.12, 0.18, text, "#e2e8f0")
@@ -83,47 +83,47 @@ def generate_visual_assets():
         ((0.41, 0.39), (0.56, 0.39)),
     ]:
         ax.annotate("", xy=end, xytext=start, arrowprops=dict(arrowstyle="->", lw=1.5))
-    ax.set_title("Fluxo funcional de negocio", fontsize=12, weight="bold")
-    flow_path = os.path.join(ASSETS_DIR, "fluxo_funcional.png")
+    ax.set_title("Business functional flow", fontsize=12, weight="bold")
+    flow_path = os.path.join(ASSETS_DIR, "functional_flow.png")
     fig.tight_layout()
     fig.savefig(flow_path, dpi=150)
     plt.close(fig)
 
-    # 3) Exemplo de categorias
+    # 3) Example of categories
     categories = [
-        "Clareza",
-        "Valor",
-        "Inovacao",
-        "Viabilidade",
-        "Escalabilidade",
-        "Mercado",
-        "Equipe",
-        "Sustentabilidade",
+        "Clarity",
+        "Value",
+        "Innovation",
+        "Viability",
+        "Scalability",
+        "Market",
+        "Team",
+        "Sustainability",
     ]
     values = [7.8, 8.2, 7.4, 6.9, 7.1, 7.6, 6.8, 7.3]
     fig, ax = plt.subplots(figsize=(10, 4))
     bars = ax.bar(categories, values, color="#2563eb")
     ax.set_ylim(0, 10)
-    ax.set_ylabel("Nota")
-    ax.set_title("Exemplo de score por categoria (0-10)")
+    ax.set_ylabel("Score")
+    ax.set_title("Example score by category (0-10)")
     ax.grid(axis="y", alpha=0.3)
     for bar, val in zip(bars, values):
         ax.text(bar.get_x() + bar.get_width() / 2, val + 0.12, f"{val:.1f}", ha="center", fontsize=8)
     fig.tight_layout()
-    categories_path = os.path.join(ASSETS_DIR, "categorias_exemplo.png")
+    categories_path = os.path.join(ASSETS_DIR, "category_example.png")
     fig.savefig(categories_path, dpi=150)
     plt.close(fig)
 
-    # 4) SLA de jobs assincromos (visual de fases)
+    # 4) Asynchronous job SLA (phase visual)
     fig, ax = plt.subplots(figsize=(10, 2.2))
     ax.axis("off")
     phases = [
-        ("Fila", "#e2e8f0"),
-        ("Inicializacao", "#c7d2fe"),
-        ("Preparacao", "#bfdbfe"),
-        ("Renderizacao", "#93c5fd"),
-        ("Persistencia", "#60a5fa"),
-        ("Concluido", "#22c55e"),
+        ("Queue", "#e2e8f0"),
+        ("Initialization", "#c7d2fe"),
+        ("Preparation", "#bfdbfe"),
+        ("Rendering", "#93c5fd"),
+        ("Persistence", "#60a5fa"),
+        ("Completed", "#22c55e"),
     ]
     x = 0.02
     for label, color in phases:
@@ -131,8 +131,8 @@ def generate_visual_assets():
         x += 0.16
     for i in range(5):
         ax.annotate("", xy=(0.18 + 0.16 * i, 0.50), xytext=(0.165 + 0.16 * i, 0.50), arrowprops=dict(arrowstyle="->", lw=1.2))
-    ax.set_title("Fases de jobs assincromos (video/treino)", fontsize=11, weight="bold")
-    jobs_path = os.path.join(ASSETS_DIR, "fases_jobs.png")
+    ax.set_title("Asynchronous job phases (video/training)", fontsize=11, weight="bold")
+    jobs_path = os.path.join(ASSETS_DIR, "job_phases.png")
     fig.tight_layout()
     fig.savefig(jobs_path, dpi=150)
     plt.close(fig)
@@ -186,56 +186,56 @@ def build_pdf():
     )
 
     story = []
-    story.append(Paragraph("Documentacao de Engenharia de Software - StartupScan", title_style))
-    story.append(Paragraph("Versao completa e detalhada", subtitle_style))
-    story.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+    story.append(Paragraph("Software Engineering Documentation - StartupScan", title_style))
+    story.append(Paragraph("Complete and detailed version", subtitle_style))
+    story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
     story.append(Spacer(1, 0.35 * cm))
 
-    story.append(Paragraph("1. Escopo e objetivos", h2))
+    story.append(Paragraph("1. Scope and objectives", h2))
     story.append(
         Paragraph(
-            "O StartupScan e uma plataforma de avaliacao de startups com IA, voltada para validacao de pitch, "
-            "comunicacao executiva e suporte a decisao. O escopo cobre processamento multimodal, scoring, "
-            "geracao de relatorios, geracao de video IA, pitch deck visual e gestao de modelos.",
+            "StartupScan is an AI-powered startup evaluation platform, aimed at pitch validation, "
+            "executive communication, and decision support. The scope covers multimodal processing, scoring, "
+            "report generation, AI video generation, visual pitch decks, and model management.",
             body,
         )
     )
     story.append(Spacer(1, 0.2 * cm))
-    story.append(Paragraph("Objetivos operacionais:", h3))
+    story.append(Paragraph("Operational objectives:", h3))
     for item in [
-        "Reduzir tempo de analise de oportunidade de startup.",
-        "Padronizar feedback tecnico e de investimento.",
-        "Gerar artefatos prontos para reunioes com stakeholders.",
-        "Manter rastreabilidade de analises e iteracoes de modelo.",
+        "Reduce the time needed to analyze a startup opportunity.",
+        "Standardize technical and investment feedback.",
+        "Generate artifacts ready for stakeholder meetings.",
+        "Maintain traceability of analyses and model iterations.",
     ]:
         story.append(Paragraph(f"• {item}", body))
 
     story.append(Spacer(1, 0.25 * cm))
-    story.append(Paragraph("2. Requisitos implementados", h2))
+    story.append(Paragraph("2. Implemented requirements", h2))
     story.append(
         _table(
             [
-                ["Requisito funcional", "Status", "Observacao"],
-                ["Submissao multimodal (texto/doc/audio/video/youtube)", "Implementado", "Fluxo principal no formulario de pitch"],
-                ["Avaliacao local/GPT com fallback", "Implementado", "Fallback automatico para resiliencia"],
-                ["Score 0-10 + categorias + recomendacoes", "Implementado", "Com bloco interpretavel para investidor"],
-                ["Relatorio tecnico PDF da analise", "Implementado", "Disponivel na pagina de resultado"],
-                ["Video IA (auto/did_only/local_only)", "Implementado", "Assincrono com endpoint de progresso"],
-                ["Pitch PDF em slides", "Implementado", "Deck visual com layout profissional"],
-                ["Design automatico + premium manual no pitch PDF", "Implementado", "Templates configuraveis"],
-                ["Gestao de modelos (treino/retreino/ativacao)", "Implementado", "Com progresso realtime"],
-                ["Dashboard operacional e investidor", "Implementado", "Com graficos e filtros"],
+                ["Functional requirement", "Status", "Notes"],
+                ["Multimodal submission (text/doc/audio/video/youtube)", "Implemented", "Main flow in the pitch form"],
+                ["Local/GPT evaluation with fallback", "Implemented", "Automatic fallback for resilience"],
+                ["Score 0-10 + categories + recommendations", "Implemented", "With an interpretable block for investors"],
+                ["Technical PDF report of the analysis", "Implemented", "Available on the result page"],
+                ["AI video (auto/did_only/local_only)", "Implemented", "Asynchronous with a progress endpoint"],
+                ["Slide-based pitch PDF", "Implemented", "Visual deck with a professional layout"],
+                ["Automatic + manual premium design in the pitch PDF", "Implemented", "Configurable templates"],
+                ["Model management (training/retraining/activation)", "Implemented", "With real-time progress"],
+                ["Operational and investor dashboard", "Implemented", "With charts and filters"],
             ],
             [8.8 * cm, 2.4 * cm, 5.0 * cm],
         )
     )
     story.append(PageBreak())
 
-    story.append(Paragraph("3. Arquitetura tecnica", h2))
+    story.append(Paragraph("3. Technical architecture", h2))
     story.append(
         Paragraph(
-            "A arquitetura e composta por frontend server-side rendering (Django templates), backend Django/DRF, "
-            "servicos de IA especializados e camada de persistencia relacional.",
+            "The architecture consists of a server-side rendering frontend (Django templates), a Django/DRF backend, "
+            "specialized AI services, and a relational persistence layer.",
             body,
         )
     )
@@ -245,34 +245,34 @@ def build_pdf():
     story.append(Paragraph("Stack:", h3))
     for item in [
         "Backend: Django + DRF",
-        "IA: scikit-learn, OpenAI SDK",
+        "AI: scikit-learn, OpenAI SDK",
         "Video/audio: moviepy, edge-tts, gTTS, D-ID API",
         "PDF/docs: reportlab, pypdf, python-docx",
         "Frontend: Bootstrap + JS + Chart.js",
-        "Banco: SQLite (dev), PostgreSQL (compatibilidade)",
+        "Database: SQLite (dev), PostgreSQL (compatibility)",
     ]:
         story.append(Paragraph(f"• {item}", body))
 
     story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph("4. Fluxos de negocio", h2))
+    story.append(Paragraph("4. Business flows", h2))
     story.append(Image(flow_path, width=17 * cm, height=7.9 * cm))
     story.append(Spacer(1, 0.2 * cm))
     story.append(
         Paragraph(
-            "O fluxo inicia na submissao multimodal, passa por extracao de features e inferencia IA, "
-            "e termina em artefatos de decisao: relatorio, video e pitch deck.",
+            "The flow starts with multimodal submission, goes through feature extraction and AI inference, "
+            "and ends with decision artifacts: report, video, and pitch deck.",
             body,
         )
     )
     story.append(PageBreak())
 
-    story.append(Paragraph("5. Modelo de dados e persistencia", h2))
+    story.append(Paragraph("5. Data model and persistence", h2))
     story.append(
         _table(
             [
-                ["Entidade", "Responsabilidade", "Campos criticos"],
-                ["PitchAnalysis", "Registro da avaliacao principal", "startup_name, score, report, metadata, arquivos multimodais"],
-                ["IdeaPitchSubmission", "Fluxo de ideia para pitch completo", "startup_name, problem, solution, generated_pitch, status"],
+                ["Entity", "Responsibility", "Critical fields"],
+                ["PitchAnalysis", "Main evaluation record", "startup_name, score, report, metadata, multimodal files"],
+                ["IdeaPitchSubmission", "Idea-to-full-pitch flow", "startup_name, problem, solution, generated_pitch, status"],
             ],
             [3.7 * cm, 5.8 * cm, 6.7 * cm],
             header_bg="#dcfce7",
@@ -282,32 +282,32 @@ def build_pdf():
     story.append(Spacer(1, 0.25 * cm))
     story.append(
         Paragraph(
-            "A camada de metadata em JSON e utilizada para acoplar informacoes dinamicas de jobs, modos de geracao, "
-            "chaves de unicidade narrativa e estado de processamento.",
+            "The JSON metadata layer is used to attach dynamic information about jobs, generation modes, "
+            "narrative uniqueness keys, and processing state.",
             body,
         )
     )
 
     story.append(Spacer(1, 0.25 * cm))
-    story.append(Paragraph("6. Pipeline de avaliacao e interpretabilidade", h2))
+    story.append(Paragraph("6. Evaluation and interpretability pipeline", h2))
     story.append(Image(categories_path, width=17 * cm, height=6.2 * cm))
     story.append(Spacer(1, 0.18 * cm))
     for item in [
-        "Extracao e consolidacao de contexto multimodal.",
-        "Predicao de score e geracao de relatorio interpretavel.",
-        "Categorias padronizadas para facilitar comparacao entre startups.",
-        "Recomendacoes orientadas a acao e prontidao de investimento.",
+        "Extraction and consolidation of multimodal context.",
+        "Score prediction and interpretable report generation.",
+        "Standardized categories to facilitate comparison between startups.",
+        "Recommendations oriented toward action and investment readiness.",
     ]:
         story.append(Paragraph(f"• {item}", body))
 
     story.append(PageBreak())
-    story.append(Paragraph("7. Pipeline de video IA", h2))
+    story.append(Paragraph("7. AI video pipeline", h2))
     story.append(Image(jobs_path, width=17 * cm, height=3.8 * cm))
     story.append(Spacer(1, 0.2 * cm))
     story.append(
         Paragraph(
-            "A geracao de video roda em job assincromo com progresso por fases. "
-            "Suporta os modos auto, did_only e local_only, com erro detalhado por cenario e conclusao obrigatoria no final.",
+            "Video generation runs as an asynchronous job with phase-based progress. "
+            "It supports the auto, did_only, and local_only modes, with detailed error handling per scenario and mandatory completion at the end.",
             body,
         )
     )
@@ -315,10 +315,10 @@ def build_pdf():
     story.append(
         _table(
             [
-                ["Modo", "Descricao", "Fallback"],
-                ["auto", "Tenta D-ID realista e cai para local quando necessario", "Sim"],
-                ["did_only", "Forca uso exclusivo da API D-ID", "Nao"],
-                ["local_only", "Renderizacao local sem dependencia externa", "Nao aplicavel"],
+                ["Mode", "Description", "Fallback"],
+                ["auto", "Attempts realistic D-ID and falls back to local when needed", "Yes"],
+                ["did_only", "Forces exclusive use of the D-ID API", "No"],
+                ["local_only", "Local rendering with no external dependency", "Not applicable"],
             ],
             [3 * cm, 9 * cm, 3 * cm],
             header_bg="#fee2e2",
@@ -327,20 +327,20 @@ def build_pdf():
     )
 
     story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph("8. Pipeline de pitch deck PDF", h2))
+    story.append(Paragraph("8. Pitch deck PDF pipeline", h2))
     story.append(
         Paragraph(
-            "O pitch deck e exportado em formato slide-based (uma pagina por slide), com duas estrategias de design: "
-            "automatico por contexto e premium manual por template.",
+            "The pitch deck is exported in slide-based format (one page per slide), with two design strategies: "
+            "automatic by context and manual premium by template.",
             body,
         )
     )
     story.append(
         _table(
             [
-                ["Modo de design", "Comportamento", "Templates"],
-                ["automatico por contexto", "Seleciona identidade visual a partir do conteudo da startup", "orbit/grid/wave/diagonal/aurora/ribbon"],
-                ["premium manual", "Usuario escolhe explicitamente o template", "orbit/grid/wave/diagonal/aurora/ribbon"],
+                ["Design mode", "Behavior", "Templates"],
+                ["automatic by context", "Selects the visual identity based on the startup's content", "orbit/grid/wave/diagonal/aurora/ribbon"],
+                ["manual premium", "The user explicitly chooses the template", "orbit/grid/wave/diagonal/aurora/ribbon"],
             ],
             [4.2 * cm, 6.8 * cm, 4 * cm],
             header_bg="#ede9fe",
@@ -349,19 +349,19 @@ def build_pdf():
     )
     story.append(PageBreak())
 
-    story.append(Paragraph("9. APIs e rotas principais", h2))
+    story.append(Paragraph("9. Main APIs and routes", h2))
     story.append(
         _table(
             [
-                ["Rota", "Metodo", "Descricao"],
-                ["/analyze/form/", "GET/POST", "Submissao e analise multimodal"],
-                ["/results/<id>/", "GET", "Visualizacao completa da analise"],
-                ["/results/<id>/pdf/", "GET", "Relatorio tecnico PDF"],
-                ["/results/<id>/pitch/pdf/", "GET", "Pitch deck PDF visual"],
-                ["/results/<id>/video/generate/", "POST", "Inicializa job de video IA"],
-                ["/results/<id>/video/progress/<job_id>/", "GET", "Estado e progresso do job de video"],
-                ["/models/", "GET/POST", "Gestao e treino de modelos"],
-                ["/investors/", "GET", "Dashboard orientado a investidor"],
+                ["Route", "Method", "Description"],
+                ["/analyze/form/", "GET/POST", "Multimodal submission and analysis"],
+                ["/results/<id>/", "GET", "Full analysis view"],
+                ["/results/<id>/pdf/", "GET", "Technical PDF report"],
+                ["/results/<id>/pitch/pdf/", "GET", "Visual pitch deck PDF"],
+                ["/results/<id>/video/generate/", "POST", "Starts an AI video job"],
+                ["/results/<id>/video/progress/<job_id>/", "GET", "Video job status and progress"],
+                ["/models/", "GET/POST", "Model management and training"],
+                ["/investors/", "GET", "Investor-oriented dashboard"],
             ],
             [6.2 * cm, 2.2 * cm, 7.6 * cm],
             header_bg="#fef3c7",
@@ -370,34 +370,34 @@ def build_pdf():
     )
 
     story.append(Spacer(1, 0.25 * cm))
-    story.append(Paragraph("10. Guia operacional", h2))
+    story.append(Paragraph("10. Operational guide", h2))
     for idx, item in enumerate(
         [
-            "Subir aplicacao e validar health basico via dashboard.",
-            "Executar submissao multimodal com dados financeiros.",
-            "Validar score, categorias e recomendacoes no resultado.",
-            "Gerar video em modo auto e acompanhar progresso.",
-            "Gerar pitch PDF em modo automatico e premium manual.",
-            "Baixar relatorio e validar formato para stakeholder.",
-            "Monitorar logs e metadata da analise para rastreabilidade.",
+            "Start the application and check basic health via the dashboard.",
+            "Run a multimodal submission with financial data.",
+            "Check score, categories, and recommendations in the result.",
+            "Generate a video in auto mode and track progress.",
+            "Generate a pitch PDF in automatic mode and manual premium mode.",
+            "Download the report and check the format for stakeholders.",
+            "Monitor logs and analysis metadata for traceability.",
         ],
         start=1,
     ):
         story.append(Paragraph(f"{idx}. {item}", body))
 
     story.append(Spacer(1, 0.22 * cm))
-    story.append(Paragraph("11. Seguranca, confiabilidade e fallbacks", h2))
+    story.append(Paragraph("11. Security, reliability, and fallbacks", h2))
     for item in [
-        "Validacao de formatos e tratamento de excecoes de upload.",
-        "Mensagens de erro normalizadas para frontend.",
-        "Fallback local quando GPT/D-ID estiver indisponivel (onde aplicavel).",
-        "Separacao de erro por cenario para diagnostico rapido.",
-        "Controle de acesso por usuario em rotas sensiveis.",
+        "Format validation and upload exception handling.",
+        "Normalized error messages for the frontend.",
+        "Local fallback when GPT/D-ID is unavailable (where applicable).",
+        "Error separation by scenario for quick diagnosis.",
+        "User-based access control on sensitive routes.",
     ]:
         story.append(Paragraph(f"• {item}", body))
 
     story.append(Spacer(1, 0.22 * cm))
-    story.append(Paragraph("12. Testes e validacao recomendada", h2))
+    story.append(Paragraph("12. Recommended testing and validation", h2))
     for cmd in [
         "python3 manage.py check",
         "python3 manage.py test",
@@ -407,18 +407,18 @@ def build_pdf():
         story.append(Paragraph(f"• {cmd}", body))
     story.append(
         Paragraph(
-            "Cenario funcional minimo: submissao multimodal, resultado com score, video IA com progresso, "
-            "pitch deck PDF nos dois modos de design e download de relatorio tecnico.",
+            "Minimum functional scenario: multimodal submission, result with score, AI video with progress, "
+            "pitch deck PDF in both design modes, and technical report download.",
             body,
         )
     )
 
     story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph("13. Entrega de documentacao e publicacao", h2))
+    story.append(Paragraph("13. Documentation delivery and publishing", h2))
     story.append(
         Paragraph(
-            "A rotina operacional inclui publicacao da documentacao atualizada (PDF e DOCX) no webhook Discord do projeto, "
-            "assegurando distribuicao imediata para equipe e stakeholders.",
+            "The operational routine includes publishing the updated documentation (PDF and DOCX) to the project's Discord webhook, "
+            "ensuring immediate distribution to the team and stakeholders.",
             body,
         )
     )

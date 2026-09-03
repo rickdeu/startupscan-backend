@@ -17,7 +17,7 @@
         </div>
         <div class="text-end">
             <div style="font-size:1.6rem;font-weight:800;color:#a78bfa;line-height:1;">{{ total_ideas }}</div>
-            <div style="font-size:.75rem;color:#64748b;">{{ ui_text.total_visible_ideas }}</div>
+            <div style="font-size:.75rem;color:#94a3b8;">{{ ui_text.total_visible_ideas }}</div>
         </div>
     </div>
 </div>
@@ -28,7 +28,7 @@
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-10">
                 <div style="position:relative;">
-                    <i class="fas fa-search" style="position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:#475569;font-size:.85rem;pointer-events:none;"></i>
+                    <i class="fas fa-search" style="position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:#8b98ab;font-size:.85rem;pointer-events:none;"></i>
                     <input type="text" class="form-control" id="id_q" name="q" value="{{ search_query }}"
                         placeholder="{{ ui_text.search_ideas_placeholder }}"
                         style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;padding-left:2.5rem;">
@@ -51,19 +51,19 @@
          onmouseleave="this.style.borderColor='rgba(100,116,139,.18)';this.style.boxShadow=''">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
             <div>
-                <div style="font-size:.75rem;color:#475569;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em;">
+                <div style="font-size:.75rem;color:#8b98ab;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em;">
                     <i class="fas fa-hashtag me-1" style="font-size:.6rem;"></i>{{ idea.rank_position }}
                 </div>
                 <h5 class="mb-1 fw-bold" style="color:#f1f5f9;font-size:1.05rem;">{{ idea.startup_name }}</h5>
                 {% if idea.one_liner %}
-                <p class="mb-0" style="color:#64748b;font-size:.88rem;">{{ idea.one_liner }}</p>
+                <p class="mb-0" style="color:#94a3b8;font-size:.88rem;">{{ idea.one_liner }}</p>
                 {% endif %}
             </div>
             <div class="text-end">
                 <div style="font-size:1.5rem;font-weight:800;color:#fcd34d;line-height:1;">
-                    <i class="fas fa-star me-1" style="font-size:1rem;"></i>{{ idea.avg_stars|default:0|floatformat:1 }}<span style="font-size:.9rem;color:#475569;">/5</span>
+                    <i class="fas fa-star me-1" style="font-size:1rem;"></i>{{ idea.avg_stars|default:0|floatformat:1 }}<span style="font-size:.9rem;color:#8b98ab;">/5</span>
                 </div>
-                <div style="font-size:.75rem;color:#475569;margin-top:.2rem;">{{ idea.ranking_points|floatformat:1 }} pts</div>
+                <div style="font-size:.75rem;color:#8b98ab;margin-top:.2rem;">{{ idea.ranking_points|floatformat:1 }} {{ ui_text.points_abbr|default:"pts" }}</div>
             </div>
         </div>
 
@@ -72,21 +72,21 @@
                 <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
                     <i class="fas fa-star me-1" style="color:#fcd34d;"></i>
                     <strong style="color:#f1f5f9;">{{ idea.feedback_count|default:0 }}</strong>
-                    <span style="color:#64748b;margin-left:.3rem;">{{ ui_text.ratings }}</span>
+                    <span style="color:#94a3b8;margin-left:.3rem;">{{ ui_text.ratings }}</span>
                 </div>
             </div>
             <div class="col-md-4">
                 <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
                     <i class="fas fa-thumbs-up me-1" style="color:#34d399;"></i>
                     <strong style="color:#f1f5f9;">{{ idea.endorsement_count|default:0 }}</strong>
-                    <span style="color:#64748b;margin-left:.3rem;">{{ ui_text.public_endorsements }}</span>
+                    <span style="color:#94a3b8;margin-left:.3rem;">{{ ui_text.public_endorsements }}</span>
                 </div>
             </div>
             <div class="col-md-4">
                 <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
                     <i class="fas fa-comment me-1" style="color:#60a5fa;"></i>
                     <strong style="color:#f1f5f9;">{{ idea.comments_count|default:0 }}</strong>
-                    <span style="color:#64748b;margin-left:.3rem;">{{ ui_text.comments }}</span>
+                    <span style="color:#94a3b8;margin-left:.3rem;">{{ ui_text.comments }}</span>
                 </div>
             </div>
         </div>
@@ -105,8 +105,8 @@
     {% empty %}
     <div class="text-center py-5">
         <i class="fas fa-lightbulb" style="font-size:3rem;color:#1e293b;display:block;margin-bottom:1rem;"></i>
-        <h5 style="color:#475569;">{{ ui_text.no_ideas_found }}</h5>
-        <p style="color:#334155;font-size:.9rem;">{{ ui_text.adjust_filters_for_ideas }}</p>
+        <h5 style="color:#8b98ab;">{{ ui_text.no_ideas_found }}</h5>
+        <p style="color:#8b98ab;font-size:.9rem;">{{ ui_text.adjust_filters_for_ideas }}</p>
     </div>
     {% endfor %}
 </div>

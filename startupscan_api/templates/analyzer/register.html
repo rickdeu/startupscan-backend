@@ -23,30 +23,30 @@
         </a>
 
         <div class="mt-auto">
-            <p class="auth-tagline">Comece a analisar pitches com IA hoje.</p>
-            <p class="auth-sub">Registe-se gratuitamente e comece com 7 dias de trial sem cartão de crédito.</p>
+            <p class="auth-tagline">{{ ui_text.register_left_tagline|default:"Comece a analisar pitches com IA hoje." }}</p>
+            <p class="auth-sub">{{ ui_text.register_left_subtext|default:"Registe-se gratuitamente e comece com 7 dias de trial sem cartão de crédito." }}</p>
 
             <ul class="auth-feature-list">
-                <li><i class="fas fa-gift"></i> 7 dias de trial gratuito</li>
-                <li><i class="fas fa-chart-bar"></i> Análise de pitch com score 0-10</li>
-                <li><i class="fas fa-file-lines"></i> Geração de pitch completo automatizada</li>
-                <li><i class="fas fa-shield-halved"></i> Dados seguros e privados</li>
-                <li><i class="fas fa-bolt"></i> Resultados em segundos</li>
+                <li><i class="fas fa-gift"></i> {{ ui_text.register_feat_trial_7days|default:"7 dias de trial gratuito" }}</li>
+                <li><i class="fas fa-chart-bar"></i> {{ ui_text.register_feat_score_analysis|default:"Análise de pitch com score 0-10" }}</li>
+                <li><i class="fas fa-file-lines"></i> {{ ui_text.register_feat_auto_pitch_gen|default:"Geração de pitch completo automatizada" }}</li>
+                <li><i class="fas fa-shield-halved"></i> {{ ui_text.register_feat_secure_data|default:"Dados seguros e privados" }}</li>
+                <li><i class="fas fa-bolt"></i> {{ ui_text.register_feat_fast_results|default:"Resultados em segundos" }}</li>
             </ul>
         </div>
 
         <div class="d-flex gap-3 mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,.1);">
             <div>
                 <div style="font-size:1.2rem;font-weight:800;color:#fcd34d;">$0</div>
-                <div style="font-size:.75rem;color:rgba(255,255,255,.5);">Trial 7 dias</div>
+                <div style="font-size:.75rem;color:rgba(255,255,255,.5);">{{ ui_text.register_stat_trial_days_label|default:"Trial 7 dias" }}</div>
             </div>
             <div>
-                <div style="font-size:1.2rem;font-weight:800;color:#34d399;">Free</div>
-                <div style="font-size:.75rem;color:rgba(255,255,255,.5);">Sem cartão</div>
+                <div style="font-size:1.2rem;font-weight:800;color:#34d399;">{{ ui_text.register_stat_free_label|default:"Free" }}</div>
+                <div style="font-size:.75rem;color:rgba(255,255,255,.5);">{{ ui_text.register_stat_no_card_label|default:"Sem cartão" }}</div>
             </div>
             <div>
                 <div style="font-size:1.2rem;font-weight:800;color:#60a5fa;">AI</div>
-                <div style="font-size:.75rem;color:rgba(255,255,255,.5);">Motor local</div>
+                <div style="font-size:.75rem;color:rgba(255,255,255,.5);">{{ ui_text.register_stat_local_engine_label|default:"Motor local" }}</div>
             </div>
         </div>
     </div>
@@ -55,7 +55,7 @@
     <div class="auth-right" style="align-items:flex-start;padding-top:2.5rem;overflow-y:auto;">
         <div class="auth-form-card animate-fade-up">
             <h2 class="fw-bold mb-1" style="color:#f1f5f9;">{{ ui_text.register_title|default:"Criar conta gratuita" }}</h2>
-            <p class="mb-4" style="color:#64748b;font-size:.9rem;">Preencha os dados abaixo para começar.</p>
+            <p class="mb-4" style="color:#94a3b8;font-size:.9rem;">{{ ui_text.register_subtitle|default:"Preencha os dados abaixo para começar." }}</p>
 
             {% if form.errors %}
             <div class="alert alert-danger mb-4">
@@ -75,13 +75,13 @@
                     <div class="col-6">
                         <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.first_name|default:"Nome" }}</label>
                         <input type="text" name="first_name" class="form-control{% if form.first_name.errors %} is-invalid{% endif %}"
-                               value="{{ form.first_name.value|default:'' }}" placeholder="Nome">
+                               value="{{ form.first_name.value|default:'' }}" placeholder="{{ ui_text.register_first_name_placeholder|default:'Nome' }}">
                         {% if form.first_name.errors %}<div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-6">
                         <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.last_name|default:"Sobrenome" }}</label>
                         <input type="text" name="last_name" class="form-control{% if form.last_name.errors %} is-invalid{% endif %}"
-                               value="{{ form.last_name.value|default:'' }}" placeholder="Sobrenome">
+                               value="{{ form.last_name.value|default:'' }}" placeholder="{{ ui_text.register_last_name_placeholder|default:'Sobrenome' }}">
                         {% if form.last_name.errors %}<div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>{% endif %}
                     </div>
                 </div>
@@ -89,14 +89,14 @@
                 <div class="mb-3">
                     <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.username|default:"Username" }}</label>
                     <input type="text" name="username" class="form-control{% if form.username.errors %} is-invalid{% endif %}"
-                           value="{{ form.username.value|default:'' }}" placeholder="nome_de_utilizador" autocomplete="username">
+                           value="{{ form.username.value|default:'' }}" placeholder="{{ ui_text.register_username_placeholder|default:'nome_de_utilizador' }}" autocomplete="username">
                     {% if form.username.errors %}<div class="invalid-feedback">{{ form.username.errors.0 }}</div>{% endif %}
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.email|default:"E-mail" }}</label>
                     <input type="email" name="email" class="form-control{% if form.email.errors %} is-invalid{% endif %}"
-                           value="{{ form.email.value|default:'' }}" placeholder="email@exemplo.com">
+                           value="{{ form.email.value|default:'' }}" placeholder="{{ ui_text.register_email_placeholder|default:'email@exemplo.com' }}">
                     {% if form.email.errors %}<div class="invalid-feedback">{{ form.email.errors.0 }}</div>{% endif %}
                 </div>
 
@@ -136,7 +136,7 @@
             </form>
 
             <div class="mt-3 pt-3 text-center" style="border-top:1px solid #1e2d4a;">
-                <span style="color:#64748b;font-size:.88rem;">{{ ui_text.already_have_account|default:"Já tem conta?" }}</span>
+                <span style="color:#94a3b8;font-size:.88rem;">{{ ui_text.already_have_account|default:"Já tem conta?" }}</span>
                 <a href="{% url 'login' %}" style="color:#60a5fa;font-weight:600;font-size:.88rem;margin-left:.35rem;">
                     {{ ui_text.login_now|default:"Entrar" }}
                 </a>
@@ -165,7 +165,7 @@
     const bar   = document.getElementById("pwStrBar");
     const label = document.getElementById("pwStrLabel");
     if (!inp || !bar) return;
-    const labels = ["", "Fraca", "Razoável", "Boa", "Forte"];
+    const labels = ["", "{{ ui_text.pw_strength_weak|default:'Fraca' }}", "{{ ui_text.pw_strength_fair|default:'Razoável' }}", "{{ ui_text.pw_strength_good|default:'Boa' }}", "{{ ui_text.pw_strength_strong|default:'Forte' }}"];
     const colors = ["", "#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
     function score(pw) {
         let s = 0;

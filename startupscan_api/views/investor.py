@@ -7,27 +7,31 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.models import InvestorConnectionInterest, PitchAnalysis
 from startupscan_api.roles import (
     ROLE_ADMIN,
-    ROLE_ANALISTA,
-    ROLE_EMPREENDEDOR,
-    ROLE_INVESTIDOR,
+    ROLE_ANALYST,
+    ROLE_ENTREPRENEUR,
+    ROLE_INVESTOR,
     get_user_role,
 )
 from startupscan_api.services.model_registry import get_active_model_name
 from .helpers import _redirect_back_or_default
 from .mixins import RoleRequiredMixin
-from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from subscriptions.mixins import check_limit_access
 
 logger = logging.getLogger(__name__)
 
 INTEREST_STATUS_LABELS = dict(InvestorConnectionInterest.STATUS_CHOICES)
 
 
-class InvestorDashboardView(SubscriptionGate, RoleRequiredMixin, View):
-    allowed_roles = {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
-    required_feature = 'investor_dashboard'
+def _ui_text_for_request(request):
+    return build_ui_text(normalize_ui_language(getattr(request, "ui_language", None)))
+
+
+class InvestorDashboardView(RoleRequiredMixin, View):
+    allowed_roles = {ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
         user_role = get_user_role(request.user)
@@ -124,12 +128,12 @@ class InvestorDashboardView(SubscriptionGate, RoleRequiredMixin, View):
             "filter_max_score": max_score,
             "filter_days": days,
             "filter_engine": engine,
-            "can_create_interest": user_role in {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN},
+            "can_create_interest": user_role in {ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN},
         })
 
 
 class InvestorInterestCreateView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
 
     def post(self, request, analysis_id):
         analysis = get_object_or_404(PitchAnalysis, id=analysis_id)
@@ -141,17 +145,25 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
             allowed, _ = check_limit_access(investor, 'investor_interests_per_month', 'investor_interests_count')
             if not allowed:
                 from django.contrib import messages
-                messages.warning(request, 'Limite mensal de interesses de investidor atingido. Faça upgrade para continuar.')
+                messages.warning(request, _ui_text_for_request(request).get(
+                    "msg_monthly_interests_limit_reached",
+                    "Monthly investor interests limit reached. Upgrade to continue.",
+                ))
                 return _redirect_back_or_default(request, 'investor_dashboard')
 
         if analysis.user_id and analysis.user_id == investor.id:
             from django.contrib import messages
-            messages.info(request, "Não é possível demonstrar interesse na sua própria startup.")
+            messages.info(request, _ui_text_for_request(request).get(
+                "msg_cannot_interest_own_startup", "You cannot express interest in your own startup.",
+            ))
             return _redirect_back_or_default(request, "investor_dashboard")
 
         if not analysis.user_id:
             from django.contrib import messages
-            messages.error(request, "Esta análise não possui empreendedor associado para conexão no momento.")
+            messages.error(request, _ui_text_for_request(request).get(
+                "msg_no_entrepreneur_for_connection",
+                "This analysis has no associated entrepreneur for a connection right now.",
+            ))
             return _redirect_back_or_default(request, "investor_dashboard")
 
         investor_message = (request.POST.get("investor_message", "") or "").strip()[:1200]
@@ -170,7 +182,10 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
             if get_user_role(investor) != ROLE_ADMIN:
                 from subscriptions.models import MonthlyUsage
                 MonthlyUsage.increment(investor, 'investor_interests_count')
-            messages.success(request, "Interesse registado com sucesso. O empreendedor foi notificado no fluxo interno.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_interest_registered_success",
+                "Interest registered successfully. The entrepreneur has been notified internally.",
+            ))
             return _redirect_back_or_default(request, "investor_dashboard")
 
         changed = False
@@ -187,14 +202,18 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
             changed = True
         if changed:
             interest.save(update_fields=["entrepreneur", "investor_message", "status", "entrepreneur_reply", "responded_at", "updated_at"])
-            messages.success(request, "Interesse atualizado e reenviado para análise do empreendedor.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_interest_updated_resent", "Interest updated and resent for the entrepreneur's review.",
+            ))
         else:
-            messages.info(request, "Já existe um interesse ativo para esta startup.")
+            messages.info(request, _ui_text_for_request(request).get(
+                "msg_interest_already_active", "There is already an active interest for this startup.",
+            ))
         return _redirect_back_or_default(request, "investor_dashboard")
 
 
 class ConnectionInterestUpdateView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
 
     def post(self, request, interest_id):
         interest = get_object_or_404(InvestorConnectionInterest, id=interest_id)
@@ -202,17 +221,19 @@ class ConnectionInterestUpdateView(RoleRequiredMixin, View):
         action = (request.POST.get("action", "") or "").strip().lower()
         reply = (request.POST.get("entrepreneur_reply", "") or "").strip()[:1200]
 
-        can_manage = role in {ROLE_ADMIN, ROLE_ANALISTA} or (
-            role == ROLE_EMPREENDEDOR and interest.entrepreneur_id == request.user.id
+        can_manage = role in {ROLE_ADMIN, ROLE_ANALYST} or (
+            role == ROLE_ENTREPRENEUR and interest.entrepreneur_id == request.user.id
         )
-        can_withdraw = interest.investor_id == request.user.id or role in {ROLE_ADMIN, ROLE_ANALISTA}
+        can_withdraw = interest.investor_id == request.user.id or role in {ROLE_ADMIN, ROLE_ANALYST}
 
         from django.contrib import messages
         if action == "withdraw" and can_withdraw:
             interest.status = InvestorConnectionInterest.STATUS_WITHDRAWN
             interest.responded_at = timezone.now()
             interest.save(update_fields=["status", "responded_at", "updated_at"])
-            messages.success(request, "Interesse retirado com sucesso.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_interest_withdrawn_success", "Interest withdrawn successfully.",
+            ))
             return _redirect_back_or_default(request, "connections_hub")
 
         if can_manage and action in {
@@ -225,15 +246,19 @@ class ConnectionInterestUpdateView(RoleRequiredMixin, View):
                 interest.entrepreneur_reply = reply
             interest.responded_at = timezone.now()
             interest.save(update_fields=["status", "entrepreneur_reply", "responded_at", "updated_at"])
-            messages.success(request, "Status da conexão atualizado.")
+            messages.success(request, _ui_text_for_request(request).get(
+                "msg_connection_status_updated", "Connection status updated.",
+            ))
             return _redirect_back_or_default(request, "connections_hub")
 
-        messages.error(request, "Não tem permissão para esta ação de conexão.")
+        messages.error(request, _ui_text_for_request(request).get(
+            "msg_no_permission_connection_action", "You do not have permission for this connection action.",
+        ))
         return _redirect_back_or_default(request, "connections_hub")
 
 
 class ConnectionsHubView(RoleRequiredMixin, View):
-    allowed_roles = {ROLE_EMPREENDEDOR, ROLE_INVESTIDOR, ROLE_ANALISTA, ROLE_ADMIN}
+    allowed_roles = {ROLE_ENTREPRENEUR, ROLE_INVESTOR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
         role = get_user_role(request.user)
@@ -241,10 +266,10 @@ class ConnectionsHubView(RoleRequiredMixin, View):
             "analysis", "investor", "entrepreneur"
         ).order_by("-updated_at")
 
-        if role == ROLE_INVESTIDOR:
+        if role == ROLE_INVESTOR:
             sent_interests = list(qs.filter(investor=request.user))
             received_interests = []
-        elif role == ROLE_EMPREENDEDOR:
+        elif role == ROLE_ENTREPRENEUR:
             sent_interests = list(qs.filter(investor=request.user))
             received_interests = list(qs.filter(entrepreneur=request.user))
         else:
@@ -260,7 +285,7 @@ class ConnectionsHubView(RoleRequiredMixin, View):
             "kpi_received": len(received_interests),
             "kpi_connected": len([
                 item
-                for item in (received_interests if role == ROLE_EMPREENDEDOR else sent_interests)
+                for item in (received_interests if role == ROLE_ENTREPRENEUR else sent_interests)
                 if item.status == InvestorConnectionInterest.STATUS_CONNECTED
             ]),
         })

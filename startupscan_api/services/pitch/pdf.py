@@ -11,6 +11,262 @@ from .design import _build_pitch_design_profile, _mix_colors, _palette_for_slide
 from .enricher import _safe_str, _truncate_text, _wrap_text_lines
 
 # ─────────────────────────────────────────────────────────────
+#  Static chrome copy (labels, defaults, slide titles) per UI language.
+#  Kept local to this module - like REPORT_STRINGS in utils/report.py and
+#  _TEMPLATES in utils/business_canvas.py - because this is pitch-deck
+#  chrome text, not general UI copy, and not the generated pitch content
+#  itself (which already arrives pre-translated inside pitch_payload).
+# ─────────────────────────────────────────────────────────────
+
+_DEFAULT_LANGUAGE = "en"
+
+_DECK_STRINGS = {
+    "pt": {
+        "cover_subtitle_default": "Apresentação executiva para investidores",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "Mensagem central em até 90 segundos",
+        "slide_no_info": "Informação não disponível para este slide.",
+        "slide_default_title": "Slide",
+        "slide_word": "Slide",
+        "section_no_content": "Sem conteúdo.",
+        "section_default_title": "Seção",
+        "section_subtitle": "Resumo estratégico",
+        "roadmap_title": "Roteiro de Apresentação",
+        "roadmap_subtitle": "Sequência sugerida para apresentação ao vivo",
+        "funding_goal_prefix": "Meta de captação",
+        "allocation_prefix": "Alocação",
+        "investment_title": "Captação e Uso de Capital",
+        "investment_subtitle": "Plano financeiro para execução e escala",
+        "investment_default_title": "Captação",
+        "closing_default": "Obrigado. Estamos prontos para os próximos passos da captação.",
+        "closing_title": "Conclusão",
+        "closing_subtitle": "Mensagem final ao investidor",
+        "deck_default_title": "Pitch de Negocio",
+        "deck_default_slogan": "Proposta de valor em evolucao.",
+        "context_label": "Contexto",
+        "generated_label": "Gerado em",
+        "engine_label": "Motor",
+        "exec_confidential_tag": "PITCH DECK EXECUTIVO  ·  CONFIDENCIAL",
+        "col_theses": "PRINCIPAIS TESES",
+        "col_execution_notes": "NOTAS DE EXECUÇÃO",
+        "narrative_flow": "FLUXO DA NARRATIVA",
+        "key_points": "PONTOS-CHAVE",
+        "kpi_goal": "META",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "ALOCAÇÃO",
+    },
+    "en": {
+        "cover_subtitle_default": "Executive presentation for investors",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "Core message in under 90 seconds",
+        "slide_no_info": "Information not available for this slide.",
+        "slide_default_title": "Slide",
+        "slide_word": "Slide",
+        "section_no_content": "No content.",
+        "section_default_title": "Section",
+        "section_subtitle": "Strategic summary",
+        "roadmap_title": "Presentation Roadmap",
+        "roadmap_subtitle": "Suggested sequence for a live presentation",
+        "funding_goal_prefix": "Funding goal",
+        "allocation_prefix": "Allocation",
+        "investment_title": "Fundraising & Use of Capital",
+        "investment_subtitle": "Financial plan for execution and scale",
+        "investment_default_title": "Fundraising",
+        "closing_default": "Thank you. We are ready for the next steps of the fundraising process.",
+        "closing_title": "Conclusion",
+        "closing_subtitle": "Final message to the investor",
+        "deck_default_title": "Business Pitch",
+        "deck_default_slogan": "An evolving value proposition.",
+        "context_label": "Context",
+        "generated_label": "Generated on",
+        "engine_label": "Engine",
+        "exec_confidential_tag": "EXECUTIVE PITCH DECK  ·  CONFIDENTIAL",
+        "col_theses": "KEY THESES",
+        "col_execution_notes": "EXECUTION NOTES",
+        "narrative_flow": "NARRATIVE FLOW",
+        "key_points": "KEY POINTS",
+        "kpi_goal": "GOAL",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "ALLOCATION",
+    },
+    "ru": {
+        "cover_subtitle_default": "Презентация для инвесторов",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "Ключевое сообщение менее чем за 90 секунд",
+        "slide_no_info": "Информация для этого слайда недоступна.",
+        "slide_default_title": "Слайд",
+        "slide_word": "Слайд",
+        "section_no_content": "Нет содержания.",
+        "section_default_title": "Раздел",
+        "section_subtitle": "Стратегическое резюме",
+        "roadmap_title": "План презентации",
+        "roadmap_subtitle": "Рекомендуемая последовательность для живой презентации",
+        "funding_goal_prefix": "Цель привлечения капитала",
+        "allocation_prefix": "Распределение",
+        "investment_title": "Привлечение капитала и использование средств",
+        "investment_subtitle": "Финансовый план для реализации и масштабирования",
+        "investment_default_title": "Привлечение капитала",
+        "closing_default": "Спасибо. Мы готовы к следующим шагам привлечения инвестиций.",
+        "closing_title": "Заключение",
+        "closing_subtitle": "Заключительное сообщение инвестору",
+        "deck_default_title": "Бизнес-питч",
+        "deck_default_slogan": "Развивающееся ценностное предложение.",
+        "context_label": "Контекст",
+        "generated_label": "Создано",
+        "engine_label": "Движок",
+        "exec_confidential_tag": "PITCH DECK ДЛЯ ИНВЕСТОРОВ  ·  КОНФИДЕНЦИАЛЬНО",
+        "col_theses": "КЛЮЧЕВЫЕ ТЕЗИСЫ",
+        "col_execution_notes": "ЗАМЕТКИ ПО РЕАЛИЗАЦИИ",
+        "narrative_flow": "ХОД ПОВЕСТВОВАНИЯ",
+        "key_points": "КЛЮЧЕВЫЕ МОМЕНТЫ",
+        "kpi_goal": "ЦЕЛЬ",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "РАСПРЕДЕЛЕНИЕ",
+    },
+    "de": {
+        "cover_subtitle_default": "Investorenpräsentation",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "Kernbotschaft in unter 90 Sekunden",
+        "slide_no_info": "Für diese Folie sind keine Informationen verfügbar.",
+        "slide_default_title": "Folie",
+        "slide_word": "Folie",
+        "section_no_content": "Kein Inhalt.",
+        "section_default_title": "Abschnitt",
+        "section_subtitle": "Strategische Zusammenfassung",
+        "roadmap_title": "Präsentationsablauf",
+        "roadmap_subtitle": "Empfohlene Reihenfolge für eine Live-Präsentation",
+        "funding_goal_prefix": "Finanzierungsziel",
+        "allocation_prefix": "Mittelverwendung",
+        "investment_title": "Finanzierung und Mittelverwendung",
+        "investment_subtitle": "Finanzplan für Umsetzung und Skalierung",
+        "investment_default_title": "Finanzierung",
+        "closing_default": "Vielen Dank. Wir sind bereit für die nächsten Schritte der Finanzierungsrunde.",
+        "closing_title": "Fazit",
+        "closing_subtitle": "Abschließende Botschaft an den Investor",
+        "deck_default_title": "Business Pitch",
+        "deck_default_slogan": "Ein sich entwickelndes Wertversprechen.",
+        "context_label": "Kontext",
+        "generated_label": "Erstellt am",
+        "engine_label": "Engine",
+        "exec_confidential_tag": "PITCH DECK FÜR INVESTOREN  ·  VERTRAULICH",
+        "col_theses": "KERNTHESEN",
+        "col_execution_notes": "UMSETZUNGSHINWEISE",
+        "narrative_flow": "ABLAUF DER PRÄSENTATION",
+        "key_points": "KERNPUNKTE",
+        "kpi_goal": "ZIEL",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "ALLOKATION",
+    },
+    "es": {
+        "cover_subtitle_default": "Presentación ejecutiva para inversores",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "Mensaje central en menos de 90 segundos",
+        "slide_no_info": "Información no disponible para esta diapositiva.",
+        "slide_default_title": "Diapositiva",
+        "slide_word": "Diapositiva",
+        "section_no_content": "Sin contenido.",
+        "section_default_title": "Sección",
+        "section_subtitle": "Resumen estratégico",
+        "roadmap_title": "Guion de la Presentación",
+        "roadmap_subtitle": "Secuencia sugerida para una presentación en vivo",
+        "funding_goal_prefix": "Meta de captación",
+        "allocation_prefix": "Asignación",
+        "investment_title": "Captación y Uso de Capital",
+        "investment_subtitle": "Plan financiero para la ejecución y escalado",
+        "investment_default_title": "Captación",
+        "closing_default": "Gracias. Estamos listos para los próximos pasos de la captación.",
+        "closing_title": "Conclusión",
+        "closing_subtitle": "Mensaje final al inversor",
+        "deck_default_title": "Pitch de Negocio",
+        "deck_default_slogan": "Una propuesta de valor en evolución.",
+        "context_label": "Contexto",
+        "generated_label": "Generado el",
+        "engine_label": "Motor",
+        "exec_confidential_tag": "PITCH DECK EJECUTIVO  ·  CONFIDENCIAL",
+        "col_theses": "TESIS PRINCIPALES",
+        "col_execution_notes": "NOTAS DE EJECUCIÓN",
+        "narrative_flow": "FLUJO NARRATIVO",
+        "key_points": "PUNTOS CLAVE",
+        "kpi_goal": "META",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "ASIGNACIÓN",
+    },
+    "zh-hans": {
+        "cover_subtitle_default": "面向投资者的高管演示",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "90秒内传达核心信息",
+        "slide_no_info": "此幻灯片暂无信息。",
+        "slide_default_title": "幻灯片",
+        "slide_word": "幻灯片",
+        "section_no_content": "无内容。",
+        "section_default_title": "章节",
+        "section_subtitle": "战略摘要",
+        "roadmap_title": "演示流程",
+        "roadmap_subtitle": "现场演示的建议顺序",
+        "funding_goal_prefix": "融资目标",
+        "allocation_prefix": "资金分配",
+        "investment_title": "融资与资金使用",
+        "investment_subtitle": "执行与扩张的财务计划",
+        "investment_default_title": "融资",
+        "closing_default": "谢谢。我们已准备好进入融资的下一步。",
+        "closing_title": "结语",
+        "closing_subtitle": "致投资者的结束语",
+        "deck_default_title": "商业路演",
+        "deck_default_slogan": "不断演进的价值主张。",
+        "context_label": "背景",
+        "generated_label": "生成于",
+        "engine_label": "引擎",
+        "exec_confidential_tag": "高管路演  ·  保密",
+        "col_theses": "核心论点",
+        "col_execution_notes": "执行说明",
+        "narrative_flow": "叙述流程",
+        "key_points": "要点",
+        "kpi_goal": "目标",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "分配",
+    },
+    "umb": {
+        "cover_subtitle_default": "Apresentação yokolele ku investidores",
+        "elevator_title": "Elevator Pitch",
+        "elevator_subtitle": "Esapo lyokole ha 90 segundos",
+        "slide_no_info": "Ka kuli elombolwilo pa slide yayi.",
+        "slide_default_title": "Slide",
+        "slide_word": "Slide",
+        "section_no_content": "Ka kuli conteúdo.",
+        "section_default_title": "Onepo",
+        "section_subtitle": "Elomboluilo lyestratégia",
+        "roadmap_title": "Onjila Yapresentação",
+        "roadmap_subtitle": "Onjila yalombolwiwa oku apresentação yokolele",
+        "funding_goal_prefix": "Ombiliko yokuandiwa",
+        "allocation_prefix": "Okuavela",
+        "investment_title": "Okuandiwa lo Okuavela kwa Kapital",
+        "investment_subtitle": "Elongiso lyombongo oku okulinga lo okukula",
+        "investment_default_title": "Okuandiwa",
+        "closing_default": "Tuasakidila. Twapongoluka oku olondaka yokukuavo yokuandiwa.",
+        "closing_title": "Esukilo",
+        "closing_subtitle": "Esapo lyokusukila ku investidor",
+        "deck_default_title": "Pitch Yombiliko",
+        "deck_default_slogan": "Etyulo lyoku eyi lyina lyalinga oku kula.",
+        "context_label": "Contexto",
+        "generated_label": "Yalingiwa",
+        "engine_label": "Motor",
+        "exec_confidential_tag": "PITCH DECK YOKOLELE  ·  CONFIDENCIAL",
+        "col_theses": "OYIPILAMO YOKOLELE",
+        "col_execution_notes": "OSAPO YOKULINGA",
+        "narrative_flow": "ONJILA YOKAMBA",
+        "key_points": "OYIPILAMO",
+        "kpi_goal": "OMBILIKO",
+        "kpi_runway": "RUNWAY",
+        "kpi_allocation": "OKUAVELA",
+    },
+}
+
+
+def _deck_strings(language: str) -> dict:
+    return _DECK_STRINGS.get(language) or _DECK_STRINGS[_DEFAULT_LANGUAGE]
+
+
+# ─────────────────────────────────────────────────────────────
 #  Low-level drawing primitives
 # ─────────────────────────────────────────────────────────────
 
@@ -151,7 +407,9 @@ def _draw_progress_dots(pdf: canvas.Canvas, width: float, page: int,
 
 
 def _draw_footer_bar(pdf: canvas.Canvas, width: float, page: int, total: int,
-                      engine: str, key: str, palette: dict) -> None:
+                      engine: str, key: str, palette: dict,
+                      language: str = _DEFAULT_LANGUAGE) -> None:
+    t = _deck_strings(language)
     bar_h = 28
     pdf.setFillColor(_with_alpha(palette["bg"], 0.92))
     pdf.rect(0, 0, width, bar_h, stroke=0, fill=1)
@@ -162,7 +420,8 @@ def _draw_footer_bar(pdf: canvas.Canvas, width: float, page: int, total: int,
 
     pdf.setFillColor(_with_alpha(palette["muted"], 0.7))
     pdf.setFont("Helvetica", 7.5)
-    pdf.drawString(20, 9, f"StartupScan · Motor: {engine} · ID: {key or '—'}")
+    engine_label = t.get("engine_label", "Engine")
+    pdf.drawString(20, 9, f"StartupScan · {engine_label}: {engine} · ID: {key or '—'}")
     slide_txt = f"{page} / {total}"
     tw = stringWidth(slide_txt, "Helvetica", 7.5)
     pdf.drawString(width - tw - 20, 9, slide_txt)
@@ -193,7 +452,9 @@ def _draw_single_bullet(pdf: canvas.Canvas, text: str, x: float, y: float,
 
 def _render_cover(pdf: canvas.Canvas, width: float, height: float,
                   slide: dict, palette: dict, template: str, seed: int,
-                  page: int, total: int, engine: str, key: str) -> None:
+                  page: int, total: int, engine: str, key: str,
+                  language: str = _DEFAULT_LANGUAGE) -> None:
+    t = _deck_strings(language)
     # Solid background
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
@@ -270,7 +531,7 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.roundRect(card_x + 14, card_y + card_h - 28, tag_w, 22, 5, stroke=0, fill=1)
     pdf.setFillColor(colors.white)
     pdf.setFont("Helvetica-Bold", 8.5)
-    pdf.drawString(card_x + 22, card_y + card_h - 18, "PITCH DECK EXECUTIVO  ·  CONFIDENCIAL")
+    pdf.drawString(card_x + 22, card_y + card_h - 18, t.get("exec_confidential_tag", "EXECUTIVE PITCH DECK  ·  CONFIDENTIAL"))
 
     # Metadata lines
     pdf.setFont("Helvetica", 10)
@@ -279,31 +540,36 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.drawString(card_x + 14, meta_y, f"Startup:  {startup_name}")
     meta_y -= 18
     pdf.setFillColor(_with_alpha(palette["text"], 0.7))
-    subtitle = _safe_str(slide.get("subtitle"), "Apresentação executiva para investidores")
+    subtitle = _safe_str(slide.get("subtitle"), t.get("cover_subtitle_default", "Executive presentation for investors"))
     pdf.drawString(card_x + 14, meta_y, f"{subtitle}")
     meta_y -= 18
     pdf.setFillColor(_with_alpha(palette["muted"], 0.8))
     context_label = _safe_str(slide.get("context_label"), "")
     template_label = template.upper() if template else "ORBIT"
-    pdf.drawString(card_x + 14, meta_y, f"Contexto: {context_label}  ·  Template: {template_label}")
+    context_word = t.get("context_label", "Context")
+    pdf.drawString(card_x + 14, meta_y, f"{context_word}: {context_label}  ·  Template: {template_label}")
     meta_y -= 18
-    pdf.drawString(card_x + 14, meta_y, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    generated_word = t.get("generated_label", "Generated on")
+    pdf.drawString(card_x + 14, meta_y, f"{generated_word}: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
-    _draw_footer_bar(pdf, width, page, total, engine, key, palette)
+    _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
 
 
 def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
                               slide: dict, palette: dict, template: str, seed: int,
-                              page: int, total: int, engine: str, key: str) -> None:
+                              page: int, total: int, engine: str, key: str,
+                              language: str = _DEFAULT_LANGUAGE) -> None:
     """Dedicated layout for investment/funding slides with KPI boxes."""
+    t = _deck_strings(language)
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
     _draw_template_bg(pdf, width, height, palette, template, seed)
     _draw_left_stripe(pdf, height, palette)
-    _draw_top_band(pdf, width, height, palette, slide.get("subtitle") or "Captação e Uso de Capital")
+    _draw_top_band(pdf, width, height, palette,
+                    slide.get("subtitle") or t.get("investment_title", "Fundraising & Use of Capital"))
     _draw_slide_number_watermark(pdf, width, height, page, palette)
 
-    title = _safe_str(slide.get("title"), "Captação")
+    title = _safe_str(slide.get("title"), t.get("investment_default_title", "Fundraising"))
     pdf.setFillColor(palette["text"])
     pdf.setFont("Helvetica-Bold", 26)
     pdf.drawString(22, height - 82, title)
@@ -319,11 +585,11 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
     runway = _safe_str(investment.get("runway_months"), "")
     milestones = _safe_str(investment.get("key_milestones"), "")
     if funding:
-        kpi_items.append(("META", funding))
+        kpi_items.append((t.get("kpi_goal", "GOAL"), funding))
     if runway:
-        kpi_items.append(("RUNWAY", runway))
+        kpi_items.append((t.get("kpi_runway", "RUNWAY"), runway))
     elif bullets:
-        kpi_items.append(("ALOCAÇÃO", _truncate_text(bullets[0], 60)))
+        kpi_items.append((t.get("kpi_allocation", "ALLOCATION"), _truncate_text(bullets[0], 60)))
 
     n_kpis = max(1, len(kpi_items))
     kpi_w = (width - 44 - (n_kpis - 1) * 14) / n_kpis
@@ -354,18 +620,20 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
         body_y = _draw_single_bullet(pdf, bullet, 22, body_y, width - 44, palette, 10.5)
 
     _draw_progress_dots(pdf, width, page, total, palette)
-    _draw_footer_bar(pdf, width, page, total, engine, key, palette)
+    _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
 
 
 def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
                            slide: dict, palette: dict, layout: str, template: str, seed: int,
-                           page: int, total: int, engine: str, key: str) -> None:
+                           page: int, total: int, engine: str, key: str,
+                           language: str = _DEFAULT_LANGUAGE) -> None:
+    t = _deck_strings(language)
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
     _draw_template_bg(pdf, width, height, palette, template, seed)
     _draw_left_stripe(pdf, height, palette)
 
-    title = _safe_str(slide.get("title"), "Slide")
+    title = _safe_str(slide.get("title"), t.get("slide_default_title", "Slide"))
     subtitle = _safe_str(slide.get("subtitle"), "")
     bullets = [str(b).strip() for b in (slide.get("bullets") or []) if str(b).strip()]
 
@@ -406,8 +674,8 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
         # Column headers
         pdf.setFillColor(palette["accent"])
         pdf.setFont("Helvetica-Bold", 9.5)
-        pdf.drawString(card_x + 16, card_y + card_h - 26, "PRINCIPAIS TESES")
-        pdf.drawString(divider_x + 14, card_y + card_h - 26, "NOTAS DE EXECUÇÃO")
+        pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("col_theses", "KEY THESES"))
+        pdf.drawString(divider_x + 14, card_y + card_h - 26, t.get("col_execution_notes", "EXECUTION NOTES"))
 
         half = max(1, (len(bullets) + 1) // 2)
         left_bullets = bullets[:half]
@@ -439,7 +707,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
 
         pdf.setFillColor(palette["accent"])
         pdf.setFont("Helvetica-Bold", 9.5)
-        pdf.drawString(card_x + 16, card_y + card_h - 28, "FLUXO DA NARRATIVA")
+        pdf.drawString(card_x + 16, card_y + card_h - 28, t.get("narrative_flow", "NARRATIVE FLOW"))
 
         step_y = top_y - 10
         for idx, raw in enumerate(bullets[:6], start=1):
@@ -462,7 +730,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
     else:  # focus (default)
         pdf.setFillColor(palette["accent"])
         pdf.setFont("Helvetica-Bold", 9.5)
-        pdf.drawString(card_x + 16, card_y + card_h - 26, "PONTOS-CHAVE")
+        pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("key_points", "KEY POINTS"))
 
         body_y = card_y + card_h - 48
         for b in bullets[:7]:
@@ -471,16 +739,17 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
             body_y = _draw_single_bullet(pdf, b, card_x + 16, body_y, card_w - 32, palette, 10.5)
 
     _draw_progress_dots(pdf, width, page, total, palette)
-    _draw_footer_bar(pdf, width, page, total, engine, key, palette)
+    _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
 
 
 # ─────────────────────────────────────────────────────────────
 #  Slide list builder
 # ─────────────────────────────────────────────────────────────
 
-def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
-    title = _safe_str(pitch_payload.get("title"), "Pitch de Negocio")
-    slogan = _safe_str(pitch_payload.get("slogan"), "Proposta de valor em evolucao.")
+def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) -> list[dict]:
+    t = _deck_strings(language)
+    title = _safe_str(pitch_payload.get("title"), t.get("deck_default_title", "Business Pitch"))
+    slogan = _safe_str(pitch_payload.get("slogan"), t.get("deck_default_slogan", "An evolving value proposition."))
     startup_name = title
     for prefix in ("Pitch de Negócio - ", "Pitch de Negocio - "):
         if startup_name.startswith(prefix):
@@ -489,12 +758,12 @@ def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
 
     slides = [{"kind": "cover", "title": title, "slogan": slogan,
                 "startup_name": startup_name,
-                "subtitle": "Apresentação executiva para investidores"}]
+                "subtitle": t.get("cover_subtitle_default", "Executive presentation for investors")}]
 
     elevator = _safe_str(pitch_payload.get("elevator_pitch"), "")
     if elevator:
-        slides.append({"kind": "content", "title": "Elevator Pitch",
-                        "subtitle": "Mensagem central em até 90 segundos",
+        slides.append({"kind": "content", "title": t.get("elevator_title", "Elevator Pitch"),
+                        "subtitle": t.get("elevator_subtitle", "Core message in under 90 seconds"),
                         "bullets": _wrap_text_lines(_truncate_text(elevator, 480), max_chars=100)[:5]})
 
     deck = pitch_payload.get("pitch_deck") or []
@@ -504,27 +773,28 @@ def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
                 continue
             bullets = [str(b).strip() for b in (item.get("bullets") or []) if str(b).strip()]
             if not bullets:
-                bullets = ["Informação não disponível para este slide."]
+                bullets = [t.get("slide_no_info", "Information not available for this slide.")]
+            slide_word = t.get("slide_word", "Slide")
             slides.append({"kind": "content",
-                            "title": _safe_str(item.get("title"), "Slide"),
-                            "subtitle": f"Slide {item.get('slide', '')}".strip(),
+                            "title": _safe_str(item.get("title"), t.get("slide_default_title", "Slide")),
+                            "subtitle": f"{slide_word} {item.get('slide', '')}".strip(),
                             "bullets": bullets})
     else:
         for sec in (pitch_payload.get("sections") or [])[:10]:
             if not isinstance(sec, dict):
                 continue
-            content = _safe_str(sec.get("content"), "Sem conteúdo.")
+            content = _safe_str(sec.get("content"), t.get("section_no_content", "No content."))
             slides.append({"kind": "content",
-                            "title": _safe_str(sec.get("title"), "Seção"),
-                            "subtitle": "Resumo estratégico",
+                            "title": _safe_str(sec.get("title"), t.get("section_default_title", "Section")),
+                            "subtitle": t.get("section_subtitle", "Strategic summary"),
                             "bullets": _wrap_text_lines(_truncate_text(content, 460), max_chars=100)[:5]})
 
     # Script / roadmap slide
     script = pitch_payload.get("script_3min") or []
     if script:
         slides.append({"kind": "content",
-                        "title": "Roteiro de Apresentação",
-                        "subtitle": "Sequência sugerida para apresentação ao vivo",
+                        "title": t.get("roadmap_title", "Presentation Roadmap"),
+                        "subtitle": t.get("roadmap_subtitle", "Suggested sequence for a live presentation"),
                         "bullets": [f"{idx}. {item}" for idx, item in enumerate(script[:6], 1)]})
 
     # Investment slide (dedicated kind)
@@ -533,25 +803,25 @@ def _build_pitch_slides(pitch_payload: dict) -> list[dict]:
     use_of_funds = _safe_str(investment.get("use_of_funds"), "")
     inv_bullets = []
     if funding:
-        inv_bullets.append(f"Meta de captação: {funding}")
+        inv_bullets.append(f"{t.get('funding_goal_prefix', 'Funding goal')}: {funding}")
     if use_of_funds:
-        inv_bullets.append(f"Alocação: {use_of_funds}")
+        inv_bullets.append(f"{t.get('allocation_prefix', 'Allocation')}: {use_of_funds}")
     for extra in ["runway_months", "key_milestones"]:
         val = _safe_str(investment.get(extra), "")
         if val:
             inv_bullets.append(val)
     slides.append({"kind": "investment",
-                    "title": "Captação e Uso de Capital",
-                    "subtitle": "Plano financeiro para execução e escala",
+                    "title": t.get("investment_title", "Fundraising & Use of Capital"),
+                    "subtitle": t.get("investment_subtitle", "Financial plan for execution and scale"),
                     "bullets": inv_bullets,
                     "investment": investment})
 
     # Closing slide
     closing = _safe_str(pitch_payload.get("closing"),
-                        "Obrigado. Estamos prontos para os próximos passos da captação.")
+                        t.get("closing_default", "Thank you. We are ready for the next steps of the fundraising process."))
     slides.append({"kind": "content",
-                    "title": "Conclusão",
-                    "subtitle": "Mensagem final ao investidor",
+                    "title": t.get("closing_title", "Conclusion"),
+                    "subtitle": t.get("closing_subtitle", "Final message to the investor"),
                     "bullets": _wrap_text_lines(_truncate_text(closing, 460), max_chars=100)[:5]})
 
     return slides
@@ -567,13 +837,14 @@ def export_pitch_pdf(
     *,
     design_mode: str = "auto_context",
     manual_template: str | None = None,
+    language: str = _DEFAULT_LANGUAGE,
 ) -> str:
     from .constants import PITCH_DESIGN_MODE_AUTO
     from .design import normalize_pitch_design_options
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
-    slides = _build_pitch_slides(pitch_payload)
+    slides = _build_pitch_slides(pitch_payload, language=language)
     page_size = landscape(A4)
     width, height = page_size
     total = len(slides)
@@ -602,16 +873,19 @@ def export_pitch_pdf(
         if kind == "cover":
             slide["context_label"] = context_label
             _render_cover(pdf, width, height, slide, palette,
-                          template_name, seed, idx, total, engine_used, uniqueness_key)
+                          template_name, seed, idx, total, engine_used, uniqueness_key,
+                          language=language)
 
         elif kind == "investment":
             _render_investment_slide(pdf, width, height, slide, palette,
-                                     template_name, seed, idx, total, engine_used, uniqueness_key)
+                                     template_name, seed, idx, total, engine_used, uniqueness_key,
+                                     language=language)
 
         else:
             layout = layout_options[(layout_seed + idx - 1) % len(layout_options)]
             _render_content_slide(pdf, width, height, slide, palette, layout,
-                                  template_name, seed, idx, total, engine_used, uniqueness_key)
+                                  template_name, seed, idx, total, engine_used, uniqueness_key,
+                                  language=language)
 
         pdf.showPage()
 
