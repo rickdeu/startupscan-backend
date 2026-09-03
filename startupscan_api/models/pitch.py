@@ -6,19 +6,19 @@ from django.utils import timezone
 
 class PitchAnalysis(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pendente'),
-        ('processing', 'Processando'),
-        ('completed', 'Completo'),
-        ('failed', 'Falhou'),
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
     ]
 
     INDUSTRY_CHOICES = [
-        ('tech', 'Tecnologia'),
-        ('health', 'Saúde'),
-        ('finance', 'Finanças'),
-        ('education', 'Educação'),
+        ('tech', 'Technology'),
+        ('health', 'Health'),
+        ('finance', 'Finance'),
+        ('education', 'Education'),
         ('ecommerce', 'E-commerce'),
-        ('other', 'Outro'),
+        ('other', 'Other'),
     ]
 
     user = models.ForeignKey(
@@ -26,10 +26,10 @@ class PitchAnalysis(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Usuário",
+        verbose_name="User",
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data de criação")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Data de atualização")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -37,62 +37,62 @@ class PitchAnalysis(models.Model):
         verbose_name="Status",
     )
     processing_time = models.FloatField(
-        null=True, blank=True, verbose_name="Tempo de processamento (segundos)"
+        null=True, blank=True, verbose_name="Processing time (seconds)"
     )
 
     startup_name = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name="Nome da Startup"
+        max_length=100, null=True, blank=True, verbose_name="Startup Name"
     )
     industry = models.CharField(
         max_length=20,
         choices=INDUSTRY_CHOICES,
         default='tech',
-        verbose_name="Setor",
+        verbose_name="Industry",
     )
-    contact_email = models.EmailField(null=True, blank=True, verbose_name="E-mail de contato")
+    contact_email = models.EmailField(null=True, blank=True, verbose_name="Contact email")
 
-    text = models.TextField(verbose_name="Texto do Pitch")
+    text = models.TextField(verbose_name="Pitch Text")
     audio_file = models.FileField(
-        upload_to='pitches/audio/%Y/%m/%d/', null=True, blank=True, verbose_name="Arquivo de Áudio"
+        upload_to='pitches/audio/%Y/%m/%d/', null=True, blank=True, verbose_name="Audio File"
     )
     video_file = models.FileField(
-        upload_to='pitches/video/%Y/%m/%d/', null=True, blank=True, verbose_name="Arquivo de Vídeo"
+        upload_to='pitches/video/%Y/%m/%d/', null=True, blank=True, verbose_name="Video File"
     )
     explainer_video_file = models.FileField(
-        upload_to='pitches/explainer/%Y/%m/%d/', null=True, blank=True, verbose_name="Vídeo Explicativo IA"
+        upload_to='pitches/explainer/%Y/%m/%d/', null=True, blank=True, verbose_name="AI Explainer Video"
     )
     presenter_face_image_file = models.FileField(
-        upload_to='pitches/presenter/%Y/%m/%d/', null=True, blank=True, verbose_name="Rosto do Apresentador"
+        upload_to='pitches/presenter/%Y/%m/%d/', null=True, blank=True, verbose_name="Presenter Face"
     )
     document_file = models.FileField(
-        upload_to='pitches/docs/%Y/%m/%d/', null=True, blank=True, verbose_name="Ficheiro Submetido"
+        upload_to='pitches/docs/%Y/%m/%d/', null=True, blank=True, verbose_name="Submitted File"
     )
-    submission_date = models.DateField(null=True, blank=True, verbose_name="Data de submissão")
+    submission_date = models.DateField(null=True, blank=True, verbose_name="Submission date")
 
     revenue = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         validators=[MinValueValidator(0)],
-        verbose_name="Receita Anual (AOA)",
+        verbose_name="Annual Revenue (AOA)",
     )
     growth_rate = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(-100), MaxValueValidator(1000)],
-        verbose_name="Taxa de Crescimento (%)",
+        verbose_name="Growth Rate (%)",
     )
     profit_margin = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name="Margem de Lucro (%)",
+        verbose_name="Profit Margin (%)",
     )
     burn_rate = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name="Taxa de Queima (AOA/mês)",
+        verbose_name="Burn Rate (AOA/month)",
     )
 
     success_score = models.DecimalField(
@@ -101,7 +101,7 @@ class PitchAnalysis(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(10)],
         null=True,
         blank=True,
-        verbose_name="Score de Sucesso",
+        verbose_name="Success Score",
     )
     confidence = models.DecimalField(
         max_digits=4,
@@ -109,20 +109,20 @@ class PitchAnalysis(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         null=True,
         blank=True,
-        verbose_name="Confiança da Análise (%)",
+        verbose_name="Analysis Confidence (%)",
     )
-    report = models.JSONField(default=dict, verbose_name="Relatório Completo")
-    metadata = models.JSONField(default=dict, verbose_name="Metadados Técnicos")
+    report = models.JSONField(default=dict, verbose_name="Full Report")
+    metadata = models.JSONField(default=dict, verbose_name="Technical Metadata")
 
-    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="Endereço IP")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP Address")
     user_agent = models.TextField(null=True, blank=True, verbose_name="User Agent")
     model_version = models.CharField(
-        max_length=50, null=True, blank=True, verbose_name="Versão do Modelo"
+        max_length=50, null=True, blank=True, verbose_name="Model Version"
     )
 
     class Meta:
-        verbose_name = "Análise de Pitch"
-        verbose_name_plural = "Análises de Pitch"
+        verbose_name = "Pitch Analysis"
+        verbose_name_plural = "Pitch Analyses"
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['created_at']),
@@ -132,7 +132,7 @@ class PitchAnalysis(models.Model):
         ]
 
     def __str__(self):
-        name = self.startup_name or f"Análise #{self.id}"
+        name = self.startup_name or f"Analysis #{self.id}"
         return f"{name} - Score: {self.success_score or 'N/A'}"
 
     def save(self, *args, **kwargs):

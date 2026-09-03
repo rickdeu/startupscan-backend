@@ -11,24 +11,24 @@ class InvestorConnectionInterest(models.Model):
     STATUS_WITHDRAWN = "withdrawn"
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pendente"),
-        (STATUS_REVIEWING, "Em análise"),
-        (STATUS_CONNECTED, "Conexão iniciada"),
-        (STATUS_REJECTED, "Recusado"),
-        (STATUS_WITHDRAWN, "Retirado"),
+        (STATUS_PENDING, "Pending"),
+        (STATUS_REVIEWING, "Reviewing"),
+        (STATUS_CONNECTED, "Connected"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_WITHDRAWN, "Withdrawn"),
     ]
 
     analysis = models.ForeignKey(
         PitchAnalysis,
         on_delete=models.CASCADE,
         related_name="connection_interests",
-        verbose_name="Análise de interesse",
+        verbose_name="Analysis of interest",
     )
     investor = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name="sent_connection_interests",
-        verbose_name="Investidor",
+        verbose_name="Investor",
     )
     entrepreneur = models.ForeignKey(
         User,
@@ -36,19 +36,19 @@ class InvestorConnectionInterest(models.Model):
         null=True,
         blank=True,
         related_name="received_connection_interests",
-        verbose_name="Empreendedor",
+        verbose_name="Entrepreneur",
     )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
-        verbose_name="Status da conexão",
+        verbose_name="Connection status",
     )
     investor_message = models.TextField(
-        blank=True, default="", verbose_name="Mensagem do investidor"
+        blank=True, default="", verbose_name="Investor message"
     )
     entrepreneur_reply = models.TextField(
-        blank=True, default="", verbose_name="Resposta do empreendedor"
+        blank=True, default="", verbose_name="Entrepreneur reply"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -56,8 +56,8 @@ class InvestorConnectionInterest(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
-        verbose_name = "Interesse de Conexão"
-        verbose_name_plural = "Interesses de Conexão"
+        verbose_name = "Connection Interest"
+        verbose_name_plural = "Connection Interests"
         constraints = [
             models.UniqueConstraint(
                 fields=["analysis", "investor"],
@@ -71,5 +71,5 @@ class InvestorConnectionInterest(models.Model):
         ]
 
     def __str__(self):
-        startup = self.analysis.startup_name or f"Análise #{self.analysis_id}"
+        startup = self.analysis.startup_name or f"Analysis #{self.analysis_id}"
         return f"{self.investor.username} -> {startup} ({self.status})"
