@@ -8,7 +8,7 @@ from docx.shared import Inches
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DOCS_DIR = os.path.join(ROOT_DIR, "docs")
 ASSETS_DIR = os.path.join(DOCS_DIR, "assets")
-DOCX_PATH = os.path.join(DOCS_DIR, "Documentacao_Engenharia_Software.docx")
+DOCX_PATH = os.path.join(DOCS_DIR, "Software_Engineering_Documentation.docx")
 
 
 def _add_bullet_list(document: Document, items: list[str]):
@@ -38,143 +38,143 @@ def build_docx():
     os.makedirs(DOCS_DIR, exist_ok=True)
 
     doc = Document()
-    doc.add_heading("Documentacao de Engenharia de Software", level=0)
-    doc.add_paragraph("StartupScan - versao completa e detalhada")
-    doc.add_paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    doc.add_heading("Software Engineering Documentation", level=0)
+    doc.add_paragraph("StartupScan - complete and detailed version")
+    doc.add_paragraph(f"Generated on: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
-    doc.add_heading("1. Resumo e objetivos", level=1)
+    doc.add_heading("1. Summary and objectives", level=1)
     doc.add_paragraph(
-        "O StartupScan e uma plataforma para avaliacao de startups com IA, projetada para reduzir tempo de analise, "
-        "aumentar padronizacao do feedback e produzir artefatos executivos para tomada de decisao."
+        "StartupScan is an AI-powered platform for evaluating startups, designed to reduce analysis time, "
+        "increase feedback standardization, and produce executive artifacts for decision-making."
     )
     _add_bullet_list(
         doc,
         [
-            "Receber pitch em formato multimodal.",
-            "Gerar score e recomendacoes interpretaveis.",
-            "Entregar relatorio tecnico, video IA e pitch deck visual.",
-            "Suportar operacao continua com monitoramento de jobs.",
+            "Receive pitches in multimodal format.",
+            "Generate an interpretable score and recommendations.",
+            "Deliver a technical report, AI video, and visual pitch deck.",
+            "Support continuous operation with job monitoring.",
         ],
     )
 
-    doc.add_heading("2. Escopo funcional implementado", level=1)
+    doc.add_heading("2. Implemented functional scope", level=1)
     _add_bullet_list(
         doc,
         [
-            "Submissao multimodal (texto, documento, audio, video e YouTube).",
-            "Analise de startup com score 0-10 e recomendacoes por categoria.",
-            "Motor local e opcao GPT com fallback.",
-            "Video IA no resultado (D-ID/local/hibrido) com progresso realtime.",
-            "Pitch PDF estilo slides com design automatico por contexto.",
-            "Pitch PDF com modo premium manual e template escolhido pelo usuario.",
-            "Gestao de modelos com treino, retreino, ativacao e monitoramento realtime.",
-            "Dashboards operacional e investidor.",
+            "Multimodal submission (text, document, audio, video, and YouTube).",
+            "Startup analysis with a 0-10 score and category-based recommendations.",
+            "Local engine and GPT option with fallback.",
+            "AI video in the result (D-ID/local/hybrid) with real-time progress.",
+            "Slide-style pitch PDF with automatic context-based design.",
+            "Pitch PDF with manual premium mode and user-selected template.",
+            "Model management with training, retraining, activation, and real-time monitoring.",
+            "Operational and investor dashboards.",
         ],
     )
 
-    doc.add_heading("3. Arquitetura tecnica", level=1)
+    doc.add_heading("3. Technical architecture", level=1)
     doc.add_paragraph(
-        "A solucao utiliza arquitetura modular com servicos especializados para analise, video e exportacao."
+        "The solution uses a modular architecture with specialized services for analysis, video, and export."
     )
     _add_table(
         doc,
-        ["Camada", "Tecnologia", "Responsabilidade"],
+        ["Layer", "Technology", "Responsibility"],
         [
-            ["Frontend", "Django Templates + JS", "Interface, formularios, dashboards e polling de progresso"],
-            ["Backend", "Django + DRF", "Orquestracao, regras de negocio, rotas e seguranca"],
-            ["IA", "scikit-learn + OpenAI", "Scoring, interpretabilidade e narrativa"],
-            ["Video", "moviepy + D-ID", "Geracao de video IA e renderizacao local"],
-            ["Documentacao", "reportlab + python-docx", "Exportacao PDF e DOCX"],
-            ["Persistencia", "SQLite/PostgreSQL", "Analises, submissoes e metadata operacional"],
+            ["Frontend", "Django Templates + JS", "Interface, forms, dashboards, and progress polling"],
+            ["Backend", "Django + DRF", "Orchestration, business rules, routes, and security"],
+            ["AI", "scikit-learn + OpenAI", "Scoring, interpretability, and narrative"],
+            ["Video", "moviepy + D-ID", "AI video generation and local rendering"],
+            ["Documentation", "reportlab + python-docx", "PDF and DOCX export"],
+            ["Persistence", "SQLite/PostgreSQL", "Analyses, submissions, and operational metadata"],
         ],
     )
 
-    architecture_image = os.path.join(ASSETS_DIR, "arquitetura_plataforma.png")
+    architecture_image = os.path.join(ASSETS_DIR, "platform_architecture.png")
     if os.path.exists(architecture_image):
-        doc.add_paragraph("Diagrama de arquitetura:")
+        doc.add_paragraph("Architecture diagram:")
         doc.add_picture(architecture_image, width=Inches(6.4))
 
-    flow_image = os.path.join(ASSETS_DIR, "fluxo_funcional.png")
+    flow_image = os.path.join(ASSETS_DIR, "functional_flow.png")
     if os.path.exists(flow_image):
-        doc.add_paragraph("Fluxo funcional:")
+        doc.add_paragraph("Functional flow:")
         doc.add_picture(flow_image, width=Inches(6.4))
 
-    categories_image = os.path.join(ASSETS_DIR, "categorias_exemplo.png")
+    categories_image = os.path.join(ASSETS_DIR, "category_example.png")
     if os.path.exists(categories_image):
-        doc.add_paragraph("Exemplo de categorias de avaliacao:")
+        doc.add_paragraph("Example of evaluation categories:")
         doc.add_picture(categories_image, width=Inches(6.4))
 
-    jobs_image = os.path.join(ASSETS_DIR, "fases_jobs.png")
+    jobs_image = os.path.join(ASSETS_DIR, "job_phases.png")
     if os.path.exists(jobs_image):
-        doc.add_paragraph("Fases de jobs assincromos:")
+        doc.add_paragraph("Asynchronous job phases:")
         doc.add_picture(jobs_image, width=Inches(6.4))
 
-    doc.add_heading("4. Fluxos de negocio", level=1)
-    doc.add_paragraph("Fluxo A - Avaliacao multimodal:")
+    doc.add_heading("4. Business flows", level=1)
+    doc.add_paragraph("Flow A - Multimodal evaluation:")
     _add_numbered_list(
         doc,
         [
-            "Receber entrada multimodal.",
-            "Extrair e consolidar contexto.",
-            "Executar inferencia local/GPT.",
-            "Persistir resultado estruturado.",
-            "Exibir score e recomendacoes.",
+            "Receive multimodal input.",
+            "Extract and consolidate context.",
+            "Run local/GPT inference.",
+            "Persist the structured result.",
+            "Display score and recommendations.",
         ],
     )
-    doc.add_paragraph("Fluxo B - Video IA:")
+    doc.add_paragraph("Flow B - AI video:")
     _add_numbered_list(
         doc,
         [
-            "Selecionar modo (auto/did_only/local_only).",
-            "Criar job assincromo.",
-            "Acompanhar progresso por endpoint.",
-            "Persistir artefato e metadata.",
+            "Select mode (auto/did_only/local_only).",
+            "Create an asynchronous job.",
+            "Track progress via endpoint.",
+            "Persist artifact and metadata.",
         ],
     )
-    doc.add_paragraph("Fluxo C - Pitch deck PDF:")
+    doc.add_paragraph("Flow C - Pitch deck PDF:")
     _add_numbered_list(
         doc,
         [
-            "Construir narrativa do pitch.",
-            "Selecionar modo de design (automatico/manual).",
-            "Renderizar slides visuais.",
-            "Entregar PDF para download.",
+            "Build the pitch narrative.",
+            "Select the design mode (automatic/manual).",
+            "Render visual slides.",
+            "Deliver the PDF for download.",
         ],
     )
 
-    doc.add_heading("5. Endpoints principais", level=1)
+    doc.add_heading("5. Main endpoints", level=1)
     _add_table(
         doc,
-        ["Endpoint", "Metodo", "Descricao"],
+        ["Endpoint", "Method", "Description"],
         [
-            ["/analyze/form/", "GET/POST", "Formulario de avaliacao multimodal"],
-            ["/results/<id>/", "GET", "Resultado completo da analise"],
-            ["/results/<id>/pdf/", "GET", "Relatorio tecnico da analise"],
-            ["/results/<id>/pitch/pdf/", "GET", "Pitch deck visual"],
-            ["/results/<id>/video/generate/", "POST", "Inicia geracao de video"],
-            ["/results/<id>/video/progress/<job_id>/", "GET", "Progresso do video"],
-            ["/models/", "GET/POST", "Gestao e treino de modelos"],
-            ["/investors/", "GET", "Dashboard investidor"],
+            ["/analyze/form/", "GET/POST", "Multimodal evaluation form"],
+            ["/results/<id>/", "GET", "Full analysis result"],
+            ["/results/<id>/pdf/", "GET", "Technical analysis report"],
+            ["/results/<id>/pitch/pdf/", "GET", "Visual pitch deck"],
+            ["/results/<id>/video/generate/", "POST", "Starts video generation"],
+            ["/results/<id>/video/progress/<job_id>/", "GET", "Video progress"],
+            ["/models/", "GET/POST", "Model management and training"],
+            ["/investors/", "GET", "Investor dashboard"],
         ],
     )
 
-    doc.add_heading("6. Guia de utilizacao", level=1)
+    doc.add_heading("6. Usage guide", level=1)
     _add_numbered_list(
         doc,
         [
-            "Aceder a pagina de Novo Pitch.",
-            "Preencher informacoes da startup e sector.",
-            "Submeter dados multimodais (texto, documento, audio, video, YouTube).",
-            "Executar avaliacao com motor local ou GPT.",
-            "Consultar resultado com score, categorias e recomendacoes.",
-            "Opcionalmente gerar video IA no modo desejado.",
-            "Gerar relatorio PDF tecnico.",
-            "Gerar pitch PDF em design automatico por contexto.",
-            "Gerar pitch PDF em design premium manual (template escolhido).",
+            "Access the New Pitch page.",
+            "Fill in the startup and sector information.",
+            "Submit multimodal data (text, document, audio, video, YouTube).",
+            "Run the evaluation with the local engine or GPT.",
+            "Review the result with score, categories, and recommendations.",
+            "Optionally generate an AI video in the desired mode.",
+            "Generate the technical PDF report.",
+            "Generate a pitch PDF with automatic context-based design.",
+            "Generate a pitch PDF with manual premium design (chosen template).",
         ],
     )
 
-    doc.add_heading("7. Operacao, testes e troubleshooting", level=1)
+    doc.add_heading("7. Operation, testing, and troubleshooting", level=1)
     _add_bullet_list(
         doc,
         [
@@ -184,31 +184,31 @@ def build_docx():
             "python3 docs/generate_engineering_docx.py",
         ],
     )
-    doc.add_paragraph("Checklist funcional minimo:")
+    doc.add_paragraph("Minimum functional checklist:")
     _add_bullet_list(
         doc,
         [
-            "Submissao multimodal valida.",
-            "Score e categorias no resultado.",
-            "Video IA com barra de progresso.",
-            "Pitch PDF com os dois modos de design.",
-            "Download de relatorio tecnico.",
+            "Valid multimodal submission.",
+            "Score and categories present in the result.",
+            "AI video with progress bar.",
+            "Pitch PDF with both design modes.",
+            "Technical report download.",
         ],
     )
-    doc.add_paragraph("Troubleshooting rapido:")
+    doc.add_paragraph("Quick troubleshooting:")
     _add_bullet_list(
         doc,
         [
-            "Falha D-ID: validar chave, creditos e URL HTTPS da imagem.",
-            "Falha GPT: validar OPENAI_API_KEY e fallback local.",
-            "Falha PDF/DOCX: validar dependencias e permissao de escrita.",
+            "D-ID failure: check key, credits, and the image HTTPS URL.",
+            "GPT failure: check OPENAI_API_KEY and local fallback.",
+            "PDF/DOCX failure: check dependencies and write permissions.",
         ],
     )
 
-    doc.add_heading("8. Publicacao de documentacao", level=1)
+    doc.add_heading("8. Documentation publishing", level=1)
     doc.add_paragraph(
-        "A entrega operacional do projeto inclui envio da documentacao atualizada para o webhook Discord "
-        "em formatos PDF e DOCX."
+        "The project's operational delivery includes sending the updated documentation to the Discord webhook "
+        "in PDF and DOCX formats."
     )
 
     doc.save(DOCX_PATH)

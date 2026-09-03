@@ -9,7 +9,7 @@ import pandas as pd
 from datetime import datetime
 from collections import Counter
 
-# Modelos de ML
+# ML models
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import (
@@ -22,13 +22,13 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 
-# Modelos adicionais
+# Additional models
 try:
     from xgboost import XGBRegressor
 except ImportError:
     logging.warning("XGBoost não instalado. Use: pip install xgboost")
 
-# Carregamento lazy de libs pesadas para não travar o boot do web server.
+# Lazy loading of heavy libraries so they don't block the web server boot.
 plt = None
 sns = None
 whisper = None
@@ -118,12 +118,12 @@ def ensure_nlp_imports():
         logging.warning("Pacotes de NLP indisponíveis: %s", str(exc))
         return False
 
-# Outros
+# Other
 from tqdm import tqdm
 warnings.filterwarnings("ignore")
 
-# Logging padrão
+# Default logging
 logging.basicConfig(level=logging.INFO)
 
-# Mensagem de boas-vindas
-print(f"[OK] Imports base carregados - StartupScan.AI [{datetime.now().strftime('%d/%m/%Y %H:%M')}]")
+# Welcome message
+print(f"[OK] Base imports loaded - StartupScanAI [{datetime.now().strftime('%Y-%m-%d %H:%M')}]")

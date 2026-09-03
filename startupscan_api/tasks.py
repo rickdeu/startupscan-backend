@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, max_retries=3)
 def reprocess_pitch_analysis(self, analysis_id):
-    """Reprocessa uma análise de pitch existente, recalculando score e relatório."""
+    """Reprocesses an existing pitch analysis, recalculating score and report."""
     from .models import PitchAnalysis
     from .services.model_training import predict_pitch_score
     from .utils import generate_interpretable_report
@@ -50,16 +50,16 @@ def reprocess_pitch_analysis(self, analysis_id):
 
 @shared_task(bind=True)
 def process_batch_analysis(self, file_path, batch_id):
-    """Tarefa Celery para processamento em lote"""
+    """Celery task for batch processing"""
     cache_key = f'batch_analysis:{batch_id}'
     results = []
     
     try:
-        # 1. Ler arquivo CSV com chunks para evitar problemas de memória
-        chunksize = 100  # Processar 100 registros por vez
+        # 1. Read CSV file with chunks to avoid memory issues
+        chunksize = 100  # Process 100 records at a time
         total_rows = sum(1 for _ in pd.read_csv(file_path, chunksize=chunksize))
-        
-        # Atualizar status com total de itens
+
+        # Update status with total item count
         cache.set(cache_key, {
             'status': 'PROCESSING',
             'total_items': total_rows,
@@ -68,7 +68,7 @@ def process_batch_analysis(self, file_path, batch_id):
             'task_id': self.request.id
         }, 86400)
         
-        # 2. Processar em chunks
+        # 2. Process in chunks
         processed_count = 0
         temp_results = []
         
@@ -91,7 +91,7 @@ def process_batch_analysis(self, file_path, batch_id):
                 
                 processed_count += 1
                 
-                # Atualizar progresso a cada 10%
+                # Update progress every 10%
                 if processed_count % max(1, total_rows//10) == 0:
                     cache.set(cache_key, {
                         'status': 'PROCESSING',
@@ -103,14 +103,14 @@ def process_batch_analysis(self, file_path, batch_id):
             
             temp_results.extend(chunk_results)
         
-        # 3. Salvar resultados
+        # 3. Save results
         results_dir = os.path.join(settings.MEDIA_ROOT, 'batch_results')
         os.makedirs(results_dir, exist_ok=True)
         results_path = os.path.join(results_dir, f'results_{batch_id}.csv')
         
         pd.DataFrame(temp_results).to_csv(results_path, index=False)
         
-        # 4. Atualizar status final
+        # 4. Update final status
         cache.set(cache_key, {
             'status': 'COMPLETED',
             'total_items': total_rows,
@@ -119,21 +119,21 @@ def process_batch_analysis(self, file_path, batch_id):
             'task_id': self.request.id
         }, 86400)
         
-        # 5. Limpar arquivo temporário de entrada
+        # 5. Clean up temporary input file
         if os.path.exists(file_path):
             os.remove(file_path)
             
         return True
         
     except Exception as e:
-        # Atualizar status com erro
+        # Update status with error
         cache.set(cache_key, {
             'status': 'FAILED',
             'error': str(e),
             'task_id': self.request.id
         }, 86400)
         
-        # Limpar arquivo temporário em caso de erro
+        # Clean up temporary file in case of error
         if os.path.exists(file_path):
             os.remove(file_path)
         

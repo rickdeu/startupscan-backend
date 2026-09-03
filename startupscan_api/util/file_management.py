@@ -4,12 +4,12 @@ import tempfile
 
 @contextmanager
 def TempFileManager(audio_file=None, video_file=None):
-    """Gerenciador de contexto para arquivos temporários"""
+    """Context manager for temporary files"""
     audio_path = None
     video_path = None
-    
+
     try:
-        # Processar áudio
+        # Process audio
         if audio_file:
             audio_suffix = os.path.splitext(getattr(audio_file, "name", ""))[1] or ".mp3"
             _, audio_path = tempfile.mkstemp(suffix=audio_suffix)
@@ -17,7 +17,7 @@ def TempFileManager(audio_file=None, video_file=None):
                 for chunk in audio_file.chunks():
                     f.write(chunk)
         
-        # Processar vídeo
+        # Process video
         if video_file:
             video_suffix = os.path.splitext(getattr(video_file, "name", ""))[1] or ".mp4"
             _, video_path = tempfile.mkstemp(suffix=video_suffix)
@@ -28,7 +28,7 @@ def TempFileManager(audio_file=None, video_file=None):
         yield (audio_path, video_path)
         
     finally:
-        # Limpeza garantida
+        # Guaranteed cleanup
         if audio_path and os.path.exists(audio_path):
             os.remove(audio_path)
         if video_path and os.path.exists(video_path):

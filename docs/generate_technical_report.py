@@ -1,8 +1,8 @@
 """
-Gera o relatório técnico académico do projecto StartupScan em formato .docx.
+Generates the technical report of the StartupScan project in .docx format.
 
-Execução:
-    python docs/generate_relatorio_academico.py
+Usage:
+    python docs/generate_technical_report.py
 """
 
 import os
@@ -16,31 +16,22 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DOCS_DIR = os.path.join(ROOT_DIR, "docs")
-OUTPUT_PATH = os.path.join(DOCS_DIR, "Relatorio_Tecnico_StartupScan.docx")
+OUTPUT_PATH = os.path.join(DOCS_DIR, "StartupScan_Technical_Report.docx")
 
 # ---------------------------------------------------------------------------
-# Metadados académicos
+# Report metadata
 # ---------------------------------------------------------------------------
 AUTHOR = "Andre Hangalo"
-INSTITUTION = "Universidade Mandume Ya Ndemofayoh"
-COURSE = "Especialização em Desenvolvimento de Software"
-SUPERVISOR = "Edson Livongue"
-ACADEMIC_YEAR = "2026"
+AUTHOR_EMAIL = "hangaloandre@gmail.com"
 PROJECT_TITLE = "StartupScan"
 REPORT_SUBTITLE = (
-    "Plataforma Inteligente de Avaliação de Startups com Inteligência Artificial"
+    "Intelligent Startup Evaluation Platform Powered by Artificial Intelligence"
 )
-GENERATION_DATE = datetime.now().strftime("%d de %B de %Y").replace(
-    "January", "Janeiro").replace("February", "Fevereiro").replace(
-    "March", "Março").replace("April", "Abril").replace(
-    "May", "Maio").replace("June", "Junho").replace(
-    "July", "Julho").replace("August", "Agosto").replace(
-    "September", "Setembro").replace("October", "Outubro").replace(
-    "November", "Novembro").replace("December", "Dezembro")
+GENERATION_DATE = datetime.now().strftime("%B %d, %Y")
 
 
 # ---------------------------------------------------------------------------
-# Helpers de formatação
+# Formatting helpers
 # ---------------------------------------------------------------------------
 
 def _set_font(run, name="Times New Roman", size=12, bold=False,
@@ -122,7 +113,7 @@ def _page_break(doc):
 
 
 def _add_page_numbers(doc):
-    """Adiciona numeração de página no rodapé."""
+    """Adds page numbering in the footer."""
     section = doc.sections[0]
     footer = section.footer
     footer_para = footer.paragraphs[0]
@@ -149,25 +140,18 @@ def _set_margins(doc, top=1.0, bottom=1.0, left=1.25, right=1.0):
 
 
 # ---------------------------------------------------------------------------
-# Secções do relatório
+# Report sections
 # ---------------------------------------------------------------------------
 
 def _capa(doc):
-    _para(doc, INSTITUTION, align=WD_ALIGN_PARAGRAPH.CENTER,
-          size=14, bold=True, space_after=4)
-    _para(doc, COURSE, align=WD_ALIGN_PARAGRAPH.CENTER,
-          size=12, space_after=60)
-
     _para(doc, PROJECT_TITLE, align=WD_ALIGN_PARAGRAPH.CENTER,
           size=20, bold=True, space_after=8)
     _para(doc, REPORT_SUBTITLE, align=WD_ALIGN_PARAGRAPH.CENTER,
           size=14, italic=True, space_after=60)
 
-    _para(doc, f"Autor: {AUTHOR}", align=WD_ALIGN_PARAGRAPH.CENTER,
+    _para(doc, f"Author: {AUTHOR}", align=WD_ALIGN_PARAGRAPH.CENTER,
           size=12, space_after=4)
-    _para(doc, f"Orientador: {SUPERVISOR}", align=WD_ALIGN_PARAGRAPH.CENTER,
-          size=12, space_after=4)
-    _para(doc, f"Ano Lectivo: {ACADEMIC_YEAR}", align=WD_ALIGN_PARAGRAPH.CENTER,
+    _para(doc, AUTHOR_EMAIL, align=WD_ALIGN_PARAGRAPH.CENTER,
           size=12, space_after=4)
     _para(doc, GENERATION_DATE, align=WD_ALIGN_PARAGRAPH.CENTER,
           size=12, space_after=0)
@@ -175,79 +159,75 @@ def _capa(doc):
 
 
 def _resumo(doc):
-    _heading(doc, "Resumo", level=1)
+    _heading(doc, "Abstract", level=1)
     _para(doc, (
-        "O presente relatório descreve o desenvolvimento do projecto StartupScan, uma plataforma "
-        "web full-stack de avaliação inteligente de startups, concebida e implementada no âmbito "
-        "do estágio curricular do curso de Especialização em Desenvolvimento de Software da "
-        f"{INSTITUTION}. "
-        "O sistema tem como objectivo principal automatizar o ciclo completo de análise de pitches "
-        "de startups, desde a recepção de entradas multimodais — texto, documentos, áudio, vídeo "
-        "e links YouTube — até à produção de artefactos de comunicação prontos para utilização "
-        "por empreendedores, analistas e investidores."
+        "This report describes the development of the StartupScan project, a full-stack web platform "
+        "for intelligent startup evaluation. "
+        "The system's main goal is to automate the complete cycle of startup pitch analysis, from receiving "
+        "multimodal inputs — text, documents, audio, video, and YouTube links — to producing communication "
+        "artifacts ready for use by entrepreneurs, analysts, and investors."
     ))
     _para(doc, (
-        "A plataforma integra um pipeline de aprendizagem automática baseado em scikit-learn e "
-        "XGBoost para geração de um score de sucesso de 0 a 10, com explicabilidade por categorias. "
-        "Complementarmente, oferece integração com a API OpenAI GPT como motor alternativo, "
-        "geração de relatório técnico em PDF, construção de pitch deck visual em PDF com múltiplos "
-        "templates, e geração de vídeo explicativo narrado por inteligência artificial, com suporte "
-        "a API D-ID e fallback local via moviepy e TTS."
+        "The platform integrates a machine learning pipeline based on scikit-learn and XGBoost to generate "
+        "a success score from 0 to 10, with category-based explainability. In addition, it offers integration "
+        "with the OpenAI GPT API as an alternative engine, generation of a technical PDF report, construction "
+        "of a visual pitch deck PDF with multiple templates, and generation of an AI-narrated explainer video, "
+        "with support for the D-ID API and a local fallback via moviepy and TTS."
     ))
     _para(doc, (
-        "Do ponto de vista técnico, o sistema foi desenvolvido com Django 6 e Django REST Framework, "
-        "utiliza SQLite em desenvolvimento e PostgreSQL em produção, e recorre a Redis e Celery "
-        "para processamento assíncrono de tarefas de longa duração. O controlo de acesso é "
-        "implementado através de um modelo de papéis (RBAC) com cinco níveis: administrador, "
-        "analista, empreendedor, investidor e público geral."
+        "From a technical standpoint, the system was built with Django 6 and Django REST Framework, "
+        "uses SQLite in development and PostgreSQL in production, and relies on Redis and Celery for "
+        "asynchronous processing of long-running tasks. Access control is implemented through a "
+        "role-based access control (RBAC) model with five levels: administrator, analyst, entrepreneur, "
+        "investor, and general public."
     ))
     _para(doc, (
-        "Palavras-chave: inteligência artificial, avaliação de startups, aprendizagem automática, "
-        "Django, processamento multimodal, pitch analysis."
+        "Keywords: artificial intelligence, startup evaluation, machine learning, "
+        "Django, multimodal processing, pitch analysis."
     ), italic=True, space_after=0)
     _page_break(doc)
 
 
 def _indice(doc):
-    _heading(doc, "Índice", level=1)
+    _heading(doc, "Table of Contents", level=1)
     entries = [
-        ("1.", "Introdução", "5"),
-        ("2.", "Contexto e Objetivos", "6"),
-        ("  2.1.", "Problema", "6"),
-        ("  2.2.", "Objetivos do Sistema", "6"),
-        ("  2.3.", "Público-Alvo", "7"),
-        ("3.", "Arquitectura Técnica", "8"),
-        ("  3.1.", "Stack Tecnológico", "8"),
-        ("  3.2.", "Arquitectura de Componentes", "9"),
-        ("  3.3.", "Fluxo de Dados", "9"),
-        ("  3.4.", "Processamento Assíncrono", "10"),
-        ("4.", "Modelo de Dados", "11"),
+        ("1.", "Introduction", "5"),
+        ("2.", "Context and Objectives", "6"),
+        ("  2.1.", "Problem", "6"),
+        ("  2.2.", "System Objectives", "6"),
+        ("  2.3.", "Target Audience", "7"),
+        ("3.", "Technical Architecture", "8"),
+        ("  3.1.", "Technology Stack", "8"),
+        ("  3.2.", "Component Architecture", "9"),
+        ("  3.3.", "Data Flow", "9"),
+        ("  3.4.", "Asynchronous Processing", "10"),
+        ("4.", "Data Model", "11"),
         ("  4.1.", "PitchAnalysis", "11"),
         ("  4.2.", "UserProfile", "12"),
         ("  4.3.", "IdeaPitchSubmission", "12"),
         ("  4.4.", "InvestorConnectionInterest", "13"),
         ("  4.5.", "IdeaPublicFeedback", "13"),
-        ("5.", "Funcionalidades Implementadas", "14"),
-        ("  5.1.", "Avaliação Multimodal de Pitch", "14"),
-        ("  5.2.", "Relatório Técnico PDF", "15"),
+        ("5.", "Implemented Features", "14"),
+        ("  5.1.", "Multimodal Pitch Evaluation", "14"),
+        ("  5.2.", "Technical PDF Report", "15"),
         ("  5.3.", "Pitch Deck PDF", "15"),
-        ("  5.4.", "Vídeo Explicativo com IA", "16"),
-        ("  5.5.", "Construtor de Ideias", "16"),
-        ("  5.6.", "Processamento em Lote", "17"),
-        ("  5.7.", "Gestão de Modelos de ML", "17"),
-        ("  5.8.", "Conexões Investidor-Startup", "17"),
-        ("6.", "Controlo de Acesso e Papéis", "18"),
-        ("7.", "Referência de Endpoints", "19"),
-        ("8.", "Pipeline de Aprendizagem Automática", "21"),
-        ("9.", "Instalação e Configuração", "22"),
-        ("  9.1.", "Pré-requisitos", "22"),
-        ("  9.2.", "Setup Local", "22"),
-        ("  9.3.", "Variáveis de Ambiente", "23"),
-        ("  9.4.", "Execução com Docker Compose", "25"),
-        ("  9.5.", "Deploy na Render", "25"),
-        ("10.", "Testes e Validação", "26"),
-        ("11.", "Conclusão", "27"),
-        ("12.", "Referências", "28"),
+        ("  5.4.", "AI Explainer Video", "16"),
+        ("  5.5.", "Idea Builder", "16"),
+        ("  5.6.", "Batch Processing", "17"),
+        ("  5.7.", "ML Model Management", "17"),
+        ("  5.8.", "Investor-Startup Connections", "17"),
+        ("6.", "Access Control and Roles", "18"),
+        ("7.", "Endpoint Reference", "19"),
+        ("8.", "Machine Learning Pipeline", "21"),
+        ("9.", "Installation and Configuration", "22"),
+        ("  9.1.", "Prerequisites", "22"),
+        ("  9.2.", "Local Setup", "22"),
+        ("  9.3.", "Environment Variables", "23"),
+        ("  9.4.", "Running with Docker Compose", "25"),
+        ("  9.5.", "Deployment on Render", "25"),
+        ("10.", "Testing and Validation", "26"),
+        ("11.", "Conclusion", "27"),
+        ("12.", "References", "28"),
     ]
     tbl = doc.add_table(rows=0, cols=3)
     tbl.style = "Table Grid"
@@ -268,549 +248,541 @@ def _indice(doc):
 
 
 def _introducao(doc):
-    _heading(doc, "1. Introdução", level=1)
+    _heading(doc, "1. Introduction", level=1)
     _para(doc, (
-        "O ecossistema de startups em Angola e em África de forma geral tem crescido de forma "
-        "significativa nos últimos anos, impulsionado pela expansão da conectividade, pelo "
-        "surgimento de aceleradoras e pela crescente disponibilidade de capital de risco. "
-        "Neste contexto, a capacidade de avaliar oportunidades de investimento de forma "
-        "rápida, consistente e fundamentada torna-se um factor crítico para todos os "
-        "intervenientes do ecossistema — empreendedores, analistas e investidores."
+        "The startup ecosystem in Angola and across Africa in general has grown significantly in recent "
+        "years, driven by expanding connectivity, the emergence of accelerators, and the growing "
+        "availability of venture capital. In this context, the ability to evaluate investment opportunities "
+        "quickly, consistently, and rigorously becomes a critical factor for every stakeholder in the "
+        "ecosystem — entrepreneurs, analysts, and investors."
     ))
     _para(doc, (
-        "O projecto StartupScan foi desenvolvido no âmbito do estágio curricular do curso de "
-        f"Especialização em Desenvolvimento de Software da {INSTITUTION}, com o objectivo de "
-        "responder a esta necessidade através de uma plataforma web que automatiza e padroniza "
-        "o processo de avaliação de pitches de startups utilizando inteligência artificial."
+        "The StartupScan project was developed with the goal of addressing this need through a web "
+        "platform that automates and standardizes the process of evaluating startup pitches using "
+        "artificial intelligence."
     ))
     _para(doc, (
-        "O presente relatório técnico documenta a totalidade do trabalho realizado: desde a "
-        "definição dos requisitos e a arquitectura do sistema, passando pela implementação de "
-        "cada funcionalidade, até aos procedimentos de instalação, configuração, testes e "
-        "deployment. O documento está organizado de forma a servir simultaneamente como "
-        "referência técnica para desenvolvedores e como relatório académico para avaliação "
-        "do trabalho efectuado."
+        "This technical report documents the entirety of the work carried out: from requirements "
+        "definition and system architecture, through the implementation of each feature, to the "
+        "installation, configuration, testing, and deployment procedures. The document is organized "
+        "to serve as a technical reference for developers and stakeholders."
     ))
     _para(doc, (
-        "O relatório está estruturado em doze capítulos. Os capítulos 2 e 3 contextualizam o "
-        "problema e descrevem a arquitectura do sistema. Os capítulos 4 a 8 detalham o modelo "
-        "de dados, as funcionalidades, o controlo de acesso, os endpoints e o pipeline de "
-        "aprendizagem automática. Os capítulos 9 e 10 cobrem a instalação e os testes. "
-        "O capítulo 11 apresenta as conclusões e o capítulo 12 lista as referências bibliográficas."
+        "The report is structured into twelve chapters. Chapters 2 and 3 provide context on the "
+        "problem and describe the system architecture. Chapters 4 through 8 detail the data model, "
+        "the features, access control, the endpoints, and the machine learning pipeline. Chapters 9 "
+        "and 10 cover installation and testing. Chapter 11 presents the conclusions, and chapter 12 "
+        "lists the bibliographic references."
     ))
 
 
 def _contexto_objetivos(doc):
-    _heading(doc, "2. Contexto e Objetivos", level=1)
+    _heading(doc, "2. Context and Objectives", level=1)
 
-    _heading(doc, "2.1. Problema", level=2)
+    _heading(doc, "2.1. Problem", level=2)
     _para(doc, (
-        "A avaliação de pitches de startups é um processo tradicionalmente manual, demorado e "
-        "subjectivo. Um analista experiente consegue avaliar um número limitado de pitches por "
-        "semana, e a qualidade do feedback varia significativamente entre avaliadores. "
-        "Esta ineficiência cria gargalos em aceleradoras e fundos de investimento, atrasa "
-        "o processo de financiamento e priva os empreendedores de feedback estruturado e "
-        "accionável em tempo útil."
+        "Evaluating startup pitches is a traditionally manual, time-consuming, and subjective process. "
+        "An experienced analyst can only evaluate a limited number of pitches per week, and the quality "
+        "of feedback varies significantly between evaluators. This inefficiency creates bottlenecks in "
+        "accelerators and investment funds, delays the financing process, and deprives entrepreneurs of "
+        "structured, actionable feedback in a timely manner."
     ))
     _para(doc, (
-        "Adicionalmente, os empreendedores, particularmente os que se encontram em fases iniciais, "
-        "carecem frequentemente de ferramentas que os ajudem a estruturar e a comunicar as suas "
-        "ideias de forma eficaz para potenciais investidores. A ausência de artefactos de "
-        "comunicação de qualidade — pitch decks, relatórios e vídeos de apresentação — "
-        "constitui uma barreira ao acesso a financiamento."
+        "Additionally, entrepreneurs, particularly those at early stages, often lack tools to help them "
+        "structure and effectively communicate their ideas to potential investors. The absence of "
+        "quality communication artifacts — pitch decks, reports, and presentation videos — constitutes "
+        "a barrier to accessing financing."
     ))
 
-    _heading(doc, "2.2. Objetivos do Sistema", level=2)
-    _para(doc, "O StartupScan foi concebido para atingir os seguintes objectivos:")
+    _heading(doc, "2.2. System Objectives", level=2)
+    _para(doc, "StartupScan was designed to achieve the following objectives:")
 
-    _para(doc, "Objectivos de negócio:", bold=True, space_after=2)
+    _para(doc, "Business objectives:", bold=True, space_after=2)
     _bullet(doc, [
-        "Reduzir o tempo de análise de oportunidades de startup de dias para segundos.",
-        "Padronizar a qualidade e a estrutura do feedback para empreendedores.",
-        "Fornecer artefactos de comunicação prontos a usar (PDF, vídeo) sem esforço adicional.",
-        "Criar um canal estruturado de conexão entre empreendedores e investidores.",
+        "Reduce the time to analyze startup opportunities from days to seconds.",
+        "Standardize the quality and structure of feedback for entrepreneurs.",
+        "Provide ready-to-use communication artifacts (PDF, video) with no extra effort.",
+        "Create a structured channel connecting entrepreneurs and investors.",
     ])
 
-    _para(doc, "Objectivos técnicos:", bold=True, space_after=2)
+    _para(doc, "Technical objectives:", bold=True, space_after=2)
     _bullet(doc, [
-        "Implementar um pipeline robusto de ingestão de dados multimodais.",
-        "Desenvolver e integrar um modelo de aprendizagem automática interpretável.",
-        "Construir um sistema de geração automática de artefactos (PDF, vídeo).",
-        "Garantir escalabilidade através de processamento assíncrono com Celery.",
-        "Disponibilizar uma API RESTful para integração com sistemas externos.",
+        "Implement a robust multimodal data ingestion pipeline.",
+        "Develop and integrate an interpretable machine learning model.",
+        "Build a system for automatic artifact generation (PDF, video).",
+        "Ensure scalability through asynchronous processing with Celery.",
+        "Provide a RESTful API for integration with external systems.",
     ])
 
-    _heading(doc, "2.3. Público-Alvo", level=2)
+    _heading(doc, "2.3. Target Audience", level=2)
     _table(doc,
-        ["Perfil", "Papel no sistema", "Funcionalidades principais"],
+        ["Profile", "Role in the system", "Main features"],
         [
-            ["Empreendedor", "empreendedor",
-             "Submissão de pitch, construtor de ideias, pitch deck PDF, conexões"],
-            ["Analista", "analista",
-             "Dashboard analítico, processamento em lote, gestão de modelos ML"],
-            ["Investidor", "investidor",
-             "Dashboard de deal flow, expressão de interesse, hub de conexões"],
-            ["Público geral", "publico_geral",
-             "Navegação de ideias públicas, feedback com classificação por estrelas"],
-            ["Administrador", "admin",
-             "Gestão total: utilizadores, modelos, configuração do sistema"],
+            ["Entrepreneur", "entrepreneur",
+             "Pitch submission, idea builder, pitch deck PDF, connections"],
+            ["Analyst", "analyst",
+             "Analytical dashboard, batch processing, ML model management"],
+            ["Investor", "investor",
+             "Deal flow dashboard, expressing interest, connection hub"],
+            ["General public", "general_public",
+             "Browsing public ideas, star-rated feedback"],
+            ["Administrator", "admin",
+             "Full management: users, models, system configuration"],
         ],
         col_widths=[1.2, 1.2, 3.6],
     )
 
 
 def _arquitectura(doc):
-    _heading(doc, "3. Arquitectura Técnica", level=1)
+    _heading(doc, "3. Technical Architecture", level=1)
 
-    _heading(doc, "3.1. Stack Tecnológico", level=2)
+    _heading(doc, "3.1. Technology Stack", level=2)
     _para(doc, (
-        "O sistema foi construído sobre um conjunto de tecnologias maduras e amplamente "
-        "adoptadas na indústria, seleccionadas com base em critérios de estabilidade, "
-        "ecosistema de suporte e adequação ao problema."
+        "The system was built on a set of mature technologies widely adopted in the industry, "
+        "selected based on criteria of stability, ecosystem support, and fit for the problem."
     ))
     _table(doc,
-        ["Camada", "Tecnologia", "Versão", "Função"],
+        ["Layer", "Technology", "Version", "Function"],
         [
-            ["Framework web", "Django", "6.0.3", "MVC, ORM, autenticação, admin"],
-            ["API REST", "Django REST Framework", "3.16.1", "Serialização, endpoints JSON"],
-            ["Servidor", "Gunicorn + WhiteNoise", "23.0 / 6.11", "WSGI, ficheiros estáticos"],
-            ["Base de dados (dev)", "SQLite", "3.x", "Persistência local"],
-            ["Base de dados (prod)", "PostgreSQL", "15", "Persistência em produção"],
-            ["Cache / Filas", "Redis + Celery", "—", "Jobs assíncronos"],
-            ["ML / IA", "scikit-learn, XGBoost", "1.4.2 / 2.0.3", "Pipeline de scoring"],
-            ["LLM", "OpenAI SDK", "1.23.2", "GPT como motor alternativo"],
-            ["Vídeo", "moviepy, OpenCV, D-ID", "2.1.2 / 4.9", "Geração de vídeo IA"],
-            ["Áudio / TTS", "Whisper, edge-tts, gTTS", "—", "Transcrição e síntese de voz"],
-            ["PDF / DOCX", "ReportLab, pypdf, python-docx", "4.4 / 6.9 / 1.2", "Geração de documentos"],
-            ["Frontend", "Django Templates + Bootstrap + Chart.js", "—", "Interface web"],
+            ["Web framework", "Django", "6.0.3", "MVC, ORM, authentication, admin"],
+            ["REST API", "Django REST Framework", "3.16.1", "Serialization, JSON endpoints"],
+            ["Server", "Gunicorn + WhiteNoise", "23.0 / 6.11", "WSGI, static files"],
+            ["Database (dev)", "SQLite", "3.x", "Local persistence"],
+            ["Database (prod)", "PostgreSQL", "15", "Production persistence"],
+            ["Cache / Queues", "Redis + Celery", "—", "Asynchronous jobs"],
+            ["ML / AI", "scikit-learn, XGBoost", "1.4.2 / 2.0.3", "Scoring pipeline"],
+            ["LLM", "OpenAI SDK", "1.23.2", "GPT as an alternative engine"],
+            ["Video", "moviepy, OpenCV, D-ID", "2.1.2 / 4.9", "AI video generation"],
+            ["Audio / TTS", "Whisper, edge-tts, gTTS", "—", "Transcription and speech synthesis"],
+            ["PDF / DOCX", "ReportLab, pypdf, python-docx", "4.4 / 6.9 / 1.2", "Document generation"],
+            ["Frontend", "Django Templates + Bootstrap + Chart.js", "—", "Web interface"],
         ],
         col_widths=[1.5, 1.8, 1.0, 2.2],
     )
 
-    _heading(doc, "3.2. Arquitectura de Componentes", level=2)
+    _heading(doc, "3.2. Component Architecture", level=2)
     _para(doc, (
-        "O sistema segue uma arquitectura em camadas com separação clara de responsabilidades. "
-        "Cada camada comunica apenas com a camada adjacente, favorecendo a manutenibilidade "
-        "e a testabilidade do código."
+        "The system follows a layered architecture with clear separation of responsibilities. "
+        "Each layer communicates only with the adjacent layer, favoring code maintainability "
+        "and testability."
     ))
     _table(doc,
-        ["Camada", "Módulos", "Responsabilidade"],
+        ["Layer", "Modules", "Responsibility"],
         [
-            ["Apresentação", "templates/, static/",
-             "Interface web, formulários, dashboards, polling de progresso"],
-            ["Controlo", "views.py, urls.py",
-             "Orquestração de pedidos, controlo de acesso, respostas HTTP"],
-            ["Negócio", "services/*, modeling.py",
-             "Lógica de análise, geração de artefactos, treino de modelos"],
-            ["Dados", "models.py, serializers.py",
-             "Abstracção da base de dados, validação, serialização"],
-            ["Infra-estrutura", "tasks.py, celery.py, settings.py",
-             "Filas assíncronas, configuração, variáveis de ambiente"],
+            ["Presentation", "templates/, static/",
+             "Web interface, forms, dashboards, progress polling"],
+            ["Control", "views.py, urls.py",
+             "Request orchestration, access control, HTTP responses"],
+            ["Business", "services/*, modeling.py",
+             "Analysis logic, artifact generation, model training"],
+            ["Data", "models.py, serializers.py",
+             "Database abstraction, validation, serialization"],
+            ["Infrastructure", "tasks.py, celery.py, settings.py",
+             "Asynchronous queues, configuration, environment variables"],
         ],
         col_widths=[1.4, 1.8, 3.3],
     )
 
-    _heading(doc, "3.3. Fluxo de Dados", level=2)
-    _para(doc, "O fluxo principal de uma avaliação de pitch segue os seguintes passos:")
+    _heading(doc, "3.3. Data Flow", level=2)
+    _para(doc, "The main flow of a pitch evaluation follows these steps:")
     _numbered(doc, [
-        "O utilizador submete o pitch através do formulário web ou da API REST.",
-        "O módulo pitch_input.py extrai e normaliza o conteúdo de todos os formatos "
-        "(texto, PDF, DOCX, áudio via Whisper, vídeo via extracção de áudio).",
-        "O motor de feature engineering transforma o texto em vectores TF-IDF e "
-        "normaliza os dados financeiros.",
-        "O modelo de ML activo (ou GPT, se configurado) gera o score e o relatório "
-        "estruturado com categorias e recomendações.",
-        "O resultado é persistido na tabela PitchAnalysis da base de dados.",
-        "O utilizador é redirecionado para a página de resultados, onde pode descarregar "
-        "o relatório PDF, o pitch deck ou iniciar a geração do vídeo.",
+        "The user submits the pitch through the web form or the REST API.",
+        "The pitch_input.py module extracts and normalizes content from all formats "
+        "(text, PDF, DOCX, audio via Whisper, video via audio extraction).",
+        "The feature engineering engine transforms text into TF-IDF vectors and "
+        "normalizes financial data.",
+        "The active ML model (or GPT, if configured) generates the score and the "
+        "structured report with categories and recommendations.",
+        "The result is persisted in the PitchAnalysis table in the database.",
+        "The user is redirected to the results page, where they can download "
+        "the PDF report, the pitch deck, or start video generation.",
     ])
 
-    _heading(doc, "3.4. Processamento Assíncrono", level=2)
+    _heading(doc, "3.4. Asynchronous Processing", level=2)
     _para(doc, (
-        "Tarefas de longa duração — treino de modelos de ML e geração de vídeo — são "
-        "executadas de forma assíncrona para não bloquear o servidor web. O padrão "
-        "implementado é o seguinte:"
+        "Long-running tasks — ML model training and video generation — are executed "
+        "asynchronously so as not to block the web server. The pattern implemented "
+        "is as follows:"
     ))
     _numbered(doc, [
-        "O cliente efectua um POST ao endpoint de início de tarefa.",
-        "O servidor cria um identificador único de job (job_id) e inicia a tarefa "
-        "em background via Celery.",
-        "O servidor retorna imediatamente o job_id ao cliente.",
-        "O cliente efectua polling periódico ao endpoint de progresso, recebendo "
-        "actualizações de estado em JSON.",
-        "Quando o estado é 'completed', o cliente apresenta o resultado ao utilizador.",
+        "The client sends a POST request to the task-start endpoint.",
+        "The server creates a unique job identifier (job_id) and starts the task "
+        "in the background via Celery.",
+        "The server immediately returns the job_id to the client.",
+        "The client periodically polls the progress endpoint, receiving "
+        "JSON status updates.",
+        "When the status is 'completed', the client displays the result to the user.",
     ])
     _para(doc, (
-        "Este padrão é aplicado tanto ao treino de modelos (/model/retrain/ → "
-        "/models/training/progress/<job_id>/) como à geração de vídeo "
+        "This pattern is applied both to model training (/model/retrain/ → "
+        "/models/training/progress/<job_id>/) and to video generation "
         "(/video/generate/ → /video/progress/<job_id>/)."
     ))
 
 
 def _modelos_dados(doc):
-    _heading(doc, "4. Modelo de Dados", level=1)
+    _heading(doc, "4. Data Model", level=1)
     _para(doc, (
-        "O esquema de dados do StartupScan é composto por cinco modelos principais, "
-        "todos geridos pelo ORM do Django e versionados através do sistema de migrações. "
-        "A seguir descreve-se cada modelo com os seus campos e relações."
+        "The StartupScan data schema is composed of five main models, all managed "
+        "by the Django ORM and versioned through the migration system. "
+        "Each model is described below, together with its fields and relationships."
     ))
 
     _heading(doc, "4.1. PitchAnalysis", level=2)
     _para(doc, (
-        "Registo central de cada avaliação de startup. Agrega todos os dados de entrada, "
-        "os resultados da análise e os metadados operacionais."
+        "Central record of each startup evaluation. It aggregates all input data, "
+        "analysis results, and operational metadata."
     ))
     _table(doc,
-        ["Campo", "Tipo", "Descrição"],
+        ["Field", "Type", "Description"],
         [
-            ["user", "FK User (nullable)", "Utilizador que submeteu a análise"],
-            ["startup_name", "CharField", "Nome da startup"],
+            ["user", "FK User (nullable)", "User who submitted the analysis"],
+            ["startup_name", "CharField", "Startup name"],
             ["industry", "CharField", "Sector (tech, health, finance, education, ecommerce, other)"],
-            ["contact_email", "EmailField", "Email de contacto"],
-            ["text", "TextField", "Texto do pitch"],
-            ["audio_file", "FileField", "Ficheiro de áudio enviado"],
-            ["video_file", "FileField", "Ficheiro de vídeo enviado"],
-            ["document_file", "FileField", "Documento enviado (PDF, DOCX, etc.)"],
-            ["presenter_face_image_file", "FileField", "Fotografia do apresentador"],
-            ["youtube_url", "URLField", "Link YouTube do pitch"],
-            ["revenue", "DecimalField", "Receita em AOA"],
-            ["growth_rate", "FloatField", "Taxa de crescimento (%)"],
-            ["profit_margin", "FloatField", "Margem de lucro (%)"],
-            ["burn_rate", "DecimalField", "Consumo mensal de capital"],
-            ["success_score", "FloatField", "Score final de 0 a 10"],
-            ["confidence", "FloatField", "Confiança da previsão (%)"],
-            ["report", "JSONField", "Relatório estruturado completo"],
+            ["contact_email", "EmailField", "Contact email"],
+            ["text", "TextField", "Pitch text"],
+            ["audio_file", "FileField", "Uploaded audio file"],
+            ["video_file", "FileField", "Uploaded video file"],
+            ["document_file", "FileField", "Uploaded document (PDF, DOCX, etc.)"],
+            ["presenter_face_image_file", "FileField", "Presenter photograph"],
+            ["youtube_url", "URLField", "YouTube link for the pitch"],
+            ["revenue", "DecimalField", "Revenue in AOA"],
+            ["growth_rate", "FloatField", "Growth rate (%)"],
+            ["profit_margin", "FloatField", "Profit margin (%)"],
+            ["burn_rate", "DecimalField", "Monthly cash burn"],
+            ["success_score", "FloatField", "Final score from 0 to 10"],
+            ["confidence", "FloatField", "Prediction confidence (%)"],
+            ["report", "JSONField", "Full structured report"],
             ["status", "CharField", "pending / processing / completed / failed"],
-            ["model_version", "CharField", "Versão do modelo de ML utilizado"],
-            ["processing_time", "FloatField", "Tempo de processamento em segundos"],
-            ["ip_address", "GenericIPAddressField", "IP do cliente"],
-            ["created_at", "DateTimeField", "Data/hora de criação"],
-            ["updated_at", "DateTimeField", "Data/hora da última actualização"],
+            ["model_version", "CharField", "Version of the ML model used"],
+            ["processing_time", "FloatField", "Processing time in seconds"],
+            ["ip_address", "GenericIPAddressField", "Client IP"],
+            ["created_at", "DateTimeField", "Creation date/time"],
+            ["updated_at", "DateTimeField", "Last update date/time"],
         ],
         col_widths=[1.8, 1.5, 3.2],
     )
 
     _heading(doc, "4.2. UserProfile", level=2)
     _para(doc, (
-        "Extensão do modelo de utilizador padrão do Django para suporte ao sistema de papéis. "
-        "Criado automaticamente no registo de cada novo utilizador."
+        "Extension of Django's default user model to support the role system. "
+        "Automatically created when each new user registers."
     ))
     _table(doc,
-        ["Campo", "Tipo", "Descrição"],
+        ["Field", "Type", "Description"],
         [
-            ["user", "OneToOneField User", "Referência ao utilizador Django"],
-            ["role", "CharField", "Um dos cinco papéis: empreendedor, investidor, analista, publico_geral, admin"],
-            ["created_at", "DateTimeField", "Data/hora de criação"],
-            ["updated_at", "DateTimeField", "Data/hora da última actualização"],
+            ["user", "OneToOneField User", "Reference to the Django user"],
+            ["role", "CharField", "One of five roles: entrepreneur, investor, analyst, general_public, admin"],
+            ["created_at", "DateTimeField", "Creation date/time"],
+            ["updated_at", "DateTimeField", "Last update date/time"],
         ],
         col_widths=[1.8, 1.8, 2.9],
     )
 
     _heading(doc, "4.3. IdeaPitchSubmission", level=2)
     _para(doc, (
-        "Armazena ideias de negócio submetidas pelo construtor de ideias. Cada registo representa "
-        "uma ideia em estado draft ou com pitch gerado."
+        "Stores business ideas submitted through the idea builder. Each record represents "
+        "an idea in draft state or with a generated pitch."
     ))
     _table(doc,
-        ["Campo", "Tipo", "Descrição"],
+        ["Field", "Type", "Description"],
         [
-            ["user", "FK User", "Utilizador criador"],
-            ["startup_name", "CharField", "Nome da startup"],
-            ["one_liner", "CharField", "Pitch de uma frase"],
-            ["problem", "TextField", "Problema que a startup resolve"],
-            ["solution", "TextField", "Solução proposta"],
-            ["target_customer", "TextField", "Perfil do cliente-alvo"],
-            ["market_size", "TextField", "Dimensão do mercado endereçável"],
-            ["business_model", "TextField", "Modelo de negócio"],
-            ["competitive_advantage", "TextField", "Diferencial competitivo"],
-            ["traction", "TextField", "Tracção e validações actuais"],
-            ["team", "TextField", "Composição e experiência da equipa"],
-            ["funding_goal", "CharField", "Objectivo de financiamento"],
-            ["use_of_funds", "TextField", "Alocação prevista do financiamento"],
-            ["model_source", "CharField", "Motor de geração: local / gpt"],
+            ["user", "FK User", "Creating user"],
+            ["startup_name", "CharField", "Startup name"],
+            ["one_liner", "CharField", "One-sentence pitch"],
+            ["problem", "TextField", "Problem the startup solves"],
+            ["solution", "TextField", "Proposed solution"],
+            ["target_customer", "TextField", "Target customer profile"],
+            ["market_size", "TextField", "Addressable market size"],
+            ["business_model", "TextField", "Business model"],
+            ["competitive_advantage", "TextField", "Competitive edge"],
+            ["traction", "TextField", "Current traction and validations"],
+            ["team", "TextField", "Team composition and experience"],
+            ["funding_goal", "CharField", "Funding target"],
+            ["use_of_funds", "TextField", "Planned use of funds"],
+            ["model_source", "CharField", "Generation engine: local / gpt"],
             ["status", "CharField", "draft / generated"],
-            ["generated_pitch", "JSONField", "Conteúdo do pitch gerado"],
+            ["generated_pitch", "JSONField", "Content of the generated pitch"],
         ],
         col_widths=[1.8, 1.2, 3.5],
     )
 
     _heading(doc, "4.4. InvestorConnectionInterest", level=2)
     _para(doc, (
-        "Regista o interesse de um investidor numa análise de startup. Suporta o ciclo "
-        "completo de comunicação entre investidor e empreendedor."
+        "Records an investor's interest in a startup analysis. Supports the full "
+        "communication cycle between investor and entrepreneur."
     ))
     _table(doc,
-        ["Campo", "Tipo", "Descrição"],
+        ["Field", "Type", "Description"],
         [
-            ["analysis", "FK PitchAnalysis", "Análise de interesse"],
-            ["investor", "FK User", "Utilizador investidor"],
-            ["entrepreneur", "FK User (nullable)", "Utilizador empreendedor destinatário"],
+            ["analysis", "FK PitchAnalysis", "Analysis of interest"],
+            ["investor", "FK User", "Investor user"],
+            ["entrepreneur", "FK User (nullable)", "Recipient entrepreneur user"],
             ["status", "CharField", "pending / reviewing / connected / rejected / withdrawn"],
-            ["investor_message", "TextField", "Mensagem inicial do investidor"],
-            ["entrepreneur_reply", "TextField", "Resposta do empreendedor"],
-            ["created_at", "DateTimeField", "Data/hora de criação do interesse"],
-            ["responded_at", "DateTimeField", "Data/hora da resposta do empreendedor"],
+            ["investor_message", "TextField", "Investor's initial message"],
+            ["entrepreneur_reply", "TextField", "Entrepreneur's reply"],
+            ["created_at", "DateTimeField", "Date/time the interest was created"],
+            ["responded_at", "DateTimeField", "Date/time of the entrepreneur's reply"],
         ],
         col_widths=[1.8, 1.5, 3.2],
     )
 
     _heading(doc, "4.5. IdeaPublicFeedback", level=2)
     _para(doc, (
-        "Avaliação da comunidade sobre ideias tornadas públicas no marketplace de ideias. "
-        "Cada utilizador pode submeter apenas um feedback por ideia."
+        "Community evaluation of ideas made public in the idea marketplace. "
+        "Each user may submit only one feedback entry per idea."
     ))
     _table(doc,
-        ["Campo", "Tipo", "Descrição"],
+        ["Field", "Type", "Description"],
         [
-            ["submission", "FK IdeaPitchSubmission", "Ideia avaliada"],
-            ["author", "FK User", "Utilizador que avaliou"],
-            ["stars", "IntegerField", "Classificação de 1 a 5 estrelas"],
-            ["endorsed", "BooleanField", "Indica se o utilizador endossou a ideia"],
-            ["comment", "TextField", "Comentário qualitativo"],
-            ["created_at", "DateTimeField", "Data/hora da avaliação"],
+            ["submission", "FK IdeaPitchSubmission", "Evaluated idea"],
+            ["author", "FK User", "User who submitted the evaluation"],
+            ["stars", "IntegerField", "Rating from 1 to 5 stars"],
+            ["endorsed", "BooleanField", "Indicates whether the user endorsed the idea"],
+            ["comment", "TextField", "Qualitative comment"],
+            ["created_at", "DateTimeField", "Date/time of the evaluation"],
         ],
         col_widths=[1.8, 1.2, 3.5],
     )
 
 
 def _funcionalidades(doc):
-    _heading(doc, "5. Funcionalidades Implementadas", level=1)
+    _heading(doc, "5. Implemented Features", level=1)
 
-    _heading(doc, "5.1. Avaliação Multimodal de Pitch", level=2)
+    _heading(doc, "5.1. Multimodal Pitch Evaluation", level=2)
     _para(doc, (
-        "A funcionalidade nuclear do sistema permite que o utilizador submeta informação "
-        "sobre a sua startup em qualquer combinação dos seguintes formatos:"
+        "The system's core feature allows the user to submit information "
+        "about their startup in any combination of the following formats:"
     ))
     _bullet(doc, [
-        "Texto livre digitado directamente no formulário.",
-        "Documento: .txt, .md, .csv, .pdf, .docx.",
-        "Ficheiro de áudio (WAV, MP3, OGG) — transcrito via OpenAI Whisper.",
-        "Ficheiro de vídeo — o áudio é extraído e transcrito.",
-        "Link YouTube — o áudio é extraído e transcrito.",
-        "Dados financeiros: receita (AOA), taxa de crescimento, margem de lucro, burn rate.",
+        "Free text typed directly into the form.",
+        "Document: .txt, .md, .csv, .pdf, .docx.",
+        "Audio file (WAV, MP3, OGG) — transcribed via OpenAI Whisper.",
+        "Video file — audio is extracted and transcribed.",
+        "YouTube link — audio is extracted and transcribed.",
+        "Financial data: revenue (AOA), growth rate, profit margin, burn rate.",
     ])
     _para(doc, (
-        "O módulo pitch_input.py consolida todas as entradas num único bloco de texto "
-        "normalizado, que é depois processado pelo pipeline de ML. O resultado da análise "
-        "inclui: score de 0 a 10, percentagem de confiança, resumo executivo, pontos fortes, "
-        "pontos fracos, recomendações práticas e avaliação em oito categorias — Clareza da "
-        "Proposta, Proposta de Valor, Inovação, Viabilidade, Escalabilidade, Mercado-Alvo, "
-        "Equipa e Sustentabilidade."
+        "The pitch_input.py module consolidates all inputs into a single normalized "
+        "text block, which is then processed by the ML pipeline. The analysis result "
+        "includes: a score from 0 to 10, a confidence percentage, an executive summary, "
+        "strengths, weaknesses, actionable recommendations, and an evaluation across "
+        "eight categories — Clarity of Proposal, Value Proposition, Innovation, "
+        "Viability, Scalability, Target Market, Team, and Sustainability."
     ))
 
-    _heading(doc, "5.2. Relatório Técnico PDF", level=2)
+    _heading(doc, "5.2. Technical PDF Report", level=2)
     _para(doc, (
-        "Para cada análise concluída, o sistema gera automaticamente um relatório técnico "
-        "em formato PDF via ReportLab. O documento inclui: dados da startup submetidos, "
-        "score e confiança com visualização gráfica, avaliação detalhada por categoria, "
-        "análise financeira, recomendações práticas e metadados do modelo utilizado "
-        "(versão, tempo de processamento)."
+        "For each completed analysis, the system automatically generates a technical "
+        "report in PDF format via ReportLab. The document includes: submitted startup "
+        "data, score and confidence with a graphical visualization, detailed evaluation "
+        "by category, financial analysis, actionable recommendations, and metadata about "
+        "the model used (version, processing time)."
     ))
 
     _heading(doc, "5.3. Pitch Deck PDF", level=2)
     _para(doc, (
-        "O sistema gera um pitch deck visual em formato PDF, estruturado como slides "
-        "prontos para apresentação a investidores. Cada página corresponde a um slide, "
-        "com capa executiva, narrativa estruturada e conclusão. "
-        "São suportados dois modos:"
+        "The system generates a visual pitch deck in PDF format, structured as slides "
+        "ready for presentation to investors. Each page corresponds to a slide, "
+        "with an executive cover, a structured narrative, and a conclusion. "
+        "Two modes are supported:"
     ))
     _bullet(doc, [
-        "Design automático por contexto (recomendado): o sistema selecciona o template "
-        "com base na indústria e nos dados da startup.",
-        "Design premium manual: o utilizador escolhe entre seis templates — Orbit, Grid, "
-        "Wave, Diagonal, Aurora e Ribbon.",
+        "Automatic design by context (recommended): the system selects the template "
+        "based on the industry and the startup's data.",
+        "Manual premium design: the user chooses among six templates — Orbit, Grid, "
+        "Wave, Diagonal, Aurora, and Ribbon.",
     ])
 
-    _heading(doc, "5.4. Vídeo Explicativo com IA", level=2)
+    _heading(doc, "5.4. AI Explainer Video", level=2)
     _para(doc, (
-        "A partir do resultado da análise, o sistema gera um vídeo narrado por inteligência "
-        "artificial com duração entre 1 e 3 minutos. São suportados três modos de geração:"
+        "Based on the analysis result, the system generates an AI-narrated video "
+        "between 1 and 3 minutes long. Three generation modes are supported:"
     ))
     _bullet(doc, [
-        "auto: tenta a API D-ID (apresentador realista) e cai para vídeo local em caso de falha.",
-        "did_only: utiliza exclusivamente a API D-ID.",
-        "local_only: geração local com moviepy e TTS, sem dependências externas pagas.",
+        "auto: attempts the D-ID API (realistic presenter) and falls back to a local video on failure.",
+        "did_only: uses exclusively the D-ID API.",
+        "local_only: local generation with moviepy and TTS, with no paid external dependencies.",
     ])
     _para(doc, (
-        "O processo é assíncrono, com progresso actualizado em tempo real via polling. "
-        "O sistema suporta detecção automática do género do apresentador a partir de uma "
-        "fotografia, utilizando o deepface, para seleccionar a voz TTS adequada."
+        "The process is asynchronous, with progress updated in real time via polling. "
+        "The system supports automatic detection of the presenter's gender from a "
+        "photograph, using deepface, in order to select the appropriate TTS voice."
     ))
 
-    _heading(doc, "5.5. Construtor de Ideias", level=2)
+    _heading(doc, "5.5. Idea Builder", level=2)
     _para(doc, (
-        "O construtor de ideias permite ao empreendedor estruturar uma ideia de negócio "
-        "através de um formulário guiado com campos para problema, solução, cliente-alvo, "
-        "dimensão de mercado, modelo de negócio, vantagem competitiva, tracção, equipa, "
-        "objectivo de financiamento e uso dos fundos. A partir destes dados, o sistema "
-        "gera automaticamente um pitch narrativo (via modelo local ou GPT), que pode ser "
-        "exportado como PDF ou publicado no marketplace público para receber feedback "
-        "da comunidade."
+        "The idea builder allows the entrepreneur to structure a business idea "
+        "through a guided form with fields for problem, solution, target customer, "
+        "market size, business model, competitive advantage, traction, team, "
+        "funding goal, and use of funds. Based on this data, the system "
+        "automatically generates a narrative pitch (via the local model or GPT), which can be "
+        "exported as a PDF or published to the public marketplace to receive feedback "
+        "from the community."
     ))
 
-    _heading(doc, "5.6. Processamento em Lote", level=2)
+    _heading(doc, "5.6. Batch Processing", level=2)
     _para(doc, (
-        "Analistas e administradores podem submeter um ficheiro CSV contendo múltiplos "
-        "pitches para avaliação em lote. O processamento ocorre de forma assíncrona, "
-        "com polling de progresso disponível. Os resultados são disponibilizados para "
-        "download num ficheiro CSV consolidado."
+        "Analysts and administrators can submit a CSV file containing multiple "
+        "pitches for batch evaluation. Processing happens asynchronously, "
+        "with progress polling available. Results are made available for "
+        "download as a consolidated CSV file."
     ))
 
-    _heading(doc, "5.7. Gestão de Modelos de ML", level=2)
+    _heading(doc, "5.7. ML Model Management", level=2)
     _para(doc, (
-        "O painel de gestão de modelos, acessível a analistas e administradores, permite:"
+        "The model management panel, accessible to analysts and administrators, allows:"
     ))
     _bullet(doc, [
-        "Importação de datasets externos (CSV de pitches e financeiros).",
-        "Treino e retreino do modelo com progresso em tempo real.",
-        "Activação do modelo a utilizar nas análises.",
-        "Edição de metadados do modelo (nome de exibição, descrição).",
-        "Remoção de modelos obsoletos.",
+        "Importing external datasets (CSV of pitches and financial data).",
+        "Training and retraining the model with real-time progress.",
+        "Activating the model to be used in analyses.",
+        "Editing model metadata (display name, description).",
+        "Removing obsolete models.",
     ])
 
-    _heading(doc, "5.8. Conexões Investidor-Startup", level=2)
+    _heading(doc, "5.8. Investor-Startup Connections", level=2)
     _para(doc, (
-        "A plataforma implementa um canal estruturado de comunicação entre investidores "
-        "e empreendedores. O investidor expressa interesse numa análise com uma mensagem "
-        "personalizada. O empreendedor recebe a notificação no hub de conexões e pode "
-        "aceitar, rejeitar ou responder. O estado da conexão percorre o ciclo: "
-        "pending → reviewing → connected / rejected."
+        "The platform implements a structured communication channel between investors "
+        "and entrepreneurs. The investor expresses interest in an analysis with a "
+        "personalized message. The entrepreneur receives the notification in the "
+        "connection hub and can accept, reject, or reply. The connection status moves "
+        "through the cycle: pending → reviewing → connected / rejected."
     ))
 
 
 def _controlo_acesso(doc):
-    _heading(doc, "6. Controlo de Acesso e Papéis", level=1)
+    _heading(doc, "6. Access Control and Roles", level=1)
     _para(doc, (
-        "O sistema implementa controlo de acesso baseado em papéis (RBAC — Role-Based "
-        "Access Control). Cada utilizador possui um UserProfile com um papel atribuído "
-        "no momento do registo. O acesso a cada funcionalidade é verificado pelo mixin "
-        "RoleRequiredMixin nas views. Administradores correspondem a superutilizadores "
-        "Django, criados via manage.py createsuperuser."
+        "The system implements Role-Based Access Control (RBAC). Each user has a "
+        "UserProfile with a role assigned at registration time. Access to each "
+        "feature is checked by the RoleRequiredMixin in the views. Administrators "
+        "correspond to Django superusers, created via manage.py createsuperuser."
     ))
     _table(doc,
-        ["Papel", "Dashboard", "Pitch", "Modelos ML", "Investidor", "Ideias", "Conexões", "Admin"],
+        ["Role", "Dashboard", "Pitch", "ML Models", "Investor", "Ideas", "Connections", "Admin"],
         [
             ["admin", "✓", "✓", "✓", "✓", "✓", "✓", "✓"],
-            ["analista", "✓", "✓", "✓", "—", "✓", "—", "—"],
-            ["empreendedor", "✓", "✓", "—", "—", "✓", "✓", "—"],
-            ["investidor", "—", "—", "—", "✓", "✓", "✓", "—"],
-            ["publico_geral", "—", "—", "—", "—", "✓ (ver)", "—", "—"],
+            ["analyst", "✓", "✓", "✓", "—", "✓", "—", "—"],
+            ["entrepreneur", "✓", "✓", "—", "—", "✓", "✓", "—"],
+            ["investor", "—", "—", "—", "✓", "✓", "✓", "—"],
+            ["general_public", "—", "—", "—", "—", "✓ (view)", "—", "—"],
         ],
         col_widths=[1.2, 0.8, 0.7, 0.9, 0.9, 0.7, 0.9, 0.7],
     )
     _para(doc, (
-        "A função role_home_url() determina a página inicial de cada utilizador após "
-        "autenticação. As views sensíveis utilizam LoginRequiredMixin em combinação com "
-        "RoleRequiredMixin para garantir dupla verificação."
+        "The role_home_url() function determines the home page for each user after "
+        "authentication. Sensitive views use LoginRequiredMixin in combination with "
+        "RoleRequiredMixin to ensure double verification."
     ))
 
 
 def _endpoints(doc):
-    _heading(doc, "7. Referência de Endpoints", level=1)
+    _heading(doc, "7. Endpoint Reference", level=1)
     _para(doc, (
-        "A tabela seguinte lista todos os endpoints disponíveis na plataforma, "
-        "organizados por domínio funcional."
+        "The following table lists all endpoints available on the platform, "
+        "organized by functional domain."
     ))
 
-    _heading(doc, "Autenticação", level=2)
+    _heading(doc, "Authentication", level=2)
     _table(doc,
-        ["Método", "Endpoint", "Descrição"],
+        ["Method", "Endpoint", "Description"],
         [
-            ["GET/POST", "/login/", "Página e processamento de login"],
-            ["GET", "/logout/", "Encerrar sessão"],
-            ["GET/POST", "/register/", "Página e processamento de registo"],
-            ["POST", "/set-language/", "Alteração do idioma da interface"],
+            ["GET/POST", "/login/", "Login page and processing"],
+            ["GET", "/logout/", "Log out"],
+            ["GET/POST", "/register/", "Registration page and processing"],
+            ["POST", "/set-language/", "Change the interface language"],
         ],
         col_widths=[0.8, 2.0, 3.7],
     )
 
-    _heading(doc, "Análise de Pitch", level=2)
+    _heading(doc, "Pitch Analysis", level=2)
     _table(doc,
-        ["Método", "Endpoint", "Descrição"],
+        ["Method", "Endpoint", "Description"],
         [
-            ["GET/POST", "/analyze/form/", "Formulário e submissão de pitch"],
-            ["POST", "/analyze/", "Endpoint API REST de análise"],
-            ["GET", "/results/<id>/", "Página de resultados"],
-            ["GET", "/results/<id>/pdf/", "Relatório técnico PDF"],
+            ["GET/POST", "/analyze/form/", "Pitch form and submission"],
+            ["POST", "/analyze/", "REST API analysis endpoint"],
+            ["GET", "/results/<id>/", "Results page"],
+            ["GET", "/results/<id>/pdf/", "Technical PDF report"],
             ["GET", "/results/<id>/pitch/pdf/", "Pitch deck PDF"],
         ],
         col_widths=[0.8, 2.5, 3.2],
     )
 
-    _heading(doc, "Vídeo Explicativo", level=2)
+    _heading(doc, "Explainer Video", level=2)
     _table(doc,
-        ["Método", "Endpoint", "Descrição"],
+        ["Method", "Endpoint", "Description"],
         [
-            ["POST", "/results/<id>/video/generate/", "Iniciar geração de vídeo"],
-            ["POST", "/results/<id>/video/detect-gender/", "Detectar género do apresentador"],
-            ["GET", "/results/<id>/video/progress/<job_id>/", "Polling do progresso do vídeo"],
+            ["POST", "/results/<id>/video/generate/", "Start video generation"],
+            ["POST", "/results/<id>/video/detect-gender/", "Detect presenter's gender"],
+            ["GET", "/results/<id>/video/progress/<job_id>/", "Video progress polling"],
         ],
         col_widths=[0.8, 3.0, 2.7],
     )
 
-    _heading(doc, "Processamento em Lote", level=2)
+    _heading(doc, "Batch Processing", level=2)
     _table(doc,
-        ["Método", "Endpoint", "Descrição"],
+        ["Method", "Endpoint", "Description"],
         [
-            ["POST", "/batch/analyze/", "Submeter CSV para análise em lote"],
-            ["GET", "/batch/status/<batch_id>/", "Estado do processamento em lote"],
-            ["GET", "/batch/results/<batch_id>/", "Descarregar resultados em CSV"],
+            ["POST", "/batch/analyze/", "Submit a CSV for batch analysis"],
+            ["GET", "/batch/status/<batch_id>/", "Batch processing status"],
+            ["GET", "/batch/results/<batch_id>/", "Download results as CSV"],
         ],
         col_widths=[0.8, 2.5, 3.2],
     )
 
-    _heading(doc, "Gestão de Modelos", level=2)
+    _heading(doc, "Model Management", level=2)
     _table(doc,
-        ["Método", "Endpoint", "Descrição"],
+        ["Method", "Endpoint", "Description"],
         [
-            ["GET", "/models/", "Painel de gestão de modelos"],
-            ["POST", "/model/retrain/", "Iniciar treino de modelo"],
-            ["GET", "/models/training/progress/<job_id>/", "Progresso do treino"],
-            ["GET", "/training/status/<task_id>/", "Estado de task Celery"],
+            ["GET", "/models/", "Model management panel"],
+            ["POST", "/model/retrain/", "Start model training"],
+            ["GET", "/models/training/progress/<job_id>/", "Training progress"],
+            ["GET", "/training/status/<task_id>/", "Celery task status"],
         ],
         col_widths=[0.8, 2.7, 3.0],
     )
 
-    _heading(doc, "Construtor de Ideias e Conexões", level=2)
+    _heading(doc, "Idea Builder and Connections", level=2)
     _table(doc,
-        ["Método", "Endpoint", "Descrição"],
+        ["Method", "Endpoint", "Description"],
         [
-            ["GET/POST", "/pitch/builder/", "Formulário e submissão de ideia"],
-            ["GET", "/pitch/builder/<id>/", "Detalhe e edição de ideia"],
-            ["GET", "/pitch/builder/<id>/pdf/", "Exportar ideia como PDF"],
-            ["GET", "/ideas/", "Marketplace de ideias públicas"],
-            ["GET", "/ideas/<id>/", "Detalhe de ideia pública"],
-            ["POST", "/ideas/<id>/feedback/", "Submeter feedback a ideia"],
-            ["POST", "/investors/interest/<id>/", "Expressar interesse numa startup"],
-            ["GET", "/connections/", "Hub de conexões"],
-            ["POST", "/connections/<id>/update/", "Actualizar estado de conexão"],
+            ["GET/POST", "/pitch/builder/", "Idea form and submission"],
+            ["GET", "/pitch/builder/<id>/", "Idea detail and editing"],
+            ["GET", "/pitch/builder/<id>/pdf/", "Export idea as PDF"],
+            ["GET", "/ideas/", "Public idea marketplace"],
+            ["GET", "/ideas/<id>/", "Public idea detail"],
+            ["POST", "/ideas/<id>/feedback/", "Submit feedback on an idea"],
+            ["POST", "/investors/interest/<id>/", "Express interest in a startup"],
+            ["GET", "/connections/", "Connection hub"],
+            ["POST", "/connections/<id>/update/", "Update connection status"],
         ],
         col_widths=[0.8, 2.5, 3.2],
     )
 
 
 def _pipeline_ml(doc):
-    _heading(doc, "8. Pipeline de Aprendizagem Automática", level=1)
+    _heading(doc, "8. Machine Learning Pipeline", level=1)
     _para(doc, (
-        "O motor de scoring do StartupScan é um pipeline de aprendizagem automática "
-        "supervisionada, treinado com dados históricos de pitches de startups. "
-        "A seguir descreve-se cada etapa do pipeline."
+        "StartupScan's scoring engine is a supervised machine learning pipeline, "
+        "trained on historical startup pitch data. "
+        "Each stage of the pipeline is described below."
     ))
 
-    _heading(doc, "8.1. Pré-processamento e Feature Engineering", level=2)
+    _heading(doc, "8.1. Preprocessing and Feature Engineering", level=2)
     _bullet(doc, [
-        "Texto do pitch: vectorização TF-IDF com n-gramas de 1 a 2 tokens.",
-        "Dados financeiros: normalização com StandardScaler (receita, crescimento, "
-        "margem de lucro, burn rate).",
-        "Feature de saúde financeira: métrica composta calculada a partir do crescimento, "
-        "margem e receita.",
-        "Augmentação de dados: factor de 60x com jitter gaussiano para enriquecer "
-        "conjuntos de dados escassos.",
+        "Pitch text: TF-IDF vectorization with n-grams of 1 to 2 tokens.",
+        "Financial data: normalization with StandardScaler (revenue, growth, "
+        "profit margin, burn rate).",
+        "Financial health feature: composite metric calculated from growth, "
+        "margin, and revenue.",
+        "Data augmentation: 60x factor with Gaussian jitter to enrich "
+        "scarce datasets.",
     ])
 
-    _heading(doc, "8.2. Modelo Ensemble", level=2)
+    _heading(doc, "8.2. Ensemble Model", level=2)
     _para(doc, (
-        "O modelo utiliza um ensemble de três estimadores base com votação suave:"
+        "The model uses an ensemble of three base estimators with soft voting:"
     ))
     _bullet(doc, [
         "Random Forest Classifier (scikit-learn).",
@@ -818,243 +790,240 @@ def _pipeline_ml(doc):
         "Extra Trees Classifier (scikit-learn).",
     ])
     _para(doc, (
-        "Como alternativa, o XGBoost Classifier pode ser activado para datasets maiores. "
-        "A validação cruzada utiliza KFold com 5 partições para estimativa de desempenho "
-        "não enviesada."
+        "As an alternative, the XGBoost Classifier can be activated for larger datasets. "
+        "Cross-validation uses 5-fold KFold for unbiased performance estimation."
     ))
 
-    _heading(doc, "8.3. Saída do Modelo", level=2)
+    _heading(doc, "8.3. Model Output", level=2)
     _bullet(doc, [
-        "Score de sucesso: valor contínuo de 0 a 10.",
-        "Confiança: percentagem derivada da dispersão entre os estimadores do ensemble.",
-        "Categorias: oito dimensões avaliadas individualmente com base nos features "
-        "mais relevantes para cada dimensão.",
-        "Recomendações: texto interpretável gerado com base nas categorias com menor score.",
+        "Success score: continuous value from 0 to 10.",
+        "Confidence: percentage derived from the dispersion among the ensemble's estimators.",
+        "Categories: eight dimensions individually evaluated based on the "
+        "features most relevant to each dimension.",
+        "Recommendations: interpretable text generated based on the lowest-scoring categories.",
     ])
 
-    _heading(doc, "8.4. Integração GPT", level=2)
+    _heading(doc, "8.4. GPT Integration", level=2)
     _para(doc, (
-        "Quando a variável OPENAI_API_KEY está configurada, o sistema pode utilizar "
-        "GPT como motor de análise alternativo. A função analyze_with_gpt() envia o "
-        "pitch consolidado para a API OpenAI e processa a resposta no mesmo formato "
-        "estruturado que o modelo local. Se a API não estiver disponível ou falhar, "
-        "o sistema cai automaticamente para o modelo local sem intervenção do utilizador."
+        "When the OPENAI_API_KEY variable is configured, the system can use "
+        "GPT as an alternative analysis engine. The analyze_with_gpt() function sends the "
+        "consolidated pitch to the OpenAI API and processes the response in the same "
+        "structured format as the local model. If the API is unavailable or fails, "
+        "the system automatically falls back to the local model without user intervention."
     ))
 
-    _heading(doc, "8.5. Gestão do Ciclo de Vida do Modelo", level=2)
+    _heading(doc, "8.5. Model Lifecycle Management", level=2)
     _para(doc, (
-        "O modelo activo é gerido pelo módulo model_registry.py, que mantém um ficheiro "
-        "de metadados JSON com o nome e o caminho do modelo activo. Novos modelos treinados "
-        "são persistidos como ficheiros .pkl via joblib. A activação de um novo modelo "
-        "actualiza imediatamente o registo, afectando todas as análises subsequentes."
+        "The active model is managed by the model_registry.py module, which maintains a "
+        "JSON metadata file with the name and path of the active model. Newly trained models "
+        "are persisted as .pkl files via joblib. Activating a new model "
+        "immediately updates the registry, affecting all subsequent analyses."
     ))
 
 
 def _instalacao(doc):
-    _heading(doc, "9. Instalação e Configuração", level=1)
+    _heading(doc, "9. Installation and Configuration", level=1)
 
-    _heading(doc, "9.1. Pré-requisitos", level=2)
+    _heading(doc, "9.1. Prerequisites", level=2)
     _table(doc,
-        ["Software", "Versão mínima", "Obrigatório", "Nota"],
+        ["Software", "Minimum version", "Required", "Note"],
         [
-            ["Python", "3.10", "Sim", "Recomendado 3.11 ou 3.12"],
-            ["pip", "23.x", "Sim", "Incluído com Python"],
-            ["Git", "2.x", "Sim", "Para clonar o repositório"],
-            ["Redis", "7.x", "Não*", "Necessário para Celery (jobs assíncronos)"],
-            ["FFmpeg", "6.x", "Não*", "Necessário para geração de vídeo local"],
-            ["Docker", "24.x", "Não*", "Para execução containerizada"],
+            ["Python", "3.10", "Yes", "3.11 or 3.12 recommended"],
+            ["pip", "23.x", "Yes", "Included with Python"],
+            ["Git", "2.x", "Yes", "To clone the repository"],
+            ["Redis", "7.x", "No*", "Required for Celery (asynchronous jobs)"],
+            ["FFmpeg", "6.x", "No*", "Required for local video generation"],
+            ["Docker", "24.x", "No*", "For containerized execution"],
         ],
         col_widths=[1.2, 1.0, 1.0, 3.3],
     )
     _para(doc, (
-        "* Opcional para o funcionamento básico (avaliação, PDF). "
-        "Redis e FFmpeg são necessários para vídeo local e processamento assíncrono."
+        "* Optional for basic operation (evaluation, PDF). "
+        "Redis and FFmpeg are required for local video and asynchronous processing."
     ), italic=True)
 
-    _heading(doc, "9.2. Setup Local", level=2)
+    _heading(doc, "9.2. Local Setup", level=2)
     _numbered(doc, [
-        "Clonar o repositório: git clone https://github.com/rickdeu/startupscan-backend.git",
-        "Criar ambiente virtual: python -m venv .venv",
-        "Activar o ambiente virtual: source .venv/bin/activate (Linux/macOS) "
-        "ou .venv\\Scripts\\activate (Windows)",
-        "Instalar dependências: pip install -r requirements.txt",
-        "Criar ficheiro .env com as variáveis de ambiente necessárias (ver 9.3).",
-        "Aplicar migrações: python manage.py migrate",
-        "Criar conta de administrador: python manage.py createsuperuser",
-        "Recolher ficheiros estáticos: python manage.py collectstatic --noinput",
-        "(Opcional) Treinar modelo inicial: python manage.py train_model "
+        "Clone the repository: git clone https://github.com/rickdeu/startupscan-backend.git",
+        "Create a virtual environment: python -m venv .venv",
+        "Activate the virtual environment: source .venv/bin/activate (Linux/macOS) "
+        "or .venv\\Scripts\\activate (Windows)",
+        "Install dependencies: pip install -r requirements.txt",
+        "Create a .env file with the required environment variables (see 9.3).",
+        "Apply migrations: python manage.py migrate",
+        "Create an administrator account: python manage.py createsuperuser",
+        "Collect static files: python manage.py collectstatic --noinput",
+        "(Optional) Train an initial model: python manage.py train_model "
         "--model-output ai_models/pitch_model.pkl",
-        "Iniciar o servidor: python manage.py runserver 0.0.0.0:8000",
+        "Start the server: python manage.py runserver 0.0.0.0:8000",
     ])
 
-    _heading(doc, "9.3. Variáveis de Ambiente", level=2)
-    _para(doc, "Variáveis obrigatórias:", bold=True, space_after=2)
+    _heading(doc, "9.3. Environment Variables", level=2)
+    _para(doc, "Required variables:", bold=True, space_after=2)
     _table(doc,
-        ["Variável", "Descrição", "Exemplo"],
+        ["Variable", "Description", "Example"],
         [
-            ["SECRET_KEY", "Chave secreta Django (obrigatória em produção)",
+            ["SECRET_KEY", "Django secret key (required in production)",
              "django-insecure-..."],
-            ["DJANGO_DEBUG", "Modo debug: 1 para dev, 0 para prod", "1"],
+            ["DJANGO_DEBUG", "Debug mode: 1 for dev, 0 for prod", "1"],
         ],
         col_widths=[1.8, 2.7, 2.0],
     )
-    _para(doc, "Variáveis de base de dados (para PostgreSQL):", bold=True, space_after=2)
+    _para(doc, "Database variables (for PostgreSQL):", bold=True, space_after=2)
     _table(doc,
-        ["Variável", "Descrição", "Exemplo"],
+        ["Variable", "Description", "Example"],
         [
-            ["DATABASE_URL", "URL de conexão PostgreSQL completa",
+            ["DATABASE_URL", "Full PostgreSQL connection URL",
              "postgres://user:pass@host:5432/db"],
-            ["POSTGRES_USER", "Utilizador PostgreSQL", "startupscan"],
-            ["POSTGRES_PASSWORD", "Password PostgreSQL", "password123"],
-            ["POSTGRES_DB", "Nome da base de dados", "startupscan"],
-            ["POSTGRES_HOST", "Host do servidor PostgreSQL", "localhost"],
-            ["POSTGRES_PORT", "Porta PostgreSQL", "5432"],
+            ["POSTGRES_USER", "PostgreSQL user", "startupscan"],
+            ["POSTGRES_PASSWORD", "PostgreSQL password", "password123"],
+            ["POSTGRES_DB", "Database name", "startupscan"],
+            ["POSTGRES_HOST", "PostgreSQL server host", "localhost"],
+            ["POSTGRES_PORT", "PostgreSQL port", "5432"],
         ],
         col_widths=[1.8, 2.2, 2.5],
     )
-    _para(doc, "Variáveis de APIs externas:", bold=True, space_after=2)
+    _para(doc, "External API variables:", bold=True, space_after=2)
     _table(doc,
-        ["Variável", "Efeito se ausente"],
+        ["Variable", "Effect if absent"],
         [
-            ["OPENAI_API_KEY", "Sistema usa exclusivamente o modelo local de ML"],
-            ["OPENAI_MODEL", "Usa gpt-4.1-mini como modelo GPT"],
-            ["DID_API_KEY", "Geração de vídeo usa modo local (moviepy + TTS)"],
-            ["DID_API_BASE_URL", "Usa https://api.d-id.com como endpoint"],
-            ["EDGE_TTS_VOICE_PT_AO", "Usa voz padrão do edge-tts em português"],
-            ["WHISPER_MODEL", "Usa modelo 'base' para transcrição de áudio"],
+            ["OPENAI_API_KEY", "System uses exclusively the local ML model"],
+            ["OPENAI_MODEL", "Uses gpt-4.1-mini as the GPT model"],
+            ["DID_API_KEY", "Video generation uses local mode (moviepy + TTS)"],
+            ["DID_API_BASE_URL", "Uses https://api.d-id.com as the endpoint"],
+            ["EDGE_TTS_VOICE_PT_AO", "Uses the default Portuguese edge-tts voice"],
+            ["WHISPER_MODEL", "Uses the 'base' model for audio transcription"],
         ],
         col_widths=[2.2, 4.3],
     )
 
-    _heading(doc, "9.4. Execução com Docker Compose", level=2)
+    _heading(doc, "9.4. Running with Docker Compose", level=2)
     _para(doc, (
-        "O ficheiro docker-compose.yml disponível na raiz do projecto levanta o stack "
-        "completo com um único comando:"
+        "The docker-compose.yml file at the project root brings up the "
+        "full stack with a single command:"
     ))
     _bullet(doc, [
-        "web: aplicação Django via Gunicorn na porta 8000.",
-        "db: PostgreSQL 15 na porta 5432.",
-        "redis: Redis 7 na porta 6379.",
-        "celery-worker: processamento assíncrono de tarefas.",
-        "celery-beat: agendamento de tarefas periódicas.",
+        "web: Django application via Gunicorn on port 8000.",
+        "db: PostgreSQL 15 on port 5432.",
+        "redis: Redis 7 on port 6379.",
+        "celery-worker: asynchronous task processing.",
+        "celery-beat: scheduling of periodic tasks.",
     ])
-    _para(doc, "Comando de arranque: docker-compose up -d")
-    _para(doc, "Comando para parar: docker-compose down")
-    _para(doc, "Remover todos os dados: docker-compose down -v")
+    _para(doc, "Start command: docker-compose up -d")
+    _para(doc, "Stop command: docker-compose down")
+    _para(doc, "Remove all data: docker-compose down -v")
 
-    _heading(doc, "9.5. Deploy na Render", level=2)
+    _heading(doc, "9.5. Deployment on Render", level=2)
     _para(doc, (
-        "O projecto está configurado para deploy contínuo na plataforma Render.com "
-        "através do ficheiro render.yaml e do workflow GitHub Actions em "
+        "The project is configured for continuous deployment on the Render.com platform "
+        "through the render.yaml file and the GitHub Actions workflow at "
         ".github/workflows/deploy-render-main.yml. "
-        "O deploy é despoletado automaticamente por cada push para a branch main, "
-        "após configuração do secret RENDER_DEPLOY_HOOK_URL no repositório GitHub."
+        "Deployment is automatically triggered on every push to the main branch, "
+        "after configuring the RENDER_DEPLOY_HOOK_URL secret in the GitHub repository."
     ))
 
 
 def _testes(doc):
-    _heading(doc, "10. Testes e Validação", level=1)
+    _heading(doc, "10. Testing and Validation", level=1)
 
-    _heading(doc, "10.1. Testes Automáticos", level=2)
+    _heading(doc, "10.1. Automated Tests", level=2)
     _para(doc, (
-        "A suite de testes automáticos está implementada em startupscan_api/tests.py "
-        "e cobre os principais fluxos da aplicação. Para executar os testes:"
+        "The automated test suite is implemented in startupscan_api/tests.py "
+        "and covers the application's main flows. To run the tests:"
     ))
     _bullet(doc, [
-        "python manage.py test — executa toda a suite de testes.",
-        "python manage.py check — verifica a configuração do sistema Django.",
+        "python manage.py test — runs the entire test suite.",
+        "python manage.py check — checks the Django system configuration.",
     ])
 
-    _heading(doc, "10.2. Checklist de Validação Funcional", level=2)
+    _heading(doc, "10.2. Functional Validation Checklist", level=2)
     _para(doc, (
-        "Após a instalação ou após alterações significativas ao código, "
-        "recomenda-se a validação dos seguintes fluxos:"
+        "After installation or after significant code changes, "
+        "it is recommended to validate the following flows:"
     ))
     _numbered(doc, [
-        "Registo e autenticação com cada um dos cinco papéis.",
-        "Submissão de pitch com texto simples e verificação do score gerado.",
-        "Submissão de pitch com ficheiro PDF e verificação da extracção de texto.",
-        "Download do relatório técnico PDF.",
-        "Geração de pitch deck PDF em modo automático.",
-        "Geração de pitch deck PDF em modo premium (pelo menos um template).",
-        "Geração de vídeo em modo local_only.",
-        "Polling de progresso de geração de vídeo (verificar actualizações).",
-        "Treino de modelo via painel e activação do novo modelo.",
-        "Polling de progresso de treino de modelo.",
-        "Submissão de ideia no construtor e exportação como PDF.",
-        "Publicação de ideia e submissão de feedback pela conta de público geral.",
-        "Fluxo completo de conexão: expressão de interesse → resposta do empreendedor.",
+        "Registration and authentication with each of the five roles.",
+        "Pitch submission with plain text and verification of the generated score.",
+        "Pitch submission with a PDF file and verification of text extraction.",
+        "Download of the technical PDF report.",
+        "Pitch deck PDF generation in automatic mode.",
+        "Pitch deck PDF generation in premium mode (at least one template).",
+        "Video generation in local_only mode.",
+        "Video generation progress polling (verify updates).",
+        "Model training via the panel and activation of the new model.",
+        "Model training progress polling.",
+        "Idea submission in the builder and export as PDF.",
+        "Publishing an idea and submitting feedback from a general public account.",
+        "Full connection flow: expressing interest → entrepreneur's reply.",
     ])
 
     _heading(doc, "10.3. Troubleshooting", level=2)
     _table(doc,
-        ["Problema", "Causa provável", "Solução"],
+        ["Problem", "Likely cause", "Solution"],
         [
-            ["SECRET_KEY não definida",
-             "DJANGO_DEBUG=0 sem SECRET_KEY no .env",
-             "Adicionar SECRET_KEY ao .env ou definir DJANGO_DEBUG=1"],
-            ["Vídeo D-ID falha",
-             "API key inválida, sem créditos, ou imagem não acessível via HTTPS",
-             "Verificar DID_API_KEY e créditos; testar com modo local_only"],
-            ["PDF não gera",
-             "ReportLab não instalado ou MEDIA_ROOT sem permissão de escrita",
-             "pip install reportlab; verificar permissões do directório media/"],
-            ["GPT não é utilizado",
-             "OPENAI_API_KEY ausente ou inválida",
-             "Definir OPENAI_API_KEY no .env; sistema usa modelo local como fallback"],
-            ["Celery não processa jobs",
-             "Redis não está a correr",
-             "Iniciar Redis (redis-server) e worker Celery"],
-            ["Overlay de submissão persiste",
-             "Cache do browser",
-             "Limpar cache do browser (Ctrl+Shift+R)"],
+            ["SECRET_KEY not defined",
+             "DJANGO_DEBUG=0 without SECRET_KEY in .env",
+             "Add SECRET_KEY to .env or set DJANGO_DEBUG=1"],
+            ["D-ID video fails",
+             "Invalid API key, no credits, or image not accessible via HTTPS",
+             "Check DID_API_KEY and credits; test with local_only mode"],
+            ["PDF not generated",
+             "ReportLab not installed or MEDIA_ROOT without write permission",
+             "pip install reportlab; check permissions on the media/ directory"],
+            ["GPT not used",
+             "OPENAI_API_KEY missing or invalid",
+             "Set OPENAI_API_KEY in .env; the system uses the local model as fallback"],
+            ["Celery not processing jobs",
+             "Redis is not running",
+             "Start Redis (redis-server) and the Celery worker"],
+            ["Submission overlay persists",
+             "Browser cache",
+             "Clear browser cache (Ctrl+Shift+R)"],
         ],
         col_widths=[1.5, 2.0, 3.0],
     )
 
 
 def _conclusao(doc):
-    _heading(doc, "11. Conclusão", level=1)
+    _heading(doc, "11. Conclusion", level=1)
     _para(doc, (
-        "O projecto StartupScan demonstrou ser tecnicamente viável e funcionalmente completo "
-        "no contexto do estágio curricular. A plataforma implementa com sucesso o ciclo "
-        "completo de avaliação de startups — da ingestão multimodal de dados à produção "
-        "de artefactos de comunicação — e integra um conjunto diversificado de tecnologias "
-        "de ponta em aprendizagem automática, processamento de linguagem natural, "
-        "síntese de vídeo e geração de documentos."
+        "The StartupScan project proved to be technically viable and functionally complete. "
+        "The platform successfully implements the full startup evaluation cycle — from multimodal "
+        "data ingestion to the production of communication artifacts — and integrates a diverse "
+        "set of cutting-edge technologies in machine learning, natural language processing, "
+        "video synthesis, and document generation."
     ))
     _para(doc, (
-        "Do ponto de vista académico, o projecto permitiu aplicar em contexto real um "
-        "conjunto abrangente de conhecimentos adquiridos ao longo do curso de especialização: "
-        "arquitectura de software web, desenvolvimento de APIs RESTful, implementação de "
-        "pipelines de machine learning, processamento assíncrono de tarefas, gestão de "
-        "bases de dados relacionais, e práticas de DevOps com Docker e CI/CD."
+        "The project applies, in a real context, a broad range of engineering practices: "
+        "web software architecture, RESTful API development, implementation of "
+        "machine learning pipelines, asynchronous task processing, relational database "
+        "management, and DevOps practices with Docker and CI/CD."
     ))
     _para(doc, (
-        "Os principais desafios técnicos enfrentados durante o desenvolvimento incluíram: "
-        "a normalização de entradas multimodais com formatos e qualidades variáveis, "
-        "a calibração do modelo de ML com datasets de dimensão limitada (resolvida com "
-        "augmentação de dados), a integração de APIs externas com comportamentos "
-        "assíncronos (D-ID, OpenAI), e a implementação de um sistema de polling "
-        "eficiente para jobs de longa duração sem degradar a experiência do utilizador."
+        "The main technical challenges encountered during development included: "
+        "normalizing multimodal inputs with varying formats and quality, "
+        "calibrating the ML model with limited-size datasets (solved through data "
+        "augmentation), integrating external APIs with asynchronous behavior "
+        "(D-ID, OpenAI), and implementing an efficient polling system "
+        "for long-running jobs without degrading the user experience."
     ))
     _para(doc, (
-        "Como trabalho futuro, identificam-se as seguintes oportunidades de evolução: "
-        "integração de modelos de linguagem de grande escala (LLM) mais recentes para "
-        "análise semântica mais profunda; implementação de um sistema de recomendação "
-        "para ligar empreendedores a investidores com base em preferências de sector; "
-        "dashboard de métricas e analytics para administradores; e suporte a múltiplos "
-        "idiomas na geração de artefactos."
+        "As future work, the following opportunities for evolution have been identified: "
+        "integration of more recent large language models (LLMs) for deeper "
+        "semantic analysis; implementation of a recommendation system "
+        "to connect entrepreneurs with investors based on sector preferences; "
+        "a metrics and analytics dashboard for administrators; and support for multiple "
+        "languages in artifact generation."
     ))
     _para(doc, (
-        "Em suma, o StartupScan representa uma contribuição concreta para a modernização "
-        "do ecossistema de avaliação de startups, com potencial de aplicação em aceleradoras, "
-        "fundos de investimento e programas de empreendedorismo no contexto angolano e africano."
+        "In summary, StartupScan represents a concrete contribution to the modernization "
+        "of the startup evaluation ecosystem, with potential application in accelerators, "
+        "investment funds, and entrepreneurship programs in the Angolan and African context."
     ))
 
 
 def _referencias(doc):
-    _heading(doc, "12. Referências", level=1)
+    _heading(doc, "12. References", level=1)
     refs = [
         ("Django Software Foundation", "Django Web Framework", "2024",
          "https://www.djangoproject.com/"),
@@ -1088,12 +1057,12 @@ def _referencias(doc):
         r3 = p.add_run(f"{year}.")
         _set_font(r3, size=11)
         if url != "—":
-            r4 = p.add_run(f" Disponível em: {url}")
+            r4 = p.add_run(f" Available at: {url}")
             _set_font(r4, size=11)
 
 
 # ---------------------------------------------------------------------------
-# Builder principal
+# Main builder
 # ---------------------------------------------------------------------------
 
 def build():
@@ -1130,7 +1099,7 @@ def build():
     _referencias(doc)
 
     doc.save(OUTPUT_PATH)
-    print(f"Relatório gerado em: {OUTPUT_PATH}")
+    print(f"Report generated at: {OUTPUT_PATH}")
     return OUTPUT_PATH
 
 

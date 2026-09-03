@@ -135,7 +135,7 @@ class Command(BaseCommand):
         growth = self._safe_numeric(work[growth_col], default=20.0) if growth_col else pd.Series([20.0] * len(work))
         customer_count = self._safe_numeric(work[team_col], default=20.0) if team_col else pd.Series([20.0] * len(work))
 
-        # Heurística de score baseada em status + funding + finanças.
+        # Score heuristic based on status + funding + finances.
         score = pd.Series([5.0] * len(work), dtype=float)
         if status_col:
             status_lower = work[status_col].fillna("").astype(str).str.lower()
