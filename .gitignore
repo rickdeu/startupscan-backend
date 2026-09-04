@@ -37,6 +37,14 @@ ai_models/model_registry.json
 data/*.csv
 data/*.json
 
+# Stray dependency artifacts (must be installed via requirements.txt, not committed)
+*.whl
+
+# Kubeconfigs / cluster credentials (never commit real cluster access)
+vke-*.yaml
+kubeconfig*.yaml
+*.kubeconfig
+
 # Temp & editor files
 *.tmp
 *.swp
