@@ -16,4 +16,4 @@ do
   sleep 2
 done
 
-exec celery -A startupscan $@
+exec celery -A startupscan_api "$@"
