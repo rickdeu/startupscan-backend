@@ -369,7 +369,7 @@
                     <div class="col-12">
                         <div class="p-2 rounded d-flex justify-content-between" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);">
                             <span class="small" style="color:#94a3b8;">{{ ui_text.revenue|default:"Receita" }}</span>
-                            <strong style="color:#34d399;">AOA {{ analysis.revenue|floatformat:0 }}</strong>
+                            <strong style="color:#34d399;">{{ analysis.revenue|currency_display:current_ui_language }}</strong>
                         </div>
                     </div>
                     <div class="col-6">

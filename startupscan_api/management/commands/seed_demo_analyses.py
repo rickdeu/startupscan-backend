@@ -36,10 +36,10 @@ STARTUP_TEMPLATES = [
             "Kenya with local distribution know-how, and we are raising a seed round to expand cold-chain "
             "storage into two more provinces."
         ),
-        "revenue": (80_000, 420_000),
+        "revenue": (70, 380),
         "growth_rate": (15, 60),
         "profit_margin": (5, 22),
-        "burn_rate": (4_000, 18_000),
+        "burn_rate": (0, 20),
     },
     {
         "name": "EduPro Angola",
@@ -53,10 +53,10 @@ STARTUP_TEMPLATES = [
             "in EdTech product design and vocational training, and this round funds course catalogue "
             "expansion and a native mobile app."
         ),
-        "revenue": (40_000, 260_000),
+        "revenue": (40, 230),
         "growth_rate": (20, 75),
         "profit_margin": (-5, 18),
-        "burn_rate": (3_000, 14_000),
+        "burn_rate": (0, 10),
     },
     {
         "name": "MicroCred",
@@ -70,10 +70,10 @@ STARTUP_TEMPLATES = [
             "regional commercial bank, and funds raised will scale the lending book and add a savings "
             "product."
         ),
-        "revenue": (150_000, 900_000),
+        "revenue": (140, 810),
         "growth_rate": (25, 80),
         "profit_margin": (10, 30),
-        "burn_rate": (8_000, 35_000),
+        "burn_rate": (10, 30),
     },
     {
         "name": "EntregaJa",
@@ -86,10 +86,10 @@ STARTUP_TEMPLATES = [
             "with a 96% on-time rate. The team has prior experience scaling logistics operations in Nigeria, "
             "and this round funds rider fleet expansion and route optimization software."
         ),
-        "revenue": (60_000, 380_000),
+        "revenue": (50, 340),
         "growth_rate": (18, 65),
         "profit_margin": (2, 16),
-        "burn_rate": (5_000, 22_000),
+        "burn_rate": (0, 20),
     },
     {
         "name": "SafeSchool",
@@ -102,10 +102,10 @@ STARTUP_TEMPLATES = [
             "previously built fleet-tracking software for a regional trucking company, and funding will "
             "accelerate sales into the public school segment."
         ),
-        "revenue": (30_000, 180_000),
+        "revenue": (30, 160),
         "growth_rate": (12, 55),
         "profit_margin": (0, 20),
-        "burn_rate": (3_500, 15_000),
+        "burn_rate": (0, 10),
     },
     {
         "name": "SaudeConecta",
@@ -118,10 +118,10 @@ STARTUP_TEMPLATES = [
             "satisfaction score. The founding team includes two practicing physicians and a health-tech "
             "product lead, and this round funds expansion into three additional provinces."
         ),
-        "revenue": (70_000, 500_000),
+        "revenue": (60, 450),
         "growth_rate": (20, 70),
         "profit_margin": (5, 25),
-        "burn_rate": (6_000, 28_000),
+        "burn_rate": (10, 30),
     },
     {
         "name": "ImobiFacil",
@@ -134,10 +134,10 @@ STARTUP_TEMPLATES = [
             "has backgrounds in proptech and payments, and funds raised will grow the verification team and "
             "add a tenant credit-history product."
         ),
-        "revenue": (50_000, 300_000),
+        "revenue": (50, 270),
         "growth_rate": (10, 45),
         "profit_margin": (8, 28),
-        "burn_rate": (4_000, 17_000),
+        "burn_rate": (0, 20),
     },
     {
         "name": "SolarKap",
@@ -149,10 +149,10 @@ STARTUP_TEMPLATES = [
             "payment rate over 18 months. Our team combines solar hardware engineering with fintech "
             "collections experience, and this round funds inventory for the next 10,000-unit rollout."
         ),
-        "revenue": (100_000, 650_000),
+        "revenue": (90, 590),
         "growth_rate": (22, 70),
         "profit_margin": (6, 24),
-        "burn_rate": (7_000, 30_000),
+        "burn_rate": (10, 30),
     },
     {
         "name": "ContaCerta",
@@ -164,10 +164,10 @@ STARTUP_TEMPLATES = [
             "3% per month. The founders previously built accounting tools for the Portuguese SMB market, "
             "and this round funds a mobile app and integrations with major local banks."
         ),
-        "revenue": (90_000, 520_000),
+        "revenue": (80, 470),
         "growth_rate": (18, 58),
         "profit_margin": (15, 35),
-        "burn_rate": (5_000, 20_000),
+        "burn_rate": (0, 20),
     },
     {
         "name": "TalentoUp",
@@ -180,10 +180,10 @@ STARTUP_TEMPLATES = [
             "employer rating. The team has staffing-industry and marketplace product experience, and funds "
             "raised will grow the employer sales team."
         ),
-        "revenue": (45_000, 280_000),
+        "revenue": (40, 250),
         "growth_rate": (15, 62),
         "profit_margin": (4, 20),
-        "burn_rate": (4_000, 16_000),
+        "burn_rate": (0, 10),
     },
 ]
 
@@ -238,7 +238,7 @@ class Command(BaseCommand):
             burn_rate = round(random.uniform(*template["burn_rate"]), 2)
 
             traction_note = (
-                f" As of this submission, monthly revenue stands at approximately {revenue:,.0f} AOA "
+                f" As of this submission, monthly revenue stands at approximately EUR {revenue:,.0f} "
                 f"with {growth_rate:.1f}% month-over-month growth."
             )
             text = template["text"] + traction_note

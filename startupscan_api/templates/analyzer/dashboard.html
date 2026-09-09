@@ -1,4 +1,5 @@
 {% extends "analyzer/base.html" %}
+{% load dict_extras %}
 
 {% block topbar_title %}{{ ui_text.dashboard_topbar_title|default:"Dashboard Operacional" }}{% endblock %}
 {% block topbar_subtitle %}{{ ui_text.dashboard_topbar_subtitle|default:"Monitorização de análises, performance e benchmark setorial" }}{% endblock %}
@@ -238,7 +239,7 @@
                                 {{ analysis.success_score|floatformat:1 }}
                             </span>
                         </td>
-                        <td class="d-none d-md-table-cell" style="font-size:.85rem;">AOA {{ analysis.revenue|floatformat:0 }}</td>
+                        <td class="d-none d-md-table-cell" style="font-size:.85rem;">{{ analysis.revenue|currency_display:current_ui_language }}</td>
                         <td class="d-none d-md-table-cell" style="font-size:.85rem;">{{ analysis.growth_rate|floatformat:1 }}%</td>
                         <td class="d-none d-lg-table-cell" style="font-size:.85rem;">{{ analysis.profit_margin|floatformat:1 }}%</td>
                         <td onclick="event.stopPropagation();">
@@ -292,7 +293,7 @@ const i18nScoreLabel      = "{{ ui_text.score|default:'Score' }}";
 const i18nDistLowLabel    = "{{ ui_text.low_label|default:'baixo'|capfirst }} (<5)";
 const i18nDistMidLabel    = "{{ ui_text.medium_label|default:'médio'|capfirst }} (5-7.4)";
 const i18nDistHighLabel   = "{{ ui_text.high_label|default:'alto'|capfirst }} (≥7.5)";
-const i18nRevenueLabel    = "{{ ui_text.revenue|default:'Receita' }} (AOA)";
+const i18nRevenueLabel    = "{{ ui_text.revenue|default:'Receita' }} ({{ current_ui_language|currency_code }})";
 const i18nGrowthLabel     = "{{ ui_text.growth|default:'Crescimento' }} (%)";
 const i18nAvgScoreLabel   = "{{ ui_text.average_score|default:'Score médio' }}";
 

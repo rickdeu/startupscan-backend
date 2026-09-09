@@ -1,4 +1,5 @@
 {% load static %}
+{% load dict_extras %}
 <!DOCTYPE html>
 <html lang="{{ current_ui_language|default:'pt' }}" data-theme="dark">
 <head>
@@ -202,7 +203,7 @@
                         <div class="score-ring"><span class="score-val">8.2</span></div>
                         <div class="chip">{{ ui_text.landing_demo_high_potential|default:"Alto Potencial" }}</div>
                     </div>
-                    <div class="metric-row"><span class="metric-label">{{ ui_text.landing_demo_annual_revenue|default:"Receita Anual" }}</span><span class="metric-value">AOA 4,200,000</span></div>
+                    <div class="metric-row"><span class="metric-label">{{ ui_text.landing_demo_annual_revenue|default:"Receita Anual" }}</span><span class="metric-value">{{ 3790|currency_display:current_ui_language }}</span></div>
                     <div class="metric-row"><span class="metric-label">{{ ui_text.growth|default:"Crescimento" }}</span><span class="metric-value">+38% <span class="chip">↑</span></span></div>
                     <div class="metric-row"><span class="metric-label">{{ ui_text.pitch_form_profit_margin|default:"Margem de Lucro" }}</span><span class="metric-value">22%</span></div>
                     <div class="metric-row"><span class="metric-label">{{ ui_text.engine|default:"Motor" }}</span><span class="metric-value">GPT-4o</span></div>

@@ -34,6 +34,7 @@ from startupscan_api.services.pitch_builder import (
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.utils import generate_interpretable_report, prepare_features
+from startupscan_api.utils.currency import format_currency
 from .helpers import (
     _infer_error_field,
     _is_meaningful_pitch_text,
@@ -83,13 +84,16 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
         cleaned = [str(v).strip() for v in values if str(v).strip()]
         return " ".join(cleaned[:3]) if cleaned else fallback
 
-    revenue = float(analysis.revenue or 0)
+    # This payload's prose is always Portuguese (see note above), so its
+    # currency follows the same Portuguese/Angola convention as the rest of
+    # the app (revenue is stored in EUR; displayed here converted to AOA).
+    currency_symbol, revenue = format_currency(analysis.revenue, "pt")
     growth_rate = float(analysis.growth_rate or 0)
     profit_margin = float(analysis.profit_margin or 0)
     success_score = float(analysis.success_score or 0)
 
-    funding_goal_aoa = max(8_000_000, int(max(revenue * 0.55, 0)))
-    funding_goal = f"AOA {funding_goal_aoa:,.0f} para acelerar escala e execução comercial."
+    funding_goal_amount = max(8_000_000, int(max(revenue * 0.55, 0)))
+    funding_goal = f"{currency_symbol} {funding_goal_amount:,.0f} para acelerar escala e execução comercial."
 
     return {
         "startup_name": startup_name,
@@ -101,7 +105,7 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
         "business_model": "Modelo orientado a geração de receita recorrente e expansão comercial disciplinada.",
         "competitive_advantage": _join_list(strengths, "Execução rápida, leitura de métricas e adaptação contínua ao mercado."),
         "traction": (
-            f"Score {success_score:.1f}/10, receita AOA {revenue:,.0f}, "
+            f"Score {success_score:.1f}/10, receita {currency_symbol} {revenue:,.0f}, "
             f"crescimento {growth_rate:.1f}% e margem {profit_margin:.1f}%."
         ),
         "team": "Equipe focada em execução e melhoria contínua com orientação a metas de crescimento.",

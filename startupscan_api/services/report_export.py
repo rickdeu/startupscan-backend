@@ -335,20 +335,23 @@ def _build_category_chart(categories: dict, t: dict, category_labels: dict | Non
 
 
 # ── Financial KPI table ──────────────────────────────────────────────────────
-def _build_kpi_table(analysis, styles, t: dict):
+def _build_kpi_table(analysis, styles, t: dict, language: str | None = None):
+    from startupscan_api.utils.currency import format_currency
+
     score = float(analysis.success_score or 0)
     fg, bg = _score_color(score)
+    currency_symbol, display_revenue = format_currency(analysis.revenue, language)
 
     kpi_data = [
         [
             Paragraph("★", styles["kpi_icon"]),
-            Paragraph("AOA", styles["kpi_icon"]),
+            Paragraph(currency_symbol, styles["kpi_icon"]),
             Paragraph("▲", styles["kpi_icon"]),
             Paragraph("◆", styles["kpi_icon"]),
         ],
         [
             Paragraph(f"{score:.1f}/10", styles["kpi_value"]),
-            Paragraph(f"{float(analysis.revenue or 0):,.0f}", styles["kpi_value"]),
+            Paragraph(f"{display_revenue:,.0f}", styles["kpi_value"]),
             Paragraph(f"{float(analysis.growth_rate or 0):.1f}%", styles["kpi_value"]),
             Paragraph(f"{float(analysis.profit_margin or 0):.1f}%", styles["kpi_value"]),
         ],
@@ -731,7 +734,7 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
 
     # ── Financial KPIs ────────────────────────────────────────────────────────
     story.append(Paragraph(f"<b>{t.get('financial_indicators', 'Indicadores Financeiros')}</b>", styles["section_h"]))
-    story.append(_build_kpi_table(analysis, styles, t))
+    story.append(_build_kpi_table(analysis, styles, t, language))
     story.append(Paragraph(
         t.get("report_pdf_financial_indicators_caption",
               "Principais sinais financeiros informados na submissão do pitch, utilizados como entradas diretas do modelo de pontuação."),

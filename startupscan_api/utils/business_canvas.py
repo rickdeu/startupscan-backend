@@ -7,6 +7,8 @@ is available offline and at no extra cost, consistent with the local report
 engine in startupscan_api/utils/report.py.
 """
 
+from startupscan_api.utils.currency import format_currency
+
 BLOCK_KEYS = [
     "key_partners",
     "key_activities",
@@ -124,7 +126,7 @@ _TEMPLATES = {
         "key_partners": [
             "Fornecedores de tecnologia e infraestrutura que reduzem o tempo de lancamento de {startup_label}.",
             "Parceiros de distribuicao e canal alinhados com a cadeia de valor do setor {industry_label}.",
-            "Parceiros financeiros e de pagamento que suportam o volume reportado de {revenue:,.0f} AOA.",
+            "Parceiros financeiros e de pagamento que suportam o volume reportado de {currency_symbol} {revenue:,.0f}.",
         ],
         "key_activities": [
             "Desenvolvimento continuo de produto guiado pela proposta de valor apresentada no pitch.",
@@ -134,7 +136,7 @@ _TEMPLATES = {
         "key_resources": [
             "Capacidades da equipa fundadora destacadas na analise (score: {founding_team_score:.1f}/10).",
             "Ativos de produto, marca e tracao inicial descritos na submissao.",
-            "Capital de giro para suportar {revenue:,.0f} AOA em operacoes reportadas.",
+            "Capital de giro para suportar {currency_symbol} {revenue:,.0f} em operacoes reportadas.",
         ],
         "value_propositions": [
             "Proposta de valor central de {startup_label} (avaliada em {value_prop_score:.1f}/10), endereçando um problema claro no setor {industry_label}.",
@@ -161,7 +163,7 @@ _TEMPLATES = {
             "Consideracoes de burn rate mensal relevantes para escalar de forma sustentavel.",
         ],
         "revenue_streams": [
-            "Fonte de receita primaria reflectida nos {revenue:,.0f} AOA reportados.",
+            "Fonte de receita primaria reflectida nos {currency_symbol} {revenue:,.0f} reportados.",
             "Trajetoria de crescimento de {growth_rate:.1f}% conforme submetido na analise.",
             "Potenciais fontes de receita secundarias a medida que o negocio escala (ticket sugerido: {suggested_ticket}).",
         ],
@@ -170,7 +172,7 @@ _TEMPLATES = {
         "key_partners": [
             "Technology and infrastructure vendors that reduce time-to-market for {startup_label}.",
             "Distribution and channel partners aligned with the {industry_label} value chain.",
-            "Financial and payment partners supporting the reported {revenue:,.0f} AOA in volume.",
+            "Financial and payment partners supporting the reported {currency_symbol} {revenue:,.0f} in volume.",
         ],
         "key_activities": [
             "Continuous product development guided by the value proposition stated in the pitch.",
@@ -180,7 +182,7 @@ _TEMPLATES = {
         "key_resources": [
             "Founding team capabilities highlighted in the analysis (score: {founding_team_score:.1f}/10).",
             "Product, brand, and early-traction assets described in the submission.",
-            "Working capital to support the reported {revenue:,.0f} AOA in operations.",
+            "Working capital to support the reported {currency_symbol} {revenue:,.0f} in operations.",
         ],
         "value_propositions": [
             "{startup_label}'s core value proposition (scored {value_prop_score:.1f}/10), addressing a clear problem in {industry_label}.",
@@ -207,7 +209,7 @@ _TEMPLATES = {
             "Monthly burn-rate considerations relevant to scaling sustainably.",
         ],
         "revenue_streams": [
-            "Primary revenue stream reflected in the reported {revenue:,.0f} AOA.",
+            "Primary revenue stream reflected in the reported {currency_symbol} {revenue:,.0f}.",
             "Growth trajectory of {growth_rate:.1f}% as submitted in the analysis.",
             "Potential secondary revenue streams as the business scales (suggested ticket: {suggested_ticket}).",
         ],
@@ -216,7 +218,7 @@ _TEMPLATES = {
         "key_partners": [
             "Поставщики технологий и инфраструктуры, сокращающие время выхода на рынок для {startup_label}.",
             "Партнеры по дистрибуции и каналам, соответствующие цепочке создания стоимости в отрасли {industry_label}.",
-            "Финансовые и платежные партнеры, поддерживающие заявленный объем в {revenue:,.0f} AOA.",
+            "Финансовые и платежные партнеры, поддерживающие заявленный объем в {currency_symbol} {revenue:,.0f}.",
         ],
         "key_activities": [
             "Непрерывная разработка продукта на основе ценностного предложения из презентации.",
@@ -226,7 +228,7 @@ _TEMPLATES = {
         "key_resources": [
             "Возможности команды основателей, отмеченные в анализе (оценка: {founding_team_score:.1f}/10).",
             "Продукт, бренд и активы раннего роста, описанные в заявке.",
-            "Оборотный капитал для поддержания заявленных операций на {revenue:,.0f} AOA.",
+            "Оборотный капитал для поддержания заявленных операций на {currency_symbol} {revenue:,.0f}.",
         ],
         "value_propositions": [
             "Основное ценностное предложение {startup_label} (оценка {value_prop_score:.1f}/10), решающее конкретную проблему в отрасли {industry_label}.",
@@ -253,7 +255,7 @@ _TEMPLATES = {
             "Учет ежемесячного расхода средств, важный для устойчивого масштабирования.",
         ],
         "revenue_streams": [
-            "Основной источник дохода отражен в заявленных {revenue:,.0f} AOA.",
+            "Основной источник дохода отражен в заявленных {currency_symbol} {revenue:,.0f}.",
             "Траектория роста {growth_rate:.1f}%, указанная в анализе.",
             "Потенциальные дополнительные источники дохода по мере масштабирования (рекомендуемый чек: {suggested_ticket}).",
         ],
@@ -262,7 +264,7 @@ _TEMPLATES = {
         "key_partners": [
             "Technologie- und Infrastrukturanbieter, die die Time-to-Market fuer {startup_label} verkuerzen.",
             "Vertriebs- und Kanalpartner entlang der Wertschoepfungskette der Branche {industry_label}.",
-            "Finanz- und Zahlungspartner zur Unterstuetzung des gemeldeten Volumens von {revenue:,.0f} AOA.",
+            "Finanz- und Zahlungspartner zur Unterstuetzung des gemeldeten Volumens von {currency_symbol} {revenue:,.0f}.",
         ],
         "key_activities": [
             "Kontinuierliche Produktentwicklung entlang des im Pitch dargestellten Wertversprechens.",
@@ -272,7 +274,7 @@ _TEMPLATES = {
         "key_resources": [
             "In der Analyse hervorgehobene Faehigkeiten des Gruenderteams (Score: {founding_team_score:.1f}/10).",
             "In der Einreichung beschriebene Produkt-, Marken- und Traction-Assets.",
-            "Betriebskapital zur Unterstuetzung der gemeldeten {revenue:,.0f} AOA im operativen Geschaeft.",
+            "Betriebskapital zur Unterstuetzung der gemeldeten {currency_symbol} {revenue:,.0f} im operativen Geschaeft.",
         ],
         "value_propositions": [
             "Kernwertversprechen von {startup_label} (bewertet mit {value_prop_score:.1f}/10), das ein klares Problem in {industry_label} loest.",
@@ -299,7 +301,7 @@ _TEMPLATES = {
             "Monatliche Burn-Rate-Ueberlegungen fuer nachhaltiges Skalieren.",
         ],
         "revenue_streams": [
-            "Primaere Einnahmequelle, abgebildet in den gemeldeten {revenue:,.0f} AOA.",
+            "Primaere Einnahmequelle, abgebildet in den gemeldeten {currency_symbol} {revenue:,.0f}.",
             "Wachstumsverlauf von {growth_rate:.1f}% gemaess Analyse.",
             "Potenzielle zusaetzliche Einnahmequellen bei Skalierung (empfohlenes Ticket: {suggested_ticket}).",
         ],
@@ -308,7 +310,7 @@ _TEMPLATES = {
         "key_partners": [
             "Proveedores de tecnologia e infraestructura que reducen el tiempo de lanzamiento de {startup_label}.",
             "Socios de distribucion y canal alineados con la cadena de valor del sector {industry_label}.",
-            "Socios financieros y de pago que respaldan el volumen reportado de {revenue:,.0f} AOA.",
+            "Socios financieros y de pago que respaldan el volumen reportado de {currency_symbol} {revenue:,.0f}.",
         ],
         "key_activities": [
             "Desarrollo continuo de producto guiado por la propuesta de valor presentada en el pitch.",
@@ -318,7 +320,7 @@ _TEMPLATES = {
         "key_resources": [
             "Capacidades del equipo fundador destacadas en el analisis (puntuacion: {founding_team_score:.1f}/10).",
             "Activos de producto, marca y traccion inicial descritos en la presentacion.",
-            "Capital de trabajo para sostener {revenue:,.0f} AOA en operaciones reportadas.",
+            "Capital de trabajo para sostener {currency_symbol} {revenue:,.0f} en operaciones reportadas.",
         ],
         "value_propositions": [
             "Propuesta de valor central de {startup_label} (puntuada en {value_prop_score:.1f}/10), que aborda un problema claro en {industry_label}.",
@@ -345,7 +347,7 @@ _TEMPLATES = {
             "Consideraciones de burn rate mensual relevantes para escalar de forma sostenible.",
         ],
         "revenue_streams": [
-            "Fuente de ingresos principal reflejada en los {revenue:,.0f} AOA reportados.",
+            "Fuente de ingresos principal reflejada en los {currency_symbol} {revenue:,.0f} reportados.",
             "Trayectoria de crecimiento de {growth_rate:.1f}% segun lo presentado en el analisis.",
             "Posibles fuentes de ingresos secundarias a medida que el negocio escala (ticket sugerido: {suggested_ticket}).",
         ],
@@ -354,7 +356,7 @@ _TEMPLATES = {
         "key_partners": [
             "能够缩短{startup_label}上市时间的技术与基础设施供应商。",
             "与{industry_label}行业价值链相匹配的分销与渠道合作伙伴。",
-            "支持所报告{revenue:,.0f}AOA交易量的金融与支付合作伙伴。",
+            "支持所报告{currency_symbol}{revenue:,.0f}交易量的金融与支付合作伙伴。",
         ],
         "key_activities": [
             "围绕路演中提出的价值主张持续进行产品开发。",
@@ -364,7 +366,7 @@ _TEMPLATES = {
         "key_resources": [
             "分析中重点提及的创始团队能力（评分：{founding_team_score:.1f}/10）。",
             "申报材料中描述的产品、品牌及早期增长资产。",
-            "支持所报告{revenue:,.0f}AOA运营规模的营运资金。",
+            "支持所报告{currency_symbol}{revenue:,.0f}运营规模的营运资金。",
         ],
         "value_propositions": [
             "{startup_label}的核心价值主张（评分{value_prop_score:.1f}/10），解决了{industry_label}行业中的一个明确问题。",
@@ -391,7 +393,7 @@ _TEMPLATES = {
             "与可持续规模化相关的月度烧钱率考量。",
         ],
         "revenue_streams": [
-            "反映在所报告{revenue:,.0f}AOA中的主要收入来源。",
+            "反映在所报告{currency_symbol}{revenue:,.0f}中的主要收入来源。",
             "分析中所示{growth_rate:.1f}%的增长轨迹。",
             "随业务规模化而产生的潜在次要收入来源（建议投资额：{suggested_ticket}）。",
         ],
@@ -400,7 +402,7 @@ _TEMPLATES = {
         "key_partners": [
             "Ovanepange votecnologia lo infraestrutura vokutumbika oku {startup_label} okwenda liwa.",
             "Ovanepange vokusongela lokwalusako komukanda wombiliko wa {industry_label}.",
-            "Ovanepange vombongo lo vopagamento vokutumbika osapo ya {revenue:,.0f} AOA.",
+            "Ovanepange vombongo lo vopagamento vokutumbika osapo ya {currency_symbol} {revenue:,.0f}.",
         ],
         "key_activities": [
             "Okulinga upange wombiliko okwenda ketyulo lyoku eyi lyapitch.",
@@ -410,7 +412,7 @@ _TEMPLATES = {
         "key_resources": [
             "Oyipulukusu yeutu wombangi yalombolwiwa ku elombolwilo (score: {founding_team_score:.1f}/10).",
             "Osapo yombangulo, yomake, lo yotecção yotete yalombolwiwa ku submissão.",
-            "Ombongo yokulinga oku tumbika {revenue:,.0f} AOA mu operações.",
+            "Ombongo yokulinga oku tumbika {currency_symbol} {revenue:,.0f} mu operações.",
         ],
         "value_propositions": [
             "Etyulo lyoku eyi lyokolele lya {startup_label} (score {value_prop_score:.1f}/10), lyokwiyako ongongo yokahandeka mu {industry_label}.",
@@ -437,7 +439,7 @@ _TEMPLATES = {
             "Oyisapo yamburn rate yohuela yina ombiliko oku kula lokwalusako.",
         ],
         "revenue_streams": [
-            "Osapo yombongo yokolele yalombolwiwa mu {revenue:,.0f} AOA.",
+            "Osapo yombongo yokolele yalombolwiwa mu {currency_symbol} {revenue:,.0f}.",
             "Onjila yokukula ya {growth_rate:.1f}% okwenda ku elombolwilo.",
             "Osapo yombongo yavali okwenda ndokukula kweutu (ticket yalombolwiwa: {suggested_ticket}).",
         ],
@@ -488,10 +490,13 @@ def generate_business_model_canvas(analysis, language: str = _DEFAULT_LANGUAGE) 
         "umb": "startup yina yakuandiwa",
     }.get(language, "the evaluated startup")
 
+    currency_symbol, display_revenue = format_currency(analysis.revenue, language)
+
     fmt_kwargs = {
         "startup_label": startup_label,
         "industry_label": _industry_label(analysis.industry, language),
-        "revenue": float(analysis.revenue or 0),
+        "revenue": display_revenue,
+        "currency_symbol": currency_symbol,
         "growth_rate": float(analysis.growth_rate or 0),
         "profit_margin": float(analysis.profit_margin or 0),
         "founding_team_score": float(category_scores.get("founding_team", 5.0) or 5.0),

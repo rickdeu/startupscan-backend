@@ -73,7 +73,7 @@ class PitchAnalysis(models.Model):
         max_digits=15,
         decimal_places=2,
         validators=[MinValueValidator(0)],
-        verbose_name="Annual Revenue (AOA)",
+        verbose_name="Annual Revenue (EUR)",
     )
     growth_rate = models.DecimalField(
         max_digits=5,
@@ -92,7 +92,7 @@ class PitchAnalysis(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name="Burn Rate (AOA/month)",
+        verbose_name="Burn Rate (EUR/month)",
     )
 
     success_score = models.DecimalField(
