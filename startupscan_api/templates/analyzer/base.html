@@ -5,9 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block page_title %}{{ ui_text.footer|default:"Startup Intelligence Hub" }}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'img/icon.png' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'analyzer/css/styles.css' %}?v=20260423-01">
+    <link rel="stylesheet" href="{% static 'analyzer/css/styles.css' %}?v=20260909-orange">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="app-body">
@@ -19,8 +20,8 @@
     <aside class="app-sidebar" id="appSidebar">
         <div class="sidebar-brand">
             <a href="{% url 'landing' %}" class="brand-link">
-                <span class="brand-icon"><i class="fas fa-rocket"></i></span>
-                <span class="brand-text">StartupScan</span>
+                <span class="brand-icon"><img src="{% static 'img/icon.png' %}" alt="StartupScanAI"></span>
+                <span class="brand-text">startupscan<span class="brand-text-accent">ai</span></span>
             </a>
         </div>
 
@@ -81,13 +82,13 @@
             </a>
             {% elif user_plan_tier == 'basic' %}
             <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
-                <span class="badge w-100 py-1" style="background:rgba(59,130,246,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">
+                <span class="badge w-100 py-1" style="background:rgba(245, 88, 13,0.2);color:#ffc199;border:1px solid rgba(245, 88, 13,0.3);">
                     <i class="fas fa-star me-1"></i>{{ ui_text.sidebar_plan_basic_badge|default:"Plano Basic" }}
                 </span>
             </a>
             {% elif user_plan_tier == 'pro' %}
             <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
-                <span class="badge w-100 py-1" style="background:rgba(139,92,246,0.2);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);">
+                <span class="badge w-100 py-1" style="background:rgba(212, 147, 31,0.2);color:#f0d8a8;border:1px solid rgba(212, 147, 31,0.3);">
                     <i class="fas fa-gem me-1"></i>{{ ui_text.sidebar_plan_pro_badge|default:"Plano Pro" }}
                 </span>
             </a>
@@ -171,6 +172,26 @@
     </div>
 </div>
 
+
+<!-- Fullscreen PDF preview -->
+<div class="pdf-preview-overlay" id="pdfPreviewOverlay" aria-hidden="true">
+    <div class="pdf-preview-bar">
+        <div class="pdf-preview-title"><i class="fas fa-file-pdf"></i><span id="pdfPreviewTitle">PDF</span></div>
+        <div class="pdf-preview-actions">
+            <button type="button" class="pdf-preview-close" id="pdfPreviewCloseBtn">
+                <i class="fas fa-xmark"></i><span>{{ ui_text.close|default:"Fechar" }}</span>
+            </button>
+        </div>
+    </div>
+    <div class="pdf-preview-body">
+        <div class="pdf-preview-status" id="pdfPreviewStatus">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span id="pdfPreviewStatusText">{{ ui_text.pdf_preview_loading|default:"A gerar o PDF..." }}</span>
+        </div>
+        <iframe id="pdfPreviewFrame" hidden title="PDF preview"></iframe>
+    </div>
+</div>
+
 <!-- Toast stack -->
 <div class="toast-stack" id="toastStack"></div>
 
@@ -223,6 +244,71 @@
     });
     window.addEventListener("pageshow", function () { if (overlay.classList.contains("active")) end(); });
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && overlay.classList.contains("active")) end(); });
+})();
+
+// Fullscreen PDF preview: fetches the PDF as a blob and shows it inline
+// (full-screen, with a close button) instead of letting the browser
+// navigate away and silently download the file.
+(function () {
+    const overlay = document.getElementById("pdfPreviewOverlay");
+    const frame = document.getElementById("pdfPreviewFrame");
+    const status = document.getElementById("pdfPreviewStatus");
+    const statusText = document.getElementById("pdfPreviewStatusText");
+    const titleEl = document.getElementById("pdfPreviewTitle");
+    const closeBtn = document.getElementById("pdfPreviewCloseBtn");
+    if (!overlay || !frame || !status || !closeBtn) return;
+
+    let currentObjectUrl = null;
+    let currentToken = 0;
+
+    function close() {
+        currentToken += 1;
+        overlay.classList.remove("active");
+        overlay.setAttribute("aria-hidden", "true");
+        frame.hidden = true;
+        frame.src = "about:blank";
+        if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+        document.body.classList.remove("pdf-preview-open");
+    }
+
+    closeBtn.addEventListener("click", close);
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && overlay.classList.contains("active")) close();
+    });
+
+    window.openPdfPreview = function (url, opts) {
+        opts = opts || {};
+        const token = ++currentToken;
+        overlay.classList.add("active");
+        overlay.setAttribute("aria-hidden", "false");
+        document.body.classList.add("pdf-preview-open");
+        titleEl.textContent = opts.title || "PDF";
+        frame.hidden = true;
+        status.hidden = false;
+        status.classList.remove("error");
+        statusText.textContent = opts.loadingText || "A gerar o PDF...";
+        if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+
+        fetch(url, { credentials: "same-origin" })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return resp.blob();
+            })
+            .then(function (blob) {
+                if (token !== currentToken) return; // preview was closed / superseded meanwhile
+                currentObjectUrl = URL.createObjectURL(blob);
+                frame.src = currentObjectUrl;
+                frame.hidden = false;
+                status.hidden = true;
+            })
+            .catch(function (err) {
+                if (token !== currentToken) return;
+                status.classList.add("error");
+                statusText.textContent = (opts.errorText || "Não foi possível gerar o PDF.") + " (" + err.message + ")";
+            });
+    };
+
+    window.closePdfPreview = close;
 })();
 
 // Global toast helper

@@ -29,17 +29,17 @@
         <div class="col-lg-4 mt-4 mt-lg-0">
             <div class="glass-card p-3">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="fas fa-microchip" style="color:#60a5fa;"></i>
+                    <i class="fas fa-microchip" style="color:#ff8a4d;"></i>
                     <h6 class="text-uppercase mb-0" style="font-size:.72rem;letter-spacing:.08em;color:#94a3b8;">{{ ui_text.active_model|default:"Modelo ativo" }}</h6>
                 </div>
                 {% if active_model %}
                 <h5 class="mb-1 fw-bold">{{ active_model.display_name }}</h5>
                 <p class="mb-1 small" style="color:#94a3b8;">{{ active_model.name }}</p>
                 <div class="d-flex align-items-center gap-2 mt-2">
-                    <div style="flex:1;height:5px;border-radius:999px;background:#1e2d4a;overflow:hidden;">
-                        <div style="height:100%;width:{{ active_model.consistency_accuracy_pct|default:0 }}%;background:linear-gradient(90deg,#2563eb,#22d3ee);border-radius:999px;"></div>
+                    <div style="flex:1;height:5px;border-radius:999px;background:#2a2c31;overflow:hidden;">
+                        <div style="height:100%;width:{{ active_model.consistency_accuracy_pct|default:0 }}%;background:linear-gradient(90deg,#d94a0a,#ff8a4d);border-radius:999px;"></div>
                     </div>
-                    <span style="font-size:.8rem;font-weight:700;color:#22d3ee;">{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</span>
+                    <span style="font-size:.8rem;font-weight:700;color:#ff8a4d;">{{ active_model.consistency_accuracy_pct|default:"N/A" }}%</span>
                 </div>
                 {% else %}
                 <p class="mb-0 small" style="color:#94a3b8;">{{ ui_text.no_active_model_detected|default:"Sem modelo ativo detectado." }}</p>
@@ -95,7 +95,7 @@
             <div class="kpi-icon"><i class="fas fa-chart-bar"></i></div>
             <span class="kpi-label">{{ ui_text.analyses_in_system|default:"Análises no sistema" }}</span>
             <h3 class="mb-0 counter" data-target="{{ global_stats.total|default:0 }}">0</h3>
-            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-line"></i> {{ ui_text.total_accumulated|default:"Total acumulado" }}</div>
+            <div class="kpi-trend" style="color:#ff8a4d;"><i class="fas fa-chart-line"></i> {{ ui_text.total_accumulated|default:"Total acumulado" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-2">
@@ -103,7 +103,7 @@
             <div class="kpi-icon"><i class="fas fa-star-half-stroke"></i></div>
             <span class="kpi-label">{{ ui_text.average_score|default:"Score médio" }}</span>
             <h3 class="mb-0"><span class="counter-dec" data-target="{{ global_stats.avg_score|default:0 }}">0</span>/10</h3>
-            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-wave-square"></i> {{ ui_text.overall_index|default:"Índice geral" }}</div>
+            <div class="kpi-trend" style="color:#e0a845;"><i class="fas fa-wave-square"></i> {{ ui_text.overall_index|default:"Índice geral" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-3">
@@ -129,8 +129,8 @@
     <div class="col-lg-8 animate-fade-up animate-delay-2">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-industry me-2" style="color:#60a5fa;font-size:.85rem;"></i>{{ ui_text.comparison_by_sector|default:"Comparação por Sector" }}</h5>
-                <span class="badge" style="background:rgba(59,130,246,.15);color:#93c5fd;font-size:.72rem;">{{ ui_text.average_score_by_sector|default:"média por sector" }}</span>
+                <h5 class="mb-0"><i class="fas fa-industry me-2" style="color:#ff8a4d;font-size:.85rem;"></i>{{ ui_text.comparison_by_sector|default:"Comparação por Sector" }}</h5>
+                <span class="badge" style="background:rgba(245, 88, 13,.15);color:#ffc199;font-size:.72rem;">{{ ui_text.average_score_by_sector|default:"média por sector" }}</span>
             </div>
             <div class="card-body"><canvas id="sectorComparisonChart" height="95"></canvas></div>
         </div>
@@ -138,11 +138,11 @@
     <div class="col-lg-4 animate-fade-up animate-delay-3">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-bullseye me-2" style="color:#a78bfa;font-size:.85rem;"></i>{{ ui_text.your_benchmark|default:"Seu Benchmark" }}</h5>
+                <h5 class="mb-0"><i class="fas fa-bullseye me-2" style="color:#e0a845;font-size:.85rem;"></i>{{ ui_text.your_benchmark|default:"Seu Benchmark" }}</h5>
             </div>
             <div class="card-body">
                 {% if user_sector_comparison %}
-                <div class="mb-3 p-3 rounded" style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);">
+                <div class="mb-3 p-3 rounded" style="background:rgba(245, 88, 13,.07);border:1px solid rgba(245, 88, 13,.2);">
                     <div class="small" style="color:#94a3b8;">{{ ui_text.sector|default:"Sector" }}</div>
                     <div class="fw-semibold">{{ user_sector_comparison.industry_label }}</div>
                 </div>
@@ -151,14 +151,14 @@
                         <div class="small" style="color:#94a3b8;">{{ ui_text.your_score|default:"Seu Score" }}</div>
                         <div style="font-size:1.4rem;font-weight:800;color:#34d399;">{{ user_sector_comparison.latest_score }}</div>
                     </div>
-                    <div class="flex-1 text-center p-2 rounded" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);">
+                    <div class="flex-1 text-center p-2 rounded" style="background:rgba(245, 88, 13,.08);border:1px solid rgba(245, 88, 13,.2);">
                         <div class="small" style="color:#94a3b8;">{{ ui_text.sector_average|default:"Média Sector" }}</div>
-                        <div style="font-size:1.4rem;font-weight:800;color:#a78bfa;">{{ user_sector_comparison.sector_avg }}</div>
+                        <div style="font-size:1.4rem;font-weight:800;color:#e0a845;">{{ user_sector_comparison.sector_avg }}</div>
                     </div>
                 </div>
                 {% else %}
                 <div class="text-center py-4">
-                    <i class="fas fa-chart-pie" style="font-size:2rem;color:#1e2d4a;"></i>
+                    <i class="fas fa-chart-pie" style="font-size:2rem;color:#2a2c31;"></i>
                     <p class="small mt-2" style="color:#8b98ab;">{{ ui_text.no_benchmark_data|default:"Sem dados suficientes para benchmark." }}</p>
                     <a href="{% url 'pitch_form' %}" class="btn btn-sm btn-primary mt-1">
                         <i class="fas fa-plus me-1"></i>{{ ui_text.create_analysis|default:"Criar análise" }}
@@ -208,7 +208,7 @@
 {% if user.is_authenticated %}
 <div class="card mb-4 animate-fade-up animate-delay-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0"><i class="fas fa-clock-rotate-left me-2" style="color:#60a5fa;font-size:.85rem;"></i>{{ ui_text.recent_analyses|default:"Análises recentes" }}</h4>
+        <h4 class="mb-0"><i class="fas fa-clock-rotate-left me-2" style="color:#ff8a4d;font-size:.85rem;"></i>{{ ui_text.recent_analyses|default:"Análises recentes" }}</h4>
         <a href="{% url 'model_management' %}" class="btn btn-sm btn-outline-primary">
             <i class="fas fa-sliders me-1"></i>{{ ui_text.manage_models|default:"Modelos" }}
         </a>
@@ -253,7 +253,7 @@
         </div>
         {% else %}
         <div class="p-5 text-center">
-            <i class="fas fa-chart-bar" style="font-size:2.5rem;color:#1e2d4a;"></i>
+            <i class="fas fa-chart-bar" style="font-size:2.5rem;color:#2a2c31;"></i>
             <p class="mt-3 mb-3" style="color:#8b98ab;">{{ ui_text.no_analyses_yet|default:"Nenhuma análise encontrada até agora." }}</p>
             <a href="{% url 'pitch_form' %}" class="btn btn-primary">
                 <i class="fas fa-rocket me-2"></i>{{ ui_text.new_analysis|default:"Nova Análise" }}
@@ -264,7 +264,7 @@
 </div>
 {% else %}
 <div class="card p-5 text-center animate-fade-up">
-    <i class="fas fa-lock" style="font-size:2.5rem;color:#1e2d4a;margin-bottom:1rem;"></i>
+    <i class="fas fa-lock" style="font-size:2.5rem;color:#2a2c31;margin-bottom:1rem;"></i>
     <p class="mb-3">{{ ui_text.login_to_track|default:"Faça login para acompanhar análises, modelos e oportunidades." }}</p>
     <div class="d-flex gap-2 justify-content-center">
         <a href="{% url 'login' %}" class="btn btn-primary"><i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login|default:"Entrar" }}</a>
@@ -329,12 +329,12 @@ if (scoreTrendCtx) {
             datasets: [{
                 label: i18nScoreLabel,
                 data: scores,
-                borderColor: "#3b82f6",
-                backgroundColor: "rgba(59,130,246,0.12)",
+                borderColor: "#f5580d",
+                backgroundColor: "rgba(245, 88, 13,0.12)",
                 tension: 0.4,
                 fill: true,
                 pointRadius: 4,
-                pointBackgroundColor: "#3b82f6",
+                pointBackgroundColor: "#f5580d",
                 pointHoverRadius: 7
             }]
         },
@@ -367,7 +367,7 @@ if (momentumCtx) {
             labels,
             datasets: [
                 { type: "bar",  label: i18nRevenueLabel, data: revenues, yAxisID: "yRevenue", backgroundColor: "rgba(16,185,129,0.4)", borderColor: "#059669", borderWidth: 1, borderRadius: 4 },
-                { type: "line", label: i18nGrowthLabel, data: growth, yAxisID: "yGrowth", borderColor: "#8b5cf6", backgroundColor: "rgba(139,92,246,0.12)", tension: 0.4, pointRadius: 3 }
+                { type: "line", label: i18nGrowthLabel, data: growth, yAxisID: "yGrowth", borderColor: "#d4931f", backgroundColor: "rgba(212, 147, 31,0.12)", tension: 0.4, pointRadius: 3 }
             ]
         },
         options: {
@@ -392,8 +392,8 @@ if (sectorCtx) {
             datasets: [{
                 label: i18nAvgScoreLabel,
                 data: sectorAvg,
-                backgroundColor: "rgba(14,165,233,0.4)",
-                borderColor: "#0284c7",
+                backgroundColor: "rgba(245, 88, 13,0.4)",
+                borderColor: "#f5580d",
                 borderWidth: 1,
                 borderRadius: 5
             }]
