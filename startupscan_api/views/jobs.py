@@ -34,6 +34,56 @@ MODEL_TRAINING_TTL_SECONDS = 60 * 60 * 24
 VIDEO_GENERATION_CACHE_PREFIX = "explainer_video_job"
 VIDEO_GENERATION_TTL_SECONDS = 60 * 60 * 24
 
+# Video generation runs in a background thread with no request context, so
+# its phase/message strings can't read startupscan_api.i18n's ui_language
+# from the request. Only English and Portuguese are implemented; any other
+# selected language falls back to English (never Portuguese), matching the
+# same product decision applied to the pitch-deck generator.
+_VIDEO_JOB_STRINGS = {
+    "en": {
+        "phase_fila": "queued",
+        "phase_inicializacao": "initializing",
+        "phase_preparacao": "preparing",
+        "phase_renderizacao": "rendering",
+        "phase_persistencia": "saving",
+        "phase_concluido": "completed",
+        "phase_falha": "failed",
+        "msg_default_queued": "Waiting for video generation to start",
+        "msg_job_created": "Video job created, waiting to run",
+        "msg_initializing": "Initializing explainer video generation",
+        "msg_preparing": "Preparing visual and audio resources",
+        "msg_rendering_start": "Creating executive script and starting rendering",
+        "msg_processing_default": "Processing video...",
+        "msg_persisting": "Saving video to the analysis result",
+        "msg_completed": "Explainer video generated successfully",
+        "msg_failed": "Failed to generate video: {detail}",
+    },
+    "pt": {
+        "phase_fila": "fila",
+        "phase_inicializacao": "inicialização",
+        "phase_preparacao": "preparação",
+        "phase_renderizacao": "renderização",
+        "phase_persistencia": "persistência",
+        "phase_concluido": "concluído",
+        "phase_falha": "falha",
+        "msg_default_queued": "Aguardando início da geração de vídeo",
+        "msg_job_created": "Job de vídeo criado, aguardando execução",
+        "msg_initializing": "Inicializando geração do vídeo explicativo",
+        "msg_preparing": "Preparando recursos visuais e áudio",
+        "msg_rendering_start": "Criando roteiro executivo e iniciando renderização",
+        "msg_processing_default": "Processando vídeo...",
+        "msg_persisting": "Salvando vídeo no resultado da análise",
+        "msg_completed": "Vídeo explicativo gerado com sucesso",
+        "msg_failed": "Falha ao gerar vídeo: {detail}",
+    },
+}
+
+
+def _video_job_text(language: str, key: str, **kwargs) -> str:
+    strings = _VIDEO_JOB_STRINGS.get(language) or _VIDEO_JOB_STRINGS["en"]
+    template = strings.get(key) or _VIDEO_JOB_STRINGS["en"].get(key, key)
+    return template.format(**kwargs) if kwargs else template
+
 
 def _model_training_cache_key(job_id: str) -> str:
     return f"{MODEL_TRAINING_CACHE_PREFIX}:{job_id}"
@@ -57,14 +107,14 @@ def _write_model_training_state(job_id: str, **updates):
     return state
 
 
-def _write_video_generation_state(job_id: str, **updates):
+def _write_video_generation_state(job_id: str, *, language: str = "en", **updates):
     key = _video_generation_cache_key(job_id)
     state = cache.get(key) or {
         "job_id": job_id,
         "status": "PENDING",
         "progress": 0,
-        "phase": "fila",
-        "message": "Aguardando início da geração de vídeo",
+        "phase": _video_job_text(language, "phase_fila"),
+        "message": _video_job_text(language, "msg_default_queued"),
     }
     state.update(updates)
     state["updated_at"] = timezone.now().isoformat()
