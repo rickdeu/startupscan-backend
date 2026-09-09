@@ -1,0 +1,37 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Idea feedback{% endblock %}
+{% block header_title %}Idea public feedback{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Startup, user, comment...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:idea_feedback_create' %}"><i class="fas fa-plus"></i> New feedback</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>#</th><th>Idea</th><th>User</th><th>Stars</th><th>Endorsed</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for f in feedbacks %}
+        <tr>
+            <td>{{ f.id }}</td>
+            <td>{{ f.submission.startup_name }}</td>
+            <td>{{ f.user.username }}</td>
+            <td>{{ f.stars }} ★</td>
+            <td>{% if f.endorsed %}<span class="sa-badge sa-badge-success">Yes</span>{% else %}<span class="sa-badge sa-badge-muted">No</span>{% endif %}</td>
+            <td>{{ f.created_at|date:"d/m/Y" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:idea_feedback_detail' f.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:idea_feedback_edit' f.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:idea_feedback_delete' f.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="sa-empty">No feedback found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

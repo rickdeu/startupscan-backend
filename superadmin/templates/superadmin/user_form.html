@@ -1,0 +1,95 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}{% if creating %}New user{% else %}Edit user{% endif %}{% endblock %}
+{% block header_title %}{% if creating %}New user{% else %}Edit user — {{ target.username }}{% endif %}{% endblock %}
+{% block content %}
+
+{% if not creating %}
+<div class="sa-tabs">
+    <a href="#account" class="sa-tab active" data-tab="account">Account &amp; role</a>
+    <a href="#permissions" class="sa-tab" data-tab="permissions">Groups &amp; permissions</a>
+</div>
+{% endif %}
+
+<div id="tab-account" class="sa-card">
+    {% if form.non_field_errors %}<div class="sa-field-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="sa-form-grid">
+            <div class="sa-field">
+                <label>Username</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+            <div class="sa-field">
+                <label>Email</label>
+                {{ form.email }}
+            </div>
+            <div class="sa-field">
+                <label>First name</label>
+                {{ form.first_name }}
+            </div>
+            <div class="sa-field">
+                <label>Last name</label>
+                {{ form.last_name }}
+            </div>
+            <div class="sa-field">
+                <label>Access profile (app role)</label>
+                {{ form.role }}
+            </div>
+            <div class="sa-field">
+                <label>&nbsp;</label>
+                <label><input type="checkbox" class="sa-check" name="{{ form.is_active.html_name }}" {% if form.is_active.value %}checked{% endif %}> Active</label>
+                <label><input type="checkbox" class="sa-check" name="{{ form.is_staff.html_name }}" {% if form.is_staff.value %}checked{% endif %}> Staff</label>
+                <label><input type="checkbox" class="sa-check" name="{{ form.is_superuser.html_name }}" {% if form.is_superuser.value %}checked{% endif %}> Superadmin</label>
+            </div>
+            <div class="sa-field">
+                <label>New password</label>
+                {{ form.password1 }}
+                {{ form.password1.errors }}
+            </div>
+            <div class="sa-field">
+                <label>Confirm new password</label>
+                {{ form.password2 }}
+                {{ form.password2.errors }}
+            </div>
+        </div>
+        <div style="margin-top:18px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:user_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if not creating %}
+<div id="tab-permissions" class="sa-card" style="display:none;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="sa-grid sa-grid-2">
+            <div class="sa-field">
+                <label>{{ permissions_form.groups.label }}</label>
+                {{ permissions_form.groups }}
+            </div>
+            <div class="sa-field">
+                <label>{{ permissions_form.user_permissions.label }}</label>
+                {{ permissions_form.user_permissions }}
+            </div>
+        </div>
+        <div style="margin-top:18px;">
+            <button type="submit" name="save_permissions" value="1" class="sa-btn"><i class="fas fa-shield-halved"></i> Save permissions</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.sa-tab').forEach(function (tab) {
+    tab.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelectorAll('.sa-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-account').style.display = tab.dataset.tab === 'account' ? '' : 'none';
+        document.getElementById('tab-permissions').style.display = tab.dataset.tab === 'permissions' ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

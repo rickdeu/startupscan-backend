@@ -44,6 +44,8 @@ from .helpers import (
 from .jobs import _video_generation_cache_key
 from .mixins import RoleRequiredMixin
 from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -386,7 +388,7 @@ class PitchFormView(RoleRequiredMixin, View):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
-        return PitchAnalysis.objects.create(
+        analysis = PitchAnalysis.objects.create(
             user=request.user if request.user.is_authenticated else None,
             startup_name=startup_name or None,
             industry=industry,
@@ -403,6 +405,11 @@ class PitchFormView(RoleRequiredMixin, View):
             metadata=metadata,
             ip_address=ip,
         )
+        log_activity(
+            request, action=ActivityLog.ACTION_ANALYSIS_CREATED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
+        return analysis
 
     def _check_pitch_gates(self, request, *, model_source, has_audio, has_video, has_youtube):
         allowed, _ = check_limit_access(request.user, 'analyses_per_month', 'analyses_count')
@@ -489,6 +496,10 @@ class PitchResultsView(RoleRequiredMixin, View):
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        log_activity(
+            request, action=ActivityLog.ACTION_REPORT_VIEWED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
         user_role = get_user_role(request.user)
         interests_qs = InvestorConnectionInterest.objects.filter(analysis=analysis).select_related("investor", "entrepreneur")
 
@@ -595,6 +606,10 @@ class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
             include_business_canvas=include_canvas,
         )
 
+        log_activity(
+            request, action=ActivityLog.ACTION_REPORT_DOWNLOADED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
         return FileResponse(
             open(output_path, "rb"),
             as_attachment=True,
@@ -658,6 +673,10 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
 
+            log_activity(
+                request, action=ActivityLog.ACTION_PITCH_PDF_GENERATED,
+                target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+            )
             return FileResponse(
                 open(output_path, "rb"),
                 as_attachment=True,

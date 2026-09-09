@@ -1,0 +1,29 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Idea feedback{% endblock %}
+{% block header_title %}{% if object %}Edit feedback{% else %}New feedback{% endif %}{% endblock %}
+{% block content %}
+<div class="sa-card">
+    <form method="post" class="sa-simple-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="sa-detail-section-title" style="margin-top:0;">Basic information</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.submission %}
+            {% include "superadmin/_field.html" with field=form.user %}
+            {% include "superadmin/_field.html" with field=form.stars %}
+            {% include "superadmin/_field.html" with field=form.endorsed %}
+        </div>
+
+        <div class="sa-detail-section-title">Comment</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.comment extra_class="sa-field-full" %}
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:idea_feedback_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

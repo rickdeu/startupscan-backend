@@ -74,6 +74,14 @@
                 </div>
             </div>
 
+            {% if user.is_superuser %}
+            <a href="{% url 'superadmin:dashboard' %}" class="d-block mb-2 text-decoration-none">
+                <span class="badge w-100 py-1" style="background:rgba(245, 88, 13,0.2);color:#ffc199;border:1px solid rgba(245, 88, 13,0.3);">
+                    <i class="fas fa-user-shield me-1"></i>Super Admin
+                </span>
+            </a>
+            {% endif %}
+
             {% if user_plan_tier == 'trial' %}
             <a href="{% url 'subscription_plans' %}" class="d-block mb-2 text-decoration-none">
                 <span class="badge w-100 py-1" style="background:rgba(245,158,11,0.2);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);">

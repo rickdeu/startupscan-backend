@@ -1,0 +1,49 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Users{% endblock %}
+{% block header_title %}Users{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Search username, email, name...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:user_create' %}"><i class="fas fa-plus"></i> New user</a>
+</div>
+
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead>
+        <tr>
+            <th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Django access</th><th>Joined</th><th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.email|default:"—" }}</td>
+            <td>{{ u.profile.get_role_display|default:"—" }}</td>
+            <td>
+                {% if u.is_active %}<span class="sa-badge sa-badge-success">Active</span>
+                {% else %}<span class="sa-badge sa-badge-danger">Inactive</span>{% endif %}
+            </td>
+            <td>
+                {% if u.is_superuser %}<span class="sa-badge sa-badge-primary">Superadmin</span>{% endif %}
+                {% if u.is_staff and not u.is_superuser %}<span class="sa-badge sa-badge-muted">Staff</span>{% endif %}
+            </td>
+            <td>{{ u.date_joined|date:"d/m/Y" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:user_detail' u.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:user_edit' u.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:user_delete' u.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="sa-empty">No users found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

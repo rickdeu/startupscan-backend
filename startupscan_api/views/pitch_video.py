@@ -20,6 +20,8 @@ from .helpers import (
 from .jobs import _start_explainer_video_job, _video_generation_cache_key
 from .mixins import RoleRequiredMixin
 from subscriptions.mixins import SubscriptionGate
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +154,12 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
             metadata["explainer_video_gender_choice"] = presenter_gender_choice
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
+
+            log_activity(
+                request, action=ActivityLog.ACTION_VIDEO_GENERATED,
+                target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+                job_id=job_id, mode=video_mode,
+            )
 
             from django.contrib import messages
             messages.success(request, _ui_text_for_request(request).get(

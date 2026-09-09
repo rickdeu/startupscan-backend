@@ -1,0 +1,37 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Investor interests{% endblock %}
+{% block header_title %}Investor connection interests{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Startup, investor, entrepreneur...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:investor_interest_create' %}"><i class="fas fa-plus"></i> New interest</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>#</th><th>Startup</th><th>Investor</th><th>Entrepreneur</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+        {% for interest in interests %}
+        <tr>
+            <td>{{ interest.id }}</td>
+            <td>{{ interest.analysis.startup_name|default:"—" }}</td>
+            <td>{{ interest.investor.username }}</td>
+            <td>{{ interest.entrepreneur.username|default:"—" }}</td>
+            <td><span class="sa-badge sa-badge-primary">{{ interest.get_status_display }}</span></td>
+            <td>{{ interest.updated_at|date:"d/m/Y" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:investor_interest_detail' interest.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:investor_interest_edit' interest.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:investor_interest_delete' interest.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="sa-empty">No connection interests found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

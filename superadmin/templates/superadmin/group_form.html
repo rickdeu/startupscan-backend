@@ -1,0 +1,22 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Group{% endblock %}
+{% block header_title %}{% if object %}Edit group{% else %}New group{% endif %}{% endblock %}
+{% block content %}
+<div class="sa-card">
+    <form method="post">
+        {% csrf_token %}
+        <div class="sa-field sa-field-full" style="margin-bottom:14px;">
+            <label>Name</label>
+            {{ form.name }}
+        </div>
+        <div class="sa-field">
+            <label>Permissions</label>
+            {{ form.permissions }}
+        </div>
+        <div style="margin-top:18px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:group_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

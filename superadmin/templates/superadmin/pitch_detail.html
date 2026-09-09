@@ -1,0 +1,48 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Pitch analysis #{{ analysis.id }}{% endblock %}
+{% block header_title %}Pitch analysis #{{ analysis.id }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:pitch_edit' analysis.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:pitch_delete' analysis.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:pitch_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Startup</div><div class="sa-detail-value">{{ analysis.startup_name|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">User</div><div class="sa-detail-value">{{ analysis.user.username|default:"Anonymous" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Status</div><div class="sa-detail-value">{{ analysis.get_status_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Industry</div><div class="sa-detail-value">{{ analysis.get_industry_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Contact email</div><div class="sa-detail-value">{{ analysis.contact_email|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Created / updated</div><div class="sa-detail-value">{{ analysis.created_at|date:"d/m/Y H:i" }} / {{ analysis.updated_at|date:"d/m/Y H:i" }}</div></div>
+
+        <div class="sa-detail-row"><div class="sa-detail-label">Success score</div><div class="sa-detail-value">{{ analysis.success_score|default:"—" }} / 10</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Confidence</div><div class="sa-detail-value">{{ analysis.confidence|default:"—" }}%</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Revenue</div><div class="sa-detail-value">€{{ analysis.revenue }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Growth rate</div><div class="sa-detail-value">{{ analysis.growth_rate }}%</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Profit margin</div><div class="sa-detail-value">{{ analysis.profit_margin }}%</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Burn rate</div><div class="sa-detail-value">{{ analysis.burn_rate|default:"—" }}</div></div>
+
+        <div class="sa-detail-row"><div class="sa-detail-label">Processing time</div><div class="sa-detail-value">{{ analysis.processing_time|default:"—" }}s</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Model version</div><div class="sa-detail-value">{{ analysis.model_version|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">IP address</div><div class="sa-detail-value">{{ analysis.ip_address|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Files</div><div class="sa-detail-value">
+            {% if analysis.audio_file %}<a href="{{ analysis.audio_file.url }}" target="_blank">Audio</a>{% endif %}
+            {% if analysis.video_file %}<a href="{{ analysis.video_file.url }}" target="_blank">Video</a>{% endif %}
+            {% if analysis.explainer_video_file %}<a href="{{ analysis.explainer_video_file.url }}" target="_blank">Explainer video</a>{% endif %}
+            {% if analysis.document_file %}<a href="{{ analysis.document_file.url }}" target="_blank">Document</a>{% endif %}
+            {% if not analysis.audio_file and not analysis.video_file and not analysis.explainer_video_file and not analysis.document_file %}—{% endif %}
+        </div></div>
+    </div>
+
+    <div class="sa-detail-section-title">Pitch text</div>
+    <div class="sa-detail-value"><pre>{{ analysis.text }}</pre></div>
+
+    <div class="sa-detail-section-title">Full report (JSON)</div>
+    <div class="sa-detail-value"><pre>{{ analysis.report|pprint }}</pre></div>
+
+    <div class="sa-detail-section-title">Technical metadata (JSON)</div>
+    <div class="sa-detail-value"><pre>{{ analysis.metadata|pprint }}</pre></div>
+</div>
+{% endblock %}

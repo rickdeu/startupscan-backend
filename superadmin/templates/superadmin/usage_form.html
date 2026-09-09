@@ -1,0 +1,30 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Monthly usage{% endblock %}
+{% block header_title %}{% if object %}Edit usage record{% else %}New usage record{% endif %}{% endblock %}
+{% block content %}
+<div class="sa-card">
+    <form method="post" class="sa-simple-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="sa-detail-section-title" style="margin-top:0;">Period</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.user %}
+            {% include "superadmin/_field.html" with field=form.year %}
+            {% include "superadmin/_field.html" with field=form.month %}
+        </div>
+
+        <div class="sa-detail-section-title">Counters</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.analyses_count %}
+            {% include "superadmin/_field.html" with field=form.videos_count %}
+            {% include "superadmin/_field.html" with field=form.investor_interests_count %}
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:usage_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
