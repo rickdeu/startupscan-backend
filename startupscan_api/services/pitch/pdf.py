@@ -17,11 +17,32 @@ if os.path.exists(LOGO_PATH):
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from .design import _build_pitch_design_profile, _mix_colors, _palette_for_slide, _with_alpha
 from .enricher import _safe_str, _truncate_text, _wrap_text_lines
+
+
+# DejaVu Sans ships inside matplotlib (a pinned dependency), so it's always
+# available without bundling extra font assets. Unlike the base-14 Helvetica
+# this used to draw with, it covers Cyrillic — Helvetica has none, so every
+# Russian-language deck was silently rendering with invisible body text.
+def _register_deck_fonts():
+    try:
+        import matplotlib
+
+        base = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
+        pdfmetrics.registerFont(TTFont("DejaVuSans", os.path.join(base, "DejaVuSans.ttf")))
+        pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", os.path.join(base, "DejaVuSans-Bold.ttf")))
+        return "DejaVuSans", "DejaVuSans-Bold"
+    except Exception:
+        return "Helvetica", "Helvetica-Bold"
+
+
+F_REG, F_BOLD = _register_deck_fonts()
 
 # ─────────────────────────────────────────────────────────────
 #  Static chrome copy (labels, defaults, slide titles) per UI language.
@@ -387,7 +408,7 @@ def _draw_top_band(pdf: canvas.Canvas, width: float, height: float,
     # Label text inside band
     if label:
         pdf.setFillColor(colors.white)
-        pdf.setFont("Helvetica-Bold", 11)
+        pdf.setFont(F_BOLD, 11)
         pdf.drawString(20, height - band_h + 20, label.upper())
 
 
@@ -395,8 +416,8 @@ def _draw_slide_number_watermark(pdf: canvas.Canvas, width: float, height: float
                                   number: int, palette: dict) -> None:
     txt = str(number).zfill(2)
     pdf.setFillColor(_with_alpha(palette["shape2"], 0.55))
-    pdf.setFont("Helvetica-Bold", 120)
-    tw = stringWidth(txt, "Helvetica-Bold", 120)
+    pdf.setFont(F_BOLD, 120)
+    tw = stringWidth(txt, F_BOLD, 120)
     pdf.drawString(width - tw - 22, 14, txt)
 
 
@@ -432,11 +453,11 @@ def _draw_footer_bar(pdf: canvas.Canvas, width: float, page: int, total: int,
     pdf.line(0, bar_h, width, bar_h)
 
     pdf.setFillColor(_with_alpha(palette["muted"], 0.7))
-    pdf.setFont("Helvetica", 7.5)
+    pdf.setFont(F_REG, 7.5)
     engine_label = t.get("engine_label", "Engine")
     pdf.drawString(20, 9, f"StartupScan · {engine_label}: {engine} · ID: {key or '—'}")
     slide_txt = f"{page} / {total}"
-    tw = stringWidth(slide_txt, "Helvetica", 7.5)
+    tw = stringWidth(slide_txt, F_REG, 7.5)
     pdf.drawString(width - tw - 20, 9, slide_txt)
 
 
@@ -453,7 +474,7 @@ def _draw_single_bullet(pdf: canvas.Canvas, text: str, x: float, y: float,
     pdf.setFillColor(palette["accent"])
     pdf.circle(x + dot_r, y + font_size * 0.38, dot_r, stroke=0, fill=1)
     pdf.setFillColor(palette["text"])
-    pdf.setFont("Helvetica", font_size)
+    pdf.setFont(F_REG, font_size)
     for i, line in enumerate(wrapped):
         pdf.drawString(text_x, y - i * (font_size + 2), line)
     return y - len(wrapped) * (font_size + 2) - 7
@@ -504,10 +525,10 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.setLineWidth(2)
     pdf.circle(badge_cx, badge_cy, 52, stroke=1, fill=0)
     pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 28)
-    tw = stringWidth(initials, "Helvetica-Bold", 28)
+    pdf.setFont(F_BOLD, 28)
+    tw = stringWidth(initials, F_BOLD, 28)
     pdf.drawString(badge_cx - tw / 2, badge_cy - 10, initials)
-    pdf.setFont("Helvetica", 7.5)
+    pdf.setFont(F_REG, 7.5)
     pdf.setFillColor(_with_alpha(colors.white, 0.6))
     pdf.drawCentredString(badge_cx, badge_cy - 24, "PITCH DECK")
 
@@ -518,7 +539,7 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
         if title.startswith(prefix):
             title = title[len(prefix):]
     pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 40)
+    pdf.setFont(F_BOLD, 40)
     title_y = height - 110
     for line in _wrap_text_lines(title, max_chars=28)[:2]:
         pdf.drawString(28, title_y, line)
@@ -532,7 +553,7 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     # ── Tagline / slogan ──
     slogan = _safe_str((slide.get("bullets") or [""])[0], "")
     pdf.setFillColor(palette["muted"])
-    pdf.setFont("Helvetica", 14)
+    pdf.setFont(F_REG, 14)
     for line in _wrap_text_lines(_truncate_text(slogan, 160), max_chars=62)[:3]:
         pdf.drawString(28, title_y, line)
         title_y -= 20
@@ -550,11 +571,11 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.setFillColor(palette["tag_bg"])
     pdf.roundRect(card_x + 14, card_y + card_h - 28, tag_w, 22, 5, stroke=0, fill=1)
     pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 8.5)
+    pdf.setFont(F_BOLD, 8.5)
     pdf.drawString(card_x + 22, card_y + card_h - 18, t.get("exec_confidential_tag", "EXECUTIVE PITCH DECK  ·  CONFIDENTIAL"))
 
     # Metadata lines
-    pdf.setFont("Helvetica", 10)
+    pdf.setFont(F_REG, 10)
     pdf.setFillColor(palette["muted"])
     meta_y = card_y + card_h - 52
     pdf.drawString(card_x + 14, meta_y, f"Startup:  {startup_name}")
@@ -591,7 +612,7 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
 
     title = _safe_str(slide.get("title"), t.get("investment_default_title", "Fundraising"))
     pdf.setFillColor(palette["text"])
-    pdf.setFont("Helvetica-Bold", 26)
+    pdf.setFont(F_BOLD, 26)
     pdf.drawString(22, height - 82, title)
     pdf.setFillColor(palette["accent"])
     pdf.rect(22, height - 90, min(120, len(title) * 8), 3, stroke=0, fill=1)
@@ -622,10 +643,10 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
         pdf.setFillColor(palette["band"])
         pdf.roundRect(kx, kpi_y + kpi_h - 28, kpi_w, 28, 10, stroke=0, fill=1)
         pdf.setFillColor(colors.white)
-        pdf.setFont("Helvetica-Bold", 9)
+        pdf.setFont(F_BOLD, 9)
         pdf.drawCentredString(kx + kpi_w / 2, kpi_y + kpi_h - 12, label)
         pdf.setFillColor(palette["text"])
-        pdf.setFont("Helvetica", 9.5)
+        pdf.setFont(F_REG, 9.5)
         for j, vline in enumerate(_wrap_text_lines(_truncate_text(value, 90), max_chars=int(kpi_w / 6))[:2]):
             pdf.drawCentredString(kx + kpi_w / 2, kpi_y + kpi_h - 46 - j * 13, vline)
 
@@ -663,7 +684,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
 
     # Title
     pdf.setFillColor(palette["text"])
-    pdf.setFont("Helvetica-Bold", 28)
+    pdf.setFont(F_BOLD, 28)
     title_y = height - 82
     for line in _wrap_text_lines(title, max_chars=44)[:1]:
         pdf.drawString(22, title_y, line)
@@ -693,7 +714,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
 
         # Column headers
         pdf.setFillColor(palette["accent"])
-        pdf.setFont("Helvetica-Bold", 9.5)
+        pdf.setFont(F_BOLD, 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("col_theses", "KEY THESES"))
         pdf.drawString(divider_x + 14, card_y + card_h - 26, t.get("col_execution_notes", "EXECUTION NOTES"))
 
@@ -726,7 +747,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
         pdf.line(line_x, bot_y, line_x, top_y)
 
         pdf.setFillColor(palette["accent"])
-        pdf.setFont("Helvetica-Bold", 9.5)
+        pdf.setFont(F_BOLD, 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 28, t.get("narrative_flow", "NARRATIVE FLOW"))
 
         step_y = top_y - 10
@@ -737,11 +758,11 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
             pdf.setFillColor(palette["band"])
             pdf.circle(line_x, step_y + 5, 9, stroke=0, fill=1)
             pdf.setFillColor(colors.white)
-            pdf.setFont("Helvetica-Bold", 7.5)
+            pdf.setFont(F_BOLD, 7.5)
             pdf.drawCentredString(line_x, step_y + 2, str(idx))
             # Text
             pdf.setFillColor(palette["text"])
-            pdf.setFont("Helvetica", 10)
+            pdf.setFont(F_REG, 10)
             txt = _truncate_text(_safe_str(raw, ""), 170)
             for i, line in enumerate(_wrap_text_lines(txt, max_chars=55)[:2]):
                 pdf.drawString(line_x + 18, step_y - i * 13, line)
@@ -749,7 +770,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
 
     else:  # focus (default)
         pdf.setFillColor(palette["accent"])
-        pdf.setFont("Helvetica-Bold", 9.5)
+        pdf.setFont(F_BOLD, 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("key_points", "KEY POINTS"))
 
         body_y = card_y + card_h - 48
