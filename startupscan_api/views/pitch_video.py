@@ -136,6 +136,7 @@ class PitchExplainerVideoGenerateView(SubscriptionGate, RoleRequiredMixin, View)
                 presenter_source_urls=presenter_source_urls,
                 presenter_gender_choice=presenter_gender_choice,
                 generation_mode=video_mode,
+                language=normalize_ui_language(getattr(request, "ui_language", None)),
             )
 
             if request.user.is_authenticated and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
