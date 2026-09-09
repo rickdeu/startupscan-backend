@@ -1,5 +1,5 @@
-import hashlib
 import os
+import re
 from datetime import datetime
 
 LOGO_PATH = os.path.join(
@@ -18,6 +18,7 @@ if os.path.exists(LOGO_PATH):
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -30,6 +31,12 @@ from .enricher import _safe_str, _truncate_text, _wrap_text_lines
 # available without bundling extra font assets. Unlike the base-14 Helvetica
 # this used to draw with, it covers Cyrillic — Helvetica has none, so every
 # Russian-language deck was silently rendering with invisible body text.
+#
+# Simplified Chinese needs a different fix: no TrueType font bundled with
+# this project (DejaVu included) carries Han glyphs, so zh-hans decks were
+# *also* rendering blank. ReportLab ships a built-in, non-embedded reference
+# to the standard Adobe "STSong-Light" CJK font instead — every PDF viewer
+# has a substitute for it, so no font file needs bundling for this either.
 def _register_deck_fonts():
     try:
         import matplotlib
@@ -37,12 +44,26 @@ def _register_deck_fonts():
         base = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
         pdfmetrics.registerFont(TTFont("DejaVuSans", os.path.join(base, "DejaVuSans.ttf")))
         pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", os.path.join(base, "DejaVuSans-Bold.ttf")))
-        return "DejaVuSans", "DejaVuSans-Bold"
+        reg, bold = "DejaVuSans", "DejaVuSans-Bold"
     except Exception:
-        return "Helvetica", "Helvetica-Bold"
+        reg, bold = "Helvetica", "Helvetica-Bold"
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+    except Exception:
+        pass
+    return reg, bold
 
 
 F_REG, F_BOLD = _register_deck_fonts()
+_CJK_FONT = "STSong-Light"
+
+
+def _font_for(language: str, bold: bool = False) -> str:
+    """STSong-Light has no distinct bold weight; every other language uses DejaVu Sans."""
+    if (language or "").strip().lower() == "zh-hans":
+        return _CJK_FONT
+    return F_BOLD if bold else F_REG
+
 
 # ─────────────────────────────────────────────────────────────
 #  Static chrome copy (labels, defaults, slide titles) per UI language.
@@ -75,6 +96,7 @@ _DECK_STRINGS = {
         "closing_default": "Obrigado. Estamos prontos para os próximos passos da captação.",
         "closing_title": "Conclusão",
         "closing_subtitle": "Mensagem final ao investidor",
+        "closing_cta": "Vamos conversar",
         "deck_default_title": "Pitch de Negocio",
         "deck_default_slogan": "Proposta de valor em evolucao.",
         "context_label": "Contexto",
@@ -88,6 +110,7 @@ _DECK_STRINGS = {
         "kpi_goal": "META",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ALOCAÇÃO",
+        "allocation_chart_title": "USO DO CAPITAL",
     },
     "en": {
         "cover_subtitle_default": "Executive presentation for investors",
@@ -109,6 +132,7 @@ _DECK_STRINGS = {
         "closing_default": "Thank you. We are ready for the next steps of the fundraising process.",
         "closing_title": "Conclusion",
         "closing_subtitle": "Final message to the investor",
+        "closing_cta": "Let's talk",
         "deck_default_title": "Business Pitch",
         "deck_default_slogan": "An evolving value proposition.",
         "context_label": "Context",
@@ -122,6 +146,7 @@ _DECK_STRINGS = {
         "kpi_goal": "GOAL",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ALLOCATION",
+        "allocation_chart_title": "USE OF CAPITAL",
     },
     "ru": {
         "cover_subtitle_default": "Презентация для инвесторов",
@@ -143,6 +168,7 @@ _DECK_STRINGS = {
         "closing_default": "Спасибо. Мы готовы к следующим шагам привлечения инвестиций.",
         "closing_title": "Заключение",
         "closing_subtitle": "Заключительное сообщение инвестору",
+        "closing_cta": "Давайте поговорим",
         "deck_default_title": "Бизнес-питч",
         "deck_default_slogan": "Развивающееся ценностное предложение.",
         "context_label": "Контекст",
@@ -156,6 +182,7 @@ _DECK_STRINGS = {
         "kpi_goal": "ЦЕЛЬ",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "РАСПРЕДЕЛЕНИЕ",
+        "allocation_chart_title": "ИСПОЛЬЗОВАНИЕ КАПИТАЛА",
     },
     "de": {
         "cover_subtitle_default": "Investorenpräsentation",
@@ -177,6 +204,7 @@ _DECK_STRINGS = {
         "closing_default": "Vielen Dank. Wir sind bereit für die nächsten Schritte der Finanzierungsrunde.",
         "closing_title": "Fazit",
         "closing_subtitle": "Abschließende Botschaft an den Investor",
+        "closing_cta": "Lassen Sie uns sprechen",
         "deck_default_title": "Business Pitch",
         "deck_default_slogan": "Ein sich entwickelndes Wertversprechen.",
         "context_label": "Kontext",
@@ -190,6 +218,7 @@ _DECK_STRINGS = {
         "kpi_goal": "ZIEL",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ALLOKATION",
+        "allocation_chart_title": "MITTELVERWENDUNG",
     },
     "es": {
         "cover_subtitle_default": "Presentación ejecutiva para inversores",
@@ -211,6 +240,7 @@ _DECK_STRINGS = {
         "closing_default": "Gracias. Estamos listos para los próximos pasos de la captación.",
         "closing_title": "Conclusión",
         "closing_subtitle": "Mensaje final al inversor",
+        "closing_cta": "Hablemos",
         "deck_default_title": "Pitch de Negocio",
         "deck_default_slogan": "Una propuesta de valor en evolución.",
         "context_label": "Contexto",
@@ -224,6 +254,7 @@ _DECK_STRINGS = {
         "kpi_goal": "META",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ASIGNACIÓN",
+        "allocation_chart_title": "USO DEL CAPITAL",
     },
     "zh-hans": {
         "cover_subtitle_default": "面向投资者的高管演示",
@@ -245,6 +276,7 @@ _DECK_STRINGS = {
         "closing_default": "谢谢。我们已准备好进入融资的下一步。",
         "closing_title": "结语",
         "closing_subtitle": "致投资者的结束语",
+        "closing_cta": "期待与您交流",
         "deck_default_title": "商业路演",
         "deck_default_slogan": "不断演进的价值主张。",
         "context_label": "背景",
@@ -258,6 +290,7 @@ _DECK_STRINGS = {
         "kpi_goal": "目标",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "分配",
+        "allocation_chart_title": "资金使用情况",
     },
     "umb": {
         "cover_subtitle_default": "Apresentação yokolele ku investidores",
@@ -279,6 +312,7 @@ _DECK_STRINGS = {
         "closing_default": "Tuasakidila. Twapongoluka oku olondaka yokukuavo yokuandiwa.",
         "closing_title": "Esukilo",
         "closing_subtitle": "Esapo lyokusukila ku investidor",
+        "closing_cta": "Tuvangule",
         "deck_default_title": "Pitch Yombiliko",
         "deck_default_slogan": "Etyulo lyoku eyi lyina lyalinga oku kula.",
         "context_label": "Contexto",
@@ -292,6 +326,7 @@ _DECK_STRINGS = {
         "kpi_goal": "OMBILIKO",
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "OKUAVELA",
+        "allocation_chart_title": "OKUAVELA KWA KAPITAL",
     },
 }
 
@@ -398,7 +433,7 @@ def _draw_left_stripe(pdf: canvas.Canvas, height: float, palette: dict) -> None:
 
 
 def _draw_top_band(pdf: canvas.Canvas, width: float, height: float,
-                   palette: dict, label: str) -> None:
+                   palette: dict, label: str, language: str = _DEFAULT_LANGUAGE) -> None:
     band_h = 54
     pdf.setFillColor(palette["band"])
     pdf.rect(0, height - band_h, width, band_h, stroke=0, fill=1)
@@ -408,16 +443,17 @@ def _draw_top_band(pdf: canvas.Canvas, width: float, height: float,
     # Label text inside band
     if label:
         pdf.setFillColor(colors.white)
-        pdf.setFont(F_BOLD, 11)
+        pdf.setFont(_font_for(language, True), 11)
         pdf.drawString(20, height - band_h + 20, label.upper())
 
 
 def _draw_slide_number_watermark(pdf: canvas.Canvas, width: float, height: float,
-                                  number: int, palette: dict) -> None:
+                                  number: int, palette: dict, language: str = _DEFAULT_LANGUAGE) -> None:
     txt = str(number).zfill(2)
+    font = _font_for(language, True)
     pdf.setFillColor(_with_alpha(palette["shape2"], 0.55))
-    pdf.setFont(F_BOLD, 120)
-    tw = stringWidth(txt, F_BOLD, 120)
+    pdf.setFont(font, 120)
+    tw = stringWidth(txt, font, 120)
     pdf.drawString(width - tw - 22, 14, txt)
 
 
@@ -452,32 +488,104 @@ def _draw_footer_bar(pdf: canvas.Canvas, width: float, page: int, total: int,
     pdf.setLineWidth(0.5)
     pdf.line(0, bar_h, width, bar_h)
 
+    font = _font_for(language)
     pdf.setFillColor(_with_alpha(palette["muted"], 0.7))
-    pdf.setFont(F_REG, 7.5)
+    pdf.setFont(font, 7.5)
     engine_label = t.get("engine_label", "Engine")
     pdf.drawString(20, 9, f"StartupScan · {engine_label}: {engine} · ID: {key or '—'}")
     slide_txt = f"{page} / {total}"
-    tw = stringWidth(slide_txt, F_REG, 7.5)
+    tw = stringWidth(slide_txt, font, 7.5)
     pdf.drawString(width - tw - 20, 9, slide_txt)
 
 
 def _draw_single_bullet(pdf: canvas.Canvas, text: str, x: float, y: float,
-                         max_width: float, palette: dict, font_size: float = 10.5) -> float:
-    """Draw one bullet item. Returns new y position after drawing."""
-    dot_r = 2.6
-    text_x = x + dot_r * 2 + 7
+                         max_width: float, palette: dict, font_size: float = 10.5,
+                         language: str = _DEFAULT_LANGUAGE, index: int | None = None) -> float:
+    """Draw one bullet item (numbered circle when `index` is given, plain dot otherwise). Returns new y."""
+    marker_r = 8.0 if index is not None else 2.6
+    text_x = x + marker_r * 2 + (10 if index is not None else 7)
     max_chars = max(20, int(max_width / (font_size * 0.58)))
     wrapped = _wrap_text_lines(_truncate_text(_safe_str(text, ""), 220), max_chars=max_chars)[:3]
     if not wrapped:
         return y
 
-    pdf.setFillColor(palette["accent"])
-    pdf.circle(x + dot_r, y + font_size * 0.38, dot_r, stroke=0, fill=1)
+    marker_cy = y + font_size * 0.38
+    if index is not None:
+        pdf.setFillColor(palette["band"])
+        pdf.circle(x + marker_r, marker_cy, marker_r, stroke=0, fill=1)
+        pdf.setFillColor(colors.white)
+        pdf.setFont(_font_for(language, True), 7.5)
+        pdf.drawCentredString(x + marker_r, marker_cy - 2.6, str(index))
+    else:
+        pdf.setFillColor(palette["accent"])
+        pdf.circle(x + marker_r, marker_cy, marker_r, stroke=0, fill=1)
+
     pdf.setFillColor(palette["text"])
-    pdf.setFont(F_REG, font_size)
+    pdf.setFont(_font_for(language), font_size)
     for i, line in enumerate(wrapped):
         pdf.drawString(text_x, y - i * (font_size + 2), line)
     return y - len(wrapped) * (font_size + 2) - 7
+
+
+_ALLOCATION_RE = re.compile(r"(\d{1,3}(?:[.,]\d+)?)\s*%\s*([^,;.]+)")
+
+
+def _parse_allocation(text: str) -> list[tuple[float, str]]:
+    """Best-effort split of a free-text allocation summary ('60% tech, 25% marketing...')
+    into (percent, label) pairs, for a visual breakdown bar. Language-agnostic: it only
+    looks for a number followed by '%', so it works the same across all 7 UI languages."""
+    items = []
+    for m in _ALLOCATION_RE.finditer(text or ""):
+        try:
+            pct = float(m.group(1).replace(",", "."))
+        except ValueError:
+            continue
+        label = m.group(2).strip(" -–—:")
+        if pct > 0 and label:
+            items.append((pct, label))
+    return items[:5]
+
+
+def _draw_allocation_bar(pdf: canvas.Canvas, x: float, y: float, width_box: float,
+                          items: list[tuple[float, str]], palette: dict, language: str) -> float:
+    """Draws a stacked horizontal capital-allocation bar with a legend below it.
+    Returns the y coordinate right below the legend, for the caller to keep drawing from."""
+    bar_h = 20
+    total = sum(p for p, _ in items) or 1.0
+    swatches = [
+        palette["band"],
+        palette["accent"],
+        _mix_colors(palette["band"], palette["muted"], 0.5),
+        _with_alpha(palette["accent"], 0.55),
+        palette["muted"],
+    ]
+
+    pdf.setFillColor(_with_alpha(palette["muted"], 0.18))
+    pdf.roundRect(x, y, width_box, bar_h, bar_h / 2, stroke=0, fill=1)
+    cx = x
+    for i, (pct, _label) in enumerate(items):
+        seg_w = width_box * (pct / total)
+        pdf.setFillColor(swatches[i % len(swatches)])
+        pdf.rect(cx, y, max(1.0, seg_w), bar_h, stroke=0, fill=1)
+        cx += seg_w
+
+    font = _font_for(language)
+    legend_y = y - 17
+    lx = x
+    row_start_x = x
+    pdf.setFont(font, 7.6)
+    for i, (pct, label) in enumerate(items):
+        txt = f"{pct:.0f}% {_truncate_text(label, 24)}"
+        seg_w = 12 + stringWidth(txt, font, 7.6) + 20
+        if lx + seg_w > x + width_box and lx > row_start_x:
+            lx = x
+            legend_y -= 15
+        pdf.setFillColor(swatches[i % len(swatches)])
+        pdf.rect(lx, legend_y + 1, 8, 8, stroke=0, fill=1)
+        pdf.setFillColor(palette["muted"])
+        pdf.drawString(lx + 12, legend_y, txt)
+        lx += seg_w
+    return legend_y - 14
 
 
 # ─────────────────────────────────────────────────────────────
@@ -525,10 +633,10 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.setLineWidth(2)
     pdf.circle(badge_cx, badge_cy, 52, stroke=1, fill=0)
     pdf.setFillColor(colors.white)
-    pdf.setFont(F_BOLD, 28)
-    tw = stringWidth(initials, F_BOLD, 28)
+    pdf.setFont(_font_for(language, True), 28)
+    tw = stringWidth(initials, _font_for(language, True), 28)
     pdf.drawString(badge_cx - tw / 2, badge_cy - 10, initials)
-    pdf.setFont(F_REG, 7.5)
+    pdf.setFont(_font_for(language), 7.5)
     pdf.setFillColor(_with_alpha(colors.white, 0.6))
     pdf.drawCentredString(badge_cx, badge_cy - 24, "PITCH DECK")
 
@@ -539,7 +647,7 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
         if title.startswith(prefix):
             title = title[len(prefix):]
     pdf.setFillColor(colors.white)
-    pdf.setFont(F_BOLD, 40)
+    pdf.setFont(_font_for(language, True), 40)
     title_y = height - 110
     for line in _wrap_text_lines(title, max_chars=28)[:2]:
         pdf.drawString(28, title_y, line)
@@ -553,13 +661,54 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     # ── Tagline / slogan ──
     slogan = _safe_str((slide.get("bullets") or [""])[0], "")
     pdf.setFillColor(palette["muted"])
-    pdf.setFont(F_REG, 14)
+    pdf.setFont(_font_for(language), 14)
     for line in _wrap_text_lines(_truncate_text(slogan, 160), max_chars=62)[:3]:
         pdf.drawString(28, title_y, line)
         title_y -= 20
 
     # ── Info card (lower section) ──
     card_x, card_y, card_w, card_h = 28, 46, width * 0.58, 112
+
+    # ── Funding snapshot chips: fills the gap between the tagline and the
+    # info card with a preview of the ask, using whatever room the (variable
+    # length) tagline left behind. Skipped gracefully if there isn't enough
+    # vertical room, or if the deck has no investment data yet. ──
+    investment = slide.get("investment") or {}
+    stat_chips = []
+    funding = _safe_str(investment.get("funding_goal"), "")
+    runway = _safe_str(investment.get("runway_months"), "") or _safe_str(investment.get("key_milestones"), "")
+    if funding:
+        stat_chips.append((t.get("kpi_goal", "GOAL"), funding))
+    if runway:
+        stat_chips.append((t.get("kpi_runway", "RUNWAY"), runway))
+
+    card_top = card_y + card_h
+    strip_top = title_y - 6
+    if stat_chips and strip_top - card_top > 40:
+        strip_h = min(46, strip_top - card_top - 8)
+        strip_y = card_top + 8
+        n = len(stat_chips)
+        gap = 8
+        chip_w = (card_w - gap * (n - 1)) / n
+        for i, (label, value) in enumerate(stat_chips):
+            cx0 = card_x + i * (chip_w + gap)
+            pdf.setFillColor(_with_alpha(palette["card"], 0.6))
+            pdf.roundRect(cx0, strip_y, chip_w, strip_h, 8, stroke=0, fill=1)
+            pdf.setStrokeColor(_with_alpha(palette["accent"], 0.35))
+            pdf.setLineWidth(0.8)
+            pdf.roundRect(cx0, strip_y, chip_w, strip_h, 8, stroke=1, fill=0)
+            pdf.setFillColor(palette["accent"])
+            pdf.setFont(_font_for(language, True), 7.5)
+            pdf.drawString(cx0 + 10, strip_y + strip_h - 16, label)
+            pdf.setFillColor(colors.white)
+            value_font = 9.5 if strip_h >= 40 else 10.5
+            pdf.setFont(_font_for(language), value_font)
+            max_lines = 2 if strip_h >= 40 else 1
+            val_lines = _wrap_text_lines(_truncate_text(value, 90), max_chars=max(10, int(chip_w / 4.6)))[:max_lines]
+            base_y = strip_y + strip_h - 30
+            for li, vline in enumerate(val_lines):
+                pdf.drawString(cx0 + 10, base_y - li * (value_font + 2), vline)
+
     pdf.setFillColor(_with_alpha(palette["card"], 0.9))
     pdf.roundRect(card_x, card_y, card_w, card_h, 12, stroke=0, fill=1)
     pdf.setStrokeColor(_with_alpha(palette["band"], 0.5))
@@ -571,11 +720,11 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.setFillColor(palette["tag_bg"])
     pdf.roundRect(card_x + 14, card_y + card_h - 28, tag_w, 22, 5, stroke=0, fill=1)
     pdf.setFillColor(colors.white)
-    pdf.setFont(F_BOLD, 8.5)
+    pdf.setFont(_font_for(language, True), 8.5)
     pdf.drawString(card_x + 22, card_y + card_h - 18, t.get("exec_confidential_tag", "EXECUTIVE PITCH DECK  ·  CONFIDENTIAL"))
 
     # Metadata lines
-    pdf.setFont(F_REG, 10)
+    pdf.setFont(_font_for(language), 10)
     pdf.setFillColor(palette["muted"])
     meta_y = card_y + card_h - 52
     pdf.drawString(card_x + 14, meta_y, f"Startup:  {startup_name}")
@@ -607,12 +756,12 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
     _draw_template_bg(pdf, width, height, palette, template, seed)
     _draw_left_stripe(pdf, height, palette)
     _draw_top_band(pdf, width, height, palette,
-                    slide.get("subtitle") or t.get("investment_title", "Fundraising & Use of Capital"))
-    _draw_slide_number_watermark(pdf, width, height, page, palette)
+                    slide.get("subtitle") or t.get("investment_title", "Fundraising & Use of Capital"), language)
+    _draw_slide_number_watermark(pdf, width, height, page, palette, language)
 
     title = _safe_str(slide.get("title"), t.get("investment_default_title", "Fundraising"))
     pdf.setFillColor(palette["text"])
-    pdf.setFont(F_BOLD, 26)
+    pdf.setFont(_font_for(language, True), 26)
     pdf.drawString(22, height - 82, title)
     pdf.setFillColor(palette["accent"])
     pdf.rect(22, height - 90, min(120, len(title) * 8), 3, stroke=0, fill=1)
@@ -643,22 +792,47 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
         pdf.setFillColor(palette["band"])
         pdf.roundRect(kx, kpi_y + kpi_h - 28, kpi_w, 28, 10, stroke=0, fill=1)
         pdf.setFillColor(colors.white)
-        pdf.setFont(F_BOLD, 9)
+        pdf.setFont(_font_for(language, True), 9)
         pdf.drawCentredString(kx + kpi_w / 2, kpi_y + kpi_h - 12, label)
         pdf.setFillColor(palette["text"])
-        pdf.setFont(F_REG, 9.5)
+        pdf.setFont(_font_for(language), 9.5)
         for j, vline in enumerate(_wrap_text_lines(_truncate_text(value, 90), max_chars=int(kpi_w / 6))[:2]):
             pdf.drawCentredString(kx + kpi_w / 2, kpi_y + kpi_h - 46 - j * 13, vline)
 
-    # ── Remaining bullets as allocation list ──
-    alloc_bullets = bullets if not kpi_items else bullets[1:]
-    if milestones:
-        alloc_bullets = [milestones] + list(alloc_bullets)
+    # ── Capital allocation: a real stacked bar when the free-text use-of-funds
+    # summary parses into percentages, otherwise fall back to a plain list. ──
+    use_of_funds_text = _safe_str(investment.get("use_of_funds"), "")
+    allocation_items = _parse_allocation(use_of_funds_text)
+    allocation_label = t.get("allocation_prefix", "Allocation")
+    funding_label = t.get("funding_goal_prefix", "Funding goal")
+
+    # `bullets` already carries every investment field as plain text
+    # (funding/allocation/runway/milestones); drop whichever of those are
+    # about to be shown again as a KPI box, the allocation chart, or the
+    # milestones highlight below, so nothing repeats twice on the slide.
+    already_shown = {v for v in (funding, runway) if v}
+    alloc_bullets = [
+        b for b in bullets
+        if _safe_str(b, "") not in already_shown
+        and not _safe_str(b, "").startswith(f"{funding_label}:")
+    ]
+
     body_y = kpi_y - 24
-    for bullet in alloc_bullets[:6]:
+    if len(allocation_items) >= 2:
+        alloc_bullets = [b for b in alloc_bullets if not _safe_str(b, "").startswith(f"{allocation_label}:")]
+        pdf.setFillColor(palette["accent"])
+        pdf.setFont(_font_for(language, True), 9)
+        pdf.drawString(22, kpi_y - 16, t.get("allocation_chart_title", "USE OF CAPITAL"))
+        body_y = _draw_allocation_bar(pdf, 22, kpi_y - 40, width - 44, allocation_items, palette, language) - 6
+
+    if milestones:
+        alloc_bullets = [b for b in alloc_bullets if _safe_str(b, "") != milestones]
+        alloc_bullets = [milestones] + alloc_bullets
+
+    for i, bullet in enumerate(alloc_bullets[:6], start=1):
         if body_y < 46:
             break
-        body_y = _draw_single_bullet(pdf, bullet, 22, body_y, width - 44, palette, 10.5)
+        body_y = _draw_single_bullet(pdf, bullet, 22, body_y, width - 44, palette, 10.5, language=language, index=i)
 
     _draw_progress_dots(pdf, width, page, total, palette)
     _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
@@ -679,19 +853,19 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
     bullets = [str(b).strip() for b in (slide.get("bullets") or []) if str(b).strip()]
 
     band_label = subtitle or title
-    _draw_top_band(pdf, width, height, palette, band_label)
-    _draw_slide_number_watermark(pdf, width, height, page, palette)
+    _draw_top_band(pdf, width, height, palette, band_label, language)
+    _draw_slide_number_watermark(pdf, width, height, page, palette, language)
 
     # Title
     pdf.setFillColor(palette["text"])
-    pdf.setFont(F_BOLD, 28)
+    pdf.setFont(_font_for(language, True), 28)
     title_y = height - 82
     for line in _wrap_text_lines(title, max_chars=44)[:1]:
         pdf.drawString(22, title_y, line)
 
     # Accent underline
     pdf.setFillColor(palette["accent"])
-    pdf.rect(22, title_y - 6, 60, 2.5, stroke=0, fill=1)
+    pdf.rect(22, title_y - 9, 60, 2.5, stroke=0, fill=1)
 
     # ── Main content card ──
     card_x = 22
@@ -714,7 +888,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
 
         # Column headers
         pdf.setFillColor(palette["accent"])
-        pdf.setFont(F_BOLD, 9.5)
+        pdf.setFont(_font_for(language, True), 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("col_theses", "KEY THESES"))
         pdf.drawString(divider_x + 14, card_y + card_h - 26, t.get("col_execution_notes", "EXECUTION NOTES"))
 
@@ -726,16 +900,16 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
         right_body_w = card_x + card_w - divider_x - 30
 
         ly = card_y + card_h - 46
-        for b in left_bullets[:5]:
+        for i, b in enumerate(left_bullets[:5], start=1):
             if ly < card_y + 26:
                 break
-            ly = _draw_single_bullet(pdf, b, card_x + 16, ly, left_body_w, palette, 10)
+            ly = _draw_single_bullet(pdf, b, card_x + 16, ly, left_body_w, palette, 10, language=language, index=i)
 
         ry = card_y + card_h - 46
-        for b in right_bullets[:5]:
+        for i, b in enumerate(right_bullets[:5], start=1):
             if ry < card_y + 26:
                 break
-            ry = _draw_single_bullet(pdf, b, divider_x + 14, ry, right_body_w, palette, 10)
+            ry = _draw_single_bullet(pdf, b, divider_x + 14, ry, right_body_w, palette, 10, language=language, index=i)
 
     elif mode == "timeline":
         line_x = card_x + 74
@@ -747,7 +921,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
         pdf.line(line_x, bot_y, line_x, top_y)
 
         pdf.setFillColor(palette["accent"])
-        pdf.setFont(F_BOLD, 9.5)
+        pdf.setFont(_font_for(language, True), 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 28, t.get("narrative_flow", "NARRATIVE FLOW"))
 
         step_y = top_y - 10
@@ -758,11 +932,11 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
             pdf.setFillColor(palette["band"])
             pdf.circle(line_x, step_y + 5, 9, stroke=0, fill=1)
             pdf.setFillColor(colors.white)
-            pdf.setFont(F_BOLD, 7.5)
+            pdf.setFont(_font_for(language, True), 7.5)
             pdf.drawCentredString(line_x, step_y + 2, str(idx))
             # Text
             pdf.setFillColor(palette["text"])
-            pdf.setFont(F_REG, 10)
+            pdf.setFont(_font_for(language), 10)
             txt = _truncate_text(_safe_str(raw, ""), 170)
             for i, line in enumerate(_wrap_text_lines(txt, max_chars=55)[:2]):
                 pdf.drawString(line_x + 18, step_y - i * 13, line)
@@ -770,16 +944,70 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
 
     else:  # focus (default)
         pdf.setFillColor(palette["accent"])
-        pdf.setFont(F_BOLD, 9.5)
+        pdf.setFont(_font_for(language, True), 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("key_points", "KEY POINTS"))
 
-        body_y = card_y + card_h - 48
-        for b in bullets[:7]:
+        # Fewer bullets get a larger, more generous type size instead of
+        # leaving the card looking sparse — same content, better fit.
+        n = max(1, len(bullets[:7]))
+        bullet_font = 15.0 if n <= 2 else (12.5 if n <= 4 else 10.5)
+
+        body_y = card_y + card_h - 50
+        for i, b in enumerate(bullets[:7], start=1):
             if body_y < card_y + 26:
                 break
-            body_y = _draw_single_bullet(pdf, b, card_x + 16, body_y, card_w - 32, palette, 10.5)
+            body_y = _draw_single_bullet(pdf, b, card_x + 16, body_y, card_w - 32, palette,
+                                          bullet_font, language=language, index=i)
 
     _draw_progress_dots(pdf, width, page, total, palette)
+    _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
+
+
+def _render_closing_slide(pdf: canvas.Canvas, width: float, height: float,
+                           slide: dict, palette: dict, template: str, seed: int,
+                           page: int, total: int, engine: str, key: str,
+                           language: str = _DEFAULT_LANGUAGE) -> None:
+    """A dedicated, centered 'thank you' finale instead of one more bulleted card."""
+    t = _deck_strings(language)
+    pdf.setFillColor(palette["bg"])
+    pdf.rect(0, 0, width, height, stroke=0, fill=1)
+    _draw_template_bg(pdf, width, height, palette, template, seed)
+    _draw_left_stripe(pdf, height, palette)
+
+    if _LOGO_ASPECT:
+        logo_h = 26
+        logo_w = logo_h * _LOGO_ASPECT
+        pdf.drawImage(LOGO_PATH, (width - logo_w) / 2, height - 70, width=logo_w, height=logo_h,
+                       mask="auto", preserveAspectRatio=True)
+
+    title = _safe_str(slide.get("title"), t.get("closing_title", "Conclusion"))
+    pdf.setFillColor(palette["text"])
+    pdf.setFont(_font_for(language, True), 34)
+    pdf.drawCentredString(width / 2, height * 0.62, title)
+
+    pdf.setFillColor(palette["accent"])
+    pdf.rect(width / 2 - 40, height * 0.62 - 16, 80, 3, stroke=0, fill=1)
+
+    body_lines = []
+    for b in (slide.get("bullets") or []):
+        body_lines.extend(_wrap_text_lines(_truncate_text(_safe_str(b, ""), 260), max_chars=72)[:3])
+    y = height * 0.62 - 40
+    pdf.setFillColor(palette["muted"])
+    pdf.setFont(_font_for(language), 12.5)
+    for line in body_lines[:5]:
+        pdf.drawCentredString(width / 2, y, line)
+        y -= 20
+
+    cta = t.get("closing_cta", "Let's talk")
+    cta_w = stringWidth(cta.upper(), _font_for(language, True), 10) + 48
+    cta_x = width / 2 - cta_w / 2
+    cta_y = max(70, y - 20)
+    pdf.setFillColor(palette["tag_bg"])
+    pdf.roundRect(cta_x, cta_y, cta_w, 30, 15, stroke=0, fill=1)
+    pdf.setFillColor(colors.white)
+    pdf.setFont(_font_for(language, True), 10)
+    pdf.drawCentredString(width / 2, cta_y + 11, cta.upper())
+
     _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
 
 
@@ -797,9 +1025,12 @@ def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) 
             startup_name = startup_name[len(prefix):]
     startup_name = startup_name.strip() or "Startup"
 
+    investment = pitch_payload.get("investment") or {}
+
     slides = [{"kind": "cover", "title": title, "slogan": slogan,
                 "startup_name": startup_name,
-                "subtitle": t.get("cover_subtitle_default", "Executive presentation for investors")}]
+                "subtitle": t.get("cover_subtitle_default", "Executive presentation for investors"),
+                "investment": investment}]
 
     elevator = _safe_str(pitch_payload.get("elevator_pitch"), "")
     if elevator:
@@ -839,7 +1070,6 @@ def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) 
                         "bullets": [f"{idx}. {item}" for idx, item in enumerate(script[:6], 1)]})
 
     # Investment slide (dedicated kind)
-    investment = pitch_payload.get("investment") or {}
     funding = _safe_str(investment.get("funding_goal"), "")
     use_of_funds = _safe_str(investment.get("use_of_funds"), "")
     inv_bullets = []
@@ -860,7 +1090,7 @@ def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) 
     # Closing slide
     closing = _safe_str(pitch_payload.get("closing"),
                         t.get("closing_default", "Thank you. We are ready for the next steps of the fundraising process."))
-    slides.append({"kind": "content",
+    slides.append({"kind": "closing",
                     "title": t.get("closing_title", "Conclusion"),
                     "subtitle": t.get("closing_subtitle", "Final message to the investor"),
                     "bullets": _wrap_text_lines(_truncate_text(closing, 460), max_chars=100)[:5]})
@@ -921,6 +1151,11 @@ def export_pitch_pdf(
             _render_investment_slide(pdf, width, height, slide, palette,
                                      template_name, seed, idx, total, engine_used, uniqueness_key,
                                      language=language)
+
+        elif kind == "closing":
+            _render_closing_slide(pdf, width, height, slide, palette,
+                                   template_name, seed, idx, total, engine_used, uniqueness_key,
+                                   language=language)
 
         else:
             layout = layout_options[(layout_seed + idx - 1) % len(layout_options)]
