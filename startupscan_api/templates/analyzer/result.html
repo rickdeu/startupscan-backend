@@ -1,8 +1,9 @@
 {% extends "analyzer/base.html" %}
 {% load dict_extras %}
+{% load l10n %}
 
-{% block topbar_title %}{{ ui_text.result_topbar_title }}{% endblock %}
-{% block topbar_subtitle %}{{ ui_text.result_topbar_subtitle }}{% endblock %}
+{% block topbar_title %}{{ analysis.startup_name|default:ui_text.startup_label|default:"Startup" }}{% endblock %}
+{% block topbar_subtitle %}{{ ui_text.result_analysis_label|default:"Analysis" }} #{{ analysis.id }}{% endblock %}
 
 {% block content %}
 {% with score=analysis.success_score|default:0 %}
@@ -12,7 +13,8 @@
     <a href="{% url 'pitch_form' %}" class="btn btn-sm btn-primary">
         <i class="fas fa-plus me-1"></i>{{ ui_text.new_analysis|default:"Nova Análise" }}
     </a>
-    <a href="{% url 'pitch_report_pdf' analysis.id %}" class="btn btn-sm btn-outline-primary">
+    <a href="{% url 'pitch_report_pdf' analysis.id %}" class="btn btn-sm btn-outline-primary"
+       onclick="event.preventDefault(); openPdfPreview(this.href, {title: '{{ ui_text.download_report_pdf|default:"PDF Relatório"|escapejs }}'});">
         <i class="fas fa-file-pdf me-1"></i>{{ ui_text.download_report_pdf|default:"PDF Relatório" }}
     </a>
     <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-light">
@@ -55,15 +57,21 @@
                     <div class="flex-grow-1">
                         <h4 class="mb-1 fw-bold">{{ analysis.startup_name|default:"Startup" }}</h4>
                         <div class="d-flex flex-wrap gap-2 mb-2">
-                            <span class="badge" style="background:rgba(59,130,246,.15);color:#93c5fd;">{{ analysis.industry|default:"—" }}</span>
+                            <span class="badge" style="background:rgba(245, 88, 13,.15);color:#ffc199;">{{ analysis.industry|default:"—" }}</span>
                             <span class="badge" style="background:rgba(16,185,129,.15);color:#6ee7b7;"><i class="fas fa-calendar me-1"></i>{{ analysis.created_at|date:"d/m/Y" }}</span>
-                            <span class="badge" style="background:rgba(139,92,246,.15);color:#c4b5fd;"><i class="fas fa-microchip me-1"></i>{{ analysis.metadata.analysis_engine_used|default:"local" }}</span>
+                            <span class="badge" style="background:rgba(212, 147, 31,.15);color:#f0d8a8;"><i class="fas fa-microchip me-1"></i>{{ analysis.metadata.analysis_engine_used|default:"local" }}</span>
                         </div>
                         <div class="small" style="color:#94a3b8;">
                             <i class="fas fa-envelope me-1"></i>{{ analysis.contact_email|default:"—" }}
                         </div>
                     </div>
                 </div>
+
+                {% if analysis.report.category_scores %}
+                <div class="startup-radar-wrap mb-3">
+                    <canvas id="startupRadarChart" height="220"></canvas>
+                </div>
+                {% endif %}
 
                 <!-- Tab nav -->
                 <ul class="nav result-nav gap-1 flex-wrap" id="resultTabs">
@@ -105,7 +113,7 @@
                         <div class="section-hd-icon"><i class="fas fa-align-left"></i></div>
                         <h5 style="color:#f1f5f9;">{{ ui_text.executive_summary|default:"Resumo executivo" }}</h5>
                     </div>
-                    <div class="p-3 rounded" style="background:rgba(15,23,42,.7);border:1px solid #1e2d4a;line-height:1.7;color:#f1f5f9;">
+                    <div class="p-3 rounded" style="background:rgba(20, 22, 26,.7);border:1px solid #2a2c31;line-height:1.7;color:#f1f5f9;">
                         {{ analysis.report.summary|default:ui_text.report_unavailable|default:"Relatório indisponível." }}
                     </div>
 
@@ -146,7 +154,7 @@
                     {% if analysis.report.recommendations %}
                     <div class="mt-4">
                         <div class="section-hd mb-3">
-                            <div class="section-hd-icon" style="background:rgba(59,130,246,.14);color:#60a5fa;"><i class="fas fa-lightbulb"></i></div>
+                            <div class="section-hd-icon" style="background:rgba(245, 88, 13,.14);color:#ff8a4d;"><i class="fas fa-lightbulb"></i></div>
                             <h6>{{ ui_text.recommended_action_plan|default:"Plano de ação recomendado" }}</h6>
                         </div>
                         <ol class="list-group list-group-numbered">
@@ -192,13 +200,13 @@
             <div class="card mb-3 animate-fade-up">
                 <div class="card-body">
                     <div class="section-hd mb-4">
-                        <div class="section-hd-icon" style="background:rgba(37,99,235,.14);color:#60a5fa;"><i class="fas fa-hand-holding-dollar"></i></div>
+                        <div class="section-hd-icon" style="background:rgba(217, 74, 10,.14);color:#ff8a4d;"><i class="fas fa-hand-holding-dollar"></i></div>
                         <h5 style="color:#f1f5f9;">{{ ui_text.investor_thesis_title|default:"Tese do Investidor" }}</h5>
                     </div>
                     <div class="thesis-box mb-4">
-                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.thesis_label|default:"Tese" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.investment_thesis }}</span></div>
-                        <div class="mb-2"><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.readiness_label|default:"Prontidão" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.funding_readiness }}</span></div>
-                        <div><span class="fw-semibold" style="color:#93c5fd;">{{ ui_text.suggested_ticket|default:"Ticket" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.suggested_ticket }}</span></div>
+                        <div class="mb-2"><span class="fw-semibold" style="color:#ffc199;">{{ ui_text.thesis_label|default:"Tese" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.investment_thesis }}</span></div>
+                        <div class="mb-2"><span class="fw-semibold" style="color:#ffc199;">{{ ui_text.readiness_label|default:"Prontidão" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.funding_readiness }}</span></div>
+                        <div><span class="fw-semibold" style="color:#ffc199;">{{ ui_text.suggested_ticket|default:"Ticket" }}:</span> <span style="color:#f1f5f9;">{{ analysis.report.investor_pitch.suggested_ticket }}</span></div>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -226,12 +234,13 @@
                     </div>
 
                     <!-- Pitch PDF generator -->
-                    <div class="mt-4 pt-3" style="border-top:1px solid #1e2d4a;">
+                    <div class="mt-4 pt-3" style="border-top:1px solid #2a2c31;">
                         <div class="section-hd mb-3">
                             <div class="section-hd-icon" style="background:rgba(245,158,11,.14);color:#fbbf24;"><i class="fas fa-file-powerpoint"></i></div>
                             <h6>{{ ui_text.pitch_pdf_slides_with_design|default:"Pitch PDF com Design" }}</h6>
                         </div>
-                        <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end">
+                        <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end"
+                              onsubmit="event.preventDefault(); openPdfPreview(this.action + '?' + new URLSearchParams(new FormData(this)).toString(), {title: '{{ ui_text.generate_pitch_pdf|default:"Gerar PDF"|escapejs }}'});">
                             <div class="col-md-5">
                                 <label class="form-label" style="font-size:.8rem;">{{ ui_text.design_mode|default:"Modo de design" }}</label>
                                 <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
@@ -302,7 +311,7 @@
             {% if can_view_received_interests %}
             <div class="card mb-3 animate-fade-up">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0" style="color:#f1f5f9;"><i class="fas fa-users me-2" style="color:#60a5fa;"></i>{{ ui_text.investors_interested_in_pitch|default:"Investidores interessados" }}</h5>
+                    <h5 class="mb-0" style="color:#f1f5f9;"><i class="fas fa-users me-2" style="color:#ff8a4d;"></i>{{ ui_text.investors_interested_in_pitch|default:"Investidores interessados" }}</h5>
                     <span class="badge bg-primary">{{ received_interests|length }}</span>
                 </div>
                 <div class="card-body">
@@ -316,7 +325,7 @@
                                         {{ interest.investor.first_name|default:interest.investor.username|slice:":2"|upper }}
                                     </div>
                                     <div>
-                                        <strong style="font-size:.88rem;">{{ interest.investor.first_name|default:interest.investor.username }}</strong>
+                                        <strong style="font-size:.88rem;color:#ffffff;">{{ interest.investor.first_name|default:interest.investor.username }}</strong>
                                         <div class="small" style="color:#94a3b8;">{{ interest.created_at|date:"d/m/Y H:i" }}</div>
                                     </div>
                                 </div>
@@ -364,15 +373,15 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded text-center" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);">
+                        <div class="p-2 rounded text-center" style="background:rgba(245, 88, 13,.08);border:1px solid rgba(245, 88, 13,.2);">
                             <div class="small" style="color:#94a3b8;">{{ ui_text.growth|default:"Crescimento" }}</div>
-                            <div class="fw-bold" style="color:#60a5fa;">{{ analysis.growth_rate|floatformat:1 }}%</div>
+                            <div class="fw-bold" style="color:#ff8a4d;">{{ analysis.growth_rate|floatformat:1 }}%</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded text-center" style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);">
+                        <div class="p-2 rounded text-center" style="background:rgba(212, 147, 31,.08);border:1px solid rgba(212, 147, 31,.2);">
                             <div class="small" style="color:#94a3b8;">{{ ui_text.margin|default:"Margem" }}</div>
-                            <div class="fw-bold" style="color:#a78bfa;">{{ analysis.profit_margin|floatformat:1 }}%</div>
+                            <div class="fw-bold" style="color:#e0a845;">{{ analysis.profit_margin|floatformat:1 }}%</div>
                         </div>
                     </div>
                 </div>
@@ -382,7 +391,7 @@
         <!-- Execution info -->
         <div class="card mb-3 animate-fade-up animate-delay-2">
             <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-circle-info me-2" style="color:#60a5fa;"></i>{{ ui_text.execution_information|default:"Informações" }}</h6>
+                <h6 class="mb-0"><i class="fas fa-circle-info me-2" style="color:#ff8a4d;"></i>{{ ui_text.execution_information|default:"Informações" }}</h6>
             </div>
             <div class="card-body">
                 <div class="d-flex flex-column gap-2" style="font-size:.85rem;">
@@ -431,8 +440,8 @@
         <!-- AI video card -->
         <div class="card animate-fade-up animate-delay-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="fas fa-video me-2" style="color:#a78bfa;"></i>{{ ui_text.ai_potential_video|default:"Vídeo IA" }}</h6>
-                <span class="badge" style="background:rgba(139,92,246,.2);color:#c4b5fd;font-size:.7rem;">{{ analysis.startup_name|default:"Startup"|truncatechars:18 }}</span>
+                <h6 class="mb-0"><i class="fas fa-video me-2" style="color:#e0a845;"></i>{{ ui_text.ai_potential_video|default:"Vídeo IA" }}</h6>
+                <span class="badge" style="background:rgba(212, 147, 31,.2);color:#f0d8a8;font-size:.7rem;">{{ analysis.startup_name|default:"Startup"|truncatechars:18 }}</span>
             </div>
             <div class="card-body">
                 {% url 'pitch_explainer_video_progress' analysis.id '__JOB_ID__' as video_progress_url_template %}
@@ -443,7 +452,7 @@
                      data-analysis-id="{{ analysis.id }}"
                      data-status="{{ active_video_job.status }}"
                      data-phase="{{ active_video_job.phase|default:'fila' }}"
-                     style="background:rgba(15,23,42,.6);">
+                     style="background:rgba(20, 22, 26,.6);">
                     <div class="d-flex justify-content-between mb-2" style="font-size:.83rem;">
                         <span style="color:#94a3b8;">Status:</span>
                         <strong id="videoJobStatusText">{{ active_video_job.status }}</strong>
@@ -486,7 +495,7 @@
                         <div class="uz-text" style="font-size:.78rem;">{{ ui_text.presenter_real_image_face|default:"Imagem do apresentador" }}</div>
                         <div class="uz-file" id="presenterImgName"></div>
                     </div>
-                    <div id="presenterGenderDetectBox" class="d-none rounded p-2 mb-2 border border-info" style="font-size:.8rem;background:rgba(14,165,233,.07);">
+                    <div id="presenterGenderDetectBox" class="d-none rounded p-2 mb-2 border border-info" style="font-size:.8rem;background:rgba(245, 88, 13,.07);">
                         <div class="fw-semibold mb-1">{{ ui_text.auto_gender_detection|default:"Detecção de género" }}</div>
                         <div id="presenterGenderDetectText" style="color:#94a3b8;">{{ ui_text.waiting_image_detection|default:"Aguardando imagem..." }}</div>
                     </div>
@@ -509,7 +518,63 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{% localize off %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Startup radar chart — one glance at every category score
+(function () {
+    const canvas = document.getElementById("startupRadarChart");
+    if (!canvas || typeof Chart === "undefined") return;
+    const labels = [
+        {% for key, value in analysis.report.category_scores.items %}
+        "{{ analysis.report.category_labels|dict_get:key|default:key|title|cut:"_"|escapejs }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const values = [
+        {% for key, value in analysis.report.category_scores.items %}
+        {{ value|default:0 }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    new Chart(canvas.getContext("2d"), {
+        type: "radar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "{{ ui_text.category_score_0_10|default:'Score'|escapejs }}",
+                data: values,
+                backgroundColor: "rgba(245, 88, 13, 0.22)",
+                borderColor: "#f5580d",
+                borderWidth: 2,
+                pointBackgroundColor: "#f5580d",
+                pointBorderColor: "#fff",
+                pointRadius: 3,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    min: 0,
+                    max: 10,
+                    ticks: { display: false, stepSize: 2.5 },
+                    grid: { color: "rgba(148, 163, 184, 0.18)" },
+                    angleLines: { color: "rgba(148, 163, 184, 0.18)" },
+                    pointLabels: { color: "#e2e8f0", font: { size: 11 } },
+                },
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) { return ctx.formattedValue + " / 10"; },
+                    },
+                },
+            },
+        },
+    });
+})();
+
 // Tab switching
 document.querySelectorAll("#resultTabs .nav-link").forEach(function (link) {
     link.addEventListener("click", function (e) {
@@ -623,12 +688,12 @@ animateBars(document.getElementById("tab-scores"));
     if (!form || !imgInp || !detBox) return;
     const csrf = (form.querySelector("input[name='csrfmiddlewaretoken']") || {}).value || "";
     const url  = "{% url 'pitch_presenter_gender_detect' analysis.id %}";
-    const i18nDetectingGender = "{{ ui_text.detecting_image_gender|default:'A detetar género da imagem...' }}";
-    const i18nErrorDetecting  = "{{ ui_text.error_detecting_image|default:'Erro ao detetar.' }}";
-    const i18nNotIdentified   = "{{ ui_text.not_identified|default:'Não identificado' }}";
-    const i18nDetectedPrefix  = "{{ ui_text.gender_detected_prefix|default:'Detetado' }}";
-    const i18nConfirmBelow    = "{{ ui_text.gender_confirm_below|default:'Confirme abaixo.' }}";
-    const i18nErrorDetectingGender = "{{ ui_text.error_detecting_gender|default:'Erro ao detetar género.' }}";
+    const i18nDetectingGender = "{{ ui_text.detecting_image_gender|default:'A detetar género da imagem...'|escapejs }}";
+    const i18nErrorDetecting  = "{{ ui_text.error_detecting_image|default:'Erro ao detetar.'|escapejs }}";
+    const i18nNotIdentified   = "{{ ui_text.not_identified|default:'Não identificado'|escapejs }}";
+    const i18nDetectedPrefix  = "{{ ui_text.gender_detected_prefix|default:'Detetado'|escapejs }}";
+    const i18nConfirmBelow    = "{{ ui_text.gender_confirm_below|default:'Confirme abaixo.'|escapejs }}";
+    const i18nErrorDetectingGender = "{{ ui_text.error_detecting_gender|default:'Erro ao detetar género.'|escapejs }}";
     let userChanged = false;
     if (choice) choice.addEventListener("change", () => userChanged = true);
     imgInp.addEventListener("change", function () {
@@ -653,4 +718,5 @@ animateBars(document.getElementById("tab-scores"));
     });
 })();
 </script>
+{% endlocalize %}
 {% endblock %}

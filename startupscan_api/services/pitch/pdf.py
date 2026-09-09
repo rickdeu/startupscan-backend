@@ -2,6 +2,19 @@ import hashlib
 import os
 from datetime import datetime
 
+LOGO_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+    "static", "img", "icon.png",
+)
+_LOGO_ASPECT = None
+if os.path.exists(LOGO_PATH):
+    try:
+        from PIL import Image as _PILImage
+        with _PILImage.open(LOGO_PATH) as _im:
+            _LOGO_ASPECT = _im.width / _im.height
+    except Exception:
+        _LOGO_ASPECT = 0.75
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -470,6 +483,13 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     # Top accent bar
     pdf.setFillColor(_with_alpha(palette["band"], 0.9))
     pdf.rect(0, height - 10, width, 10, stroke=0, fill=1)
+
+    # ── Platform logo (top-left, every deck carries the brand mark) ──
+    if _LOGO_ASPECT:
+        logo_h = 22
+        logo_w = logo_h * _LOGO_ASPECT
+        pdf.drawImage(LOGO_PATH, 24, height - 24 - logo_h, width=logo_w, height=logo_h,
+                       mask="auto", preserveAspectRatio=True)
 
     # ── Company initials badge (top-right circle) ──
     startup_name = _safe_str(slide.get("startup_name"), "ST")
