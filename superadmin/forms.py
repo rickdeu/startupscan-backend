@@ -6,6 +6,7 @@ from startupscan_api.models import (
     IdeaPublicFeedback,
     InvestorConnectionInterest,
     PitchAnalysis,
+    PromptTemplate,
     UserProfile,
 )
 from subscriptions.models import MonthlyUsage, Subscription, SubscriptionPlan
@@ -170,7 +171,8 @@ class SubscriptionPlanForm(StyledFormMixin, forms.ModelForm):
             "name", "tier", "interval", "price_usd", "price_eur", "price_aoa",
             "is_active", "trial_days",
             "analyses_per_month", "videos_per_month", "investor_interests_per_month", "batch_max_rows",
-            "gpt_analysis", "audio_upload", "video_upload", "youtube_url", "financial_data",
+            "local_analysis", "gpt_analysis", "deepseek_analysis", "ollama_analysis",
+            "audio_upload", "video_upload", "youtube_url", "financial_data",
             "pdf_report", "pdf_investor", "pitch_template_choice", "pitch_gpt", "pitch_pdf",
             "batch_analysis", "investor_dashboard", "video_generation", "business_model_canvas",
         ]
@@ -194,3 +196,23 @@ class MonthlyUsageForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = MonthlyUsage
         fields = ["user", "year", "month", "analyses_count", "videos_count", "investor_interests_count"]
+
+
+class PromptTemplateForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = PromptTemplate
+        fields = ["engine", "purpose", "is_active", "content"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # StyledFormMixin._style() forces every Textarea to rows=3, so this
+        # has to be re-applied after super().__init__() runs. Large,
+        # distraction-free plain-text panel (see .sa-prompt-editor in
+        # admin.css) — deliberately not a rich-text/WYSIWYG editor: this
+        # content is sent verbatim to an LLM API, where HTML formatting
+        # would corrupt the prompt.
+        self.fields["content"].widget.attrs.update({
+            "class": "sa-input sa-prompt-editor",
+            "rows": 26,
+            "spellcheck": "false",
+        })

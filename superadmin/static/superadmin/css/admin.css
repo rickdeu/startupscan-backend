@@ -222,6 +222,42 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     font-size: 0.86rem;
 }
 .sa-input:focus { outline: none; border-color: var(--sa-primary); }
+.sa-prompt-editor {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    min-height: 480px;
+    resize: vertical;
+    white-space: pre;
+    tab-size: 4;
+}
+.sa-prompt-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.sa-prompt-var-btn {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    background: var(--sa-bg-surface-soft);
+    border: 1px solid var(--sa-border);
+    border-radius: 6px;
+    color: var(--sa-primary);
+    padding: 3px 8px;
+    cursor: pointer;
+}
+.sa-prompt-var-btn:hover { border-color: var(--sa-primary); background: var(--sa-bg-surface); }
+.sa-prompt-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.74rem; color: var(--sa-text-soft); }
+.sa-prompt-fullscreen-btn { font-size: 0.74rem; }
+.sa-prompt-editor-wrap.is-fullscreen {
+    position: fixed;
+    inset: 16px;
+    z-index: 1000;
+    background: var(--sa-bg-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.sa-prompt-editor-wrap.is-fullscreen .sa-prompt-editor { flex: 1; min-height: 0; }
 .sa-check { margin-right: 8px; }
 .sa-check-list { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; border: 1px solid var(--sa-border); border-radius: 8px; padding: 10px; background: var(--sa-bg-surface-soft); }
 .sa-check-list li { padding: 3px 0; font-size: 0.82rem; }

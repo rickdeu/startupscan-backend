@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.engines import AnalysisEngine
 from startupscan_api.models import PitchAnalysis
 from startupscan_api.utils.currency import format_currency
 from startupscan_api.roles import (
@@ -73,7 +74,7 @@ class DashboardView(RoleRequiredMixin, View):
             days = 90
 
         engine = str(request.GET.get("engine", "all")).strip().lower()
-        if engine not in {"all", "local", "gpt"}:
+        if engine not in ({"all"} | set(AnalysisEngine.values)):
             engine = "all"
 
         min_score = max(0.0, min(10.0, min_score))

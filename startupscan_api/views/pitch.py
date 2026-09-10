@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.engines import AnalysisEngine, normalize_engine
 from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.models import InvestorConnectionInterest, PitchAnalysis
@@ -31,6 +32,8 @@ from startupscan_api.services.pitch_builder import (
     get_pitch_design_mode_choices,
     get_pitch_design_template_choices,
 )
+from startupscan_api.services.ai_engines.deepseek_engine import analyze_with_deepseek
+from startupscan_api.services.ai_engines.ollama_engine import analyze_with_ollama
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.utils import generate_interpretable_report, prepare_features
@@ -43,7 +46,20 @@ from .helpers import (
 )
 from .jobs import _video_generation_cache_key
 from .mixins import RoleRequiredMixin
-from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from subscriptions.mixins import (
+    SubscriptionGate,
+    check_engine_access,
+    check_feature_access,
+    check_limit_access,
+    get_available_engines_for_user,
+    pick_default_engine_for_user,
+)
+
+_ENGINE_ANALYZE_FUNCS = {
+    AnalysisEngine.GPT: analyze_with_gpt,
+    AnalysisEngine.DEEPSEEK: analyze_with_deepseek,
+    AnalysisEngine.OLLAMA: analyze_with_ollama,
+}
 from superadmin.activity import log_activity
 from superadmin.models import ActivityLog
 
@@ -127,11 +143,13 @@ class PitchFormView(RoleRequiredMixin, View):
     allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
+        available_engines = get_available_engines_for_user(request.user) if request.user.is_authenticated else [AnalysisEngine.LOCAL]
         return render(request, 'analyzer/pitch_form.html', {
             'default_date': datetime.now().strftime('%Y-%m-%d'),
             'max_file_size': 50,
             'industries': PitchAnalysis.INDUSTRY_CHOICES,
             'form_data': {'model_source': 'local'},
+            'available_engines': available_engines,
         })
 
     def post(self, request):
@@ -246,9 +264,7 @@ class PitchFormView(RoleRequiredMixin, View):
                 messages.error(request, detail, extra_tags=f"{field}:{detail}")
                 return self._render_form_with_data(request)
 
-            model_source = str(request.POST.get("model_source", "local")).strip().lower()
-            if model_source not in {"local", "gpt"}:
-                model_source = "local"
+            model_source = normalize_engine(request.POST.get("model_source"))
 
             if request.user.is_authenticated and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
                 gate = self._check_pitch_gates(
@@ -260,7 +276,7 @@ class PitchFormView(RoleRequiredMixin, View):
                     return gate
 
             model = None
-            if model_source == "local":
+            if model_source == AnalysisEngine.LOCAL:
                 model = ensure_model_exists()
                 if model is None:
                     logger.critical("Modelo de análise não disponível")
@@ -288,8 +304,9 @@ class PitchFormView(RoleRequiredMixin, View):
                     engine_used = model_source
                     report_language = normalize_ui_language(getattr(request, "ui_language", None))
 
-                    if model_source == "gpt":
-                        prediction, report, engine_used = analyze_with_gpt(
+                    analyze_func = _ENGINE_ANALYZE_FUNCS.get(model_source)
+                    if analyze_func is not None:
+                        prediction, report, engine_used = analyze_func(
                             text, financial_data, metadata, language=report_language,
                         )
 
@@ -420,13 +437,12 @@ class PitchFormView(RoleRequiredMixin, View):
             ))
             return redirect('subscription_plans')
 
-        if model_source == 'gpt':
-            allowed, _ = check_feature_access(request.user, 'gpt_analysis')
-            if not allowed:
-                messages.warning(request, _ui_text_for_request(request).get(
-                    "msg_gpt_analysis_requires_upgrade", "GPT analysis requires a higher plan.",
-                ))
-                return redirect('subscription_plans')
+        allowed, _ = check_engine_access(request.user, model_source)
+        if not allowed:
+            messages.warning(request, _ui_text_for_request(request).get(
+                f"msg_{model_source}_analysis_requires_upgrade", "This analysis engine requires a higher plan.",
+            ))
+            return redirect('subscription_plans')
 
         if has_audio:
             allowed, _ = check_feature_access(request.user, 'audio_upload')
@@ -481,6 +497,7 @@ class PitchFormView(RoleRequiredMixin, View):
             else:
                 general_errors.append(msg_text)
 
+        available_engines = get_available_engines_for_user(request.user) if request.user.is_authenticated else [AnalysisEngine.LOCAL]
         return render(request, 'analyzer/pitch_form.html', {
             'form_data': form_data,
             'errors': errors,
@@ -488,6 +505,7 @@ class PitchFormView(RoleRequiredMixin, View):
             'default_date': datetime.now().strftime('%Y-%m-%d'),
             'max_file_size': 50,
             'industries': PitchAnalysis.INDUSTRY_CHOICES,
+            'available_engines': available_engines,
         })
 
 
@@ -635,9 +653,8 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
         try:
             payload = _build_pitch_payload_from_analysis(analysis)
             model_source = (request.GET.get("model_source", "") or "").strip().lower()
-            if model_source not in {"local", "gpt"}:
-                import os as _os
-                model_source = "gpt" if _os.getenv("OPENAI_API_KEY") else "local"
+            if model_source not in AnalysisEngine.values:
+                model_source = pick_default_engine_for_user(request.user)
 
             design_mode, design_template = _resolve_pitch_design_selection(
                 request, default_mode=PITCH_DESIGN_MODE_AUTO, default_template="orbit"

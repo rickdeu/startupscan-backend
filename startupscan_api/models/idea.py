@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+from startupscan_api.engines import AnalysisEngine
+
 
 class IdeaPitchSubmission(models.Model):
     STATUS_CHOICES = [
@@ -9,10 +11,7 @@ class IdeaPitchSubmission(models.Model):
         ("generated", "Pitch generated"),
     ]
 
-    MODEL_SOURCE_CHOICES = [
-        ("local", "Local"),
-        ("gpt", "GPT"),
-    ]
+    MODEL_SOURCE_CHOICES = AnalysisEngine.choices
 
     user = models.ForeignKey(
         User,

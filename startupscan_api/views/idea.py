@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.engines import AnalysisEngine, normalize_engine
 from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.models import IdeaPitchSubmission, IdeaPublicFeedback
 from startupscan_api.roles import (
@@ -25,7 +26,12 @@ from startupscan_api.services.pitch_builder import (
 )
 from .helpers import _resolve_pitch_design_selection
 from .mixins import RoleRequiredMixin
-from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from subscriptions.mixins import (
+    SubscriptionGate,
+    check_engine_access,
+    check_limit_access,
+    get_available_engines_for_user,
+)
 from superadmin.activity import log_activity
 from superadmin.models import ActivityLog
 
@@ -66,10 +72,8 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
             "funding_goal": request.POST.get("funding_goal", "").strip(),
             "use_of_funds": request.POST.get("use_of_funds", "").strip(),
             "call_to_action": request.POST.get("call_to_action", "").strip(),
-            "model_source": request.POST.get("model_source", "local").strip().lower(),
+            "model_source": normalize_engine(request.POST.get("model_source")),
         }
-        if form_data["model_source"] not in {"local", "gpt"}:
-            form_data["model_source"] = "local"
         return form_data
 
     def _validate(self, form_data):
@@ -80,20 +84,26 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
         return errors
 
     def get(self, request):
+        available_engines = get_available_engines_for_user(request.user) if request.user.is_authenticated else [AnalysisEngine.LOCAL]
         return render(request, "analyzer/idea_pitch_form.html", {
             "form_data": {"model_source": "local"},
             "errors": {},
+            "available_engines": available_engines,
         })
 
     def post(self, request):
         form_data = self._collect_form_data(request)
         errors = self._validate(form_data)
 
+        available_engines = get_available_engines_for_user(request.user) if request.user.is_authenticated else [AnalysisEngine.LOCAL]
+
         if errors:
             messages.error(request, _ui_text_for_request(request).get(
                 "msg_fill_required_idea_fields", "Fill in the required fields to save the idea.",
             ))
-            return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": errors})
+            return render(request, "analyzer/idea_pitch_form.html", {
+                "form_data": form_data, "errors": errors, "available_engines": available_engines,
+            })
 
         try:
             submission = IdeaPitchSubmission.objects.create(
@@ -115,7 +125,9 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
             messages.error(request, _ui_text_for_request(request).get(
                 "msg_idea_save_failed", "Could not save the idea. Please try again.",
             ))
-            return render(request, "analyzer/idea_pitch_form.html", {"form_data": form_data, "errors": {}})
+            return render(request, "analyzer/idea_pitch_form.html", {
+                "form_data": form_data, "errors": {}, "available_engines": available_engines,
+            })
 
 
 class IdeaPitchDetailView(RoleRequiredMixin, View):
@@ -178,11 +190,12 @@ class IdeaPitchDetailView(RoleRequiredMixin, View):
         if action != "generate":
             return redirect("idea_pitch_detail", submission_id=submission.id)
 
-        if submission.model_source == 'gpt' and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
-            allowed, _ = check_feature_access(request.user, 'pitch_gpt')
+        if get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
+            allowed, _ = check_engine_access(request.user, submission.model_source)
             if not allowed:
                 messages.warning(request, _ui_text_for_request(request).get(
-                    "msg_pitch_gpt_requires_upgrade", "Generating a pitch via GPT requires a higher plan.",
+                    f"msg_{submission.model_source}_analysis_requires_upgrade",
+                    "This analysis engine requires a higher plan.",
                 ))
                 return redirect('idea_pitch_detail', submission_id=submission.id)
 

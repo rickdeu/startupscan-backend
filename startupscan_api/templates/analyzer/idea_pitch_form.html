@@ -1,4 +1,5 @@
 {% extends "analyzer/base.html" %}
+{% load dict_extras %}
 
 {% block topbar_title %}{{ ui_text.idea_form_topbar_title }}{% endblock %}
 {% block topbar_subtitle %}{{ ui_text.idea_form_topbar_subtitle }}{% endblock %}
@@ -49,20 +50,18 @@
                 <div class="col-md-4">
                     <label class="form-label" style="font-size:.83rem;font-weight:600;color:#94a3b8;">{{ ui_text.idea_form_generation_engine }}</label>
                     <div class="d-flex gap-2 mt-1">
+                        {% for engine in available_engines %}
                         <label class="engine-radio-card flex-fill" style="cursor:pointer;">
-                            <input type="radio" name="model_source" value="local" {% if form_data.model_source|default:'local' == 'local' %}checked{% endif %} style="display:none;" class="engine-radio">
+                            <input type="radio" name="model_source" value="{{ engine }}" {% if form_data.model_source|default:'local' == engine %}checked{% endif %} style="display:none;" class="engine-radio">
                             <div class="engine-label" style="border:1px solid rgba(100,116,139,.3);border-radius:8px;padding:.5rem .75rem;text-align:center;transition:all .2s;">
-                                <i class="fas fa-microchip" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
-                                <span style="font-size:.78rem;font-weight:600;">{{ ui_text.idea_form_engine_local }}</span>
+                                {% if engine == 'local' %}<i class="fas fa-bolt" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
+                                {% elif engine == 'ollama' %}<i class="fas fa-scale-balanced" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
+                                {% elif engine == 'deepseek' %}<i class="fas fa-brain" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
+                                {% else %}<i class="fas fa-crown" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>{% endif %}
+                                <span style="font-size:.78rem;font-weight:600;">{{ ui_text|idea_engine_label:engine }}</span>
                             </div>
                         </label>
-                        <label class="engine-radio-card flex-fill" style="cursor:pointer;">
-                            <input type="radio" name="model_source" value="gpt" {% if form_data.model_source == 'gpt' %}checked{% endif %} style="display:none;" class="engine-radio">
-                            <div class="engine-label" style="border:1px solid rgba(100,116,139,.3);border-radius:8px;padding:.5rem .75rem;text-align:center;transition:all .2s;">
-                                <i class="fas fa-brain" style="font-size:.9rem;display:block;margin-bottom:.2rem;"></i>
-                                <span style="font-size:.78rem;font-weight:600;">GPT</span>
-                            </div>
-                        </label>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="col-12">

@@ -30,15 +30,25 @@ except Exception:
         def successful(self):
             return False
 
+from startupscan_api.engines import AnalysisEngine, normalize_engine
 from startupscan_api.i18n import normalize_ui_language
 from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.serializers import BatchAnalysisSerializer
+from startupscan_api.services.ai_engines.deepseek_engine import analyze_with_deepseek
+from startupscan_api.services.ai_engines.ollama_engine import analyze_with_ollama
 from startupscan_api.services.model_training import ensure_model_exists, predict_pitch_score, train_model_task
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.tasks import process_batch_analysis
 from startupscan_api.util.file_management import TempFileManager
 from startupscan_api.utils import generate_interpretable_report, prepare_features
 from .helpers import _is_meaningful_pitch_text, _safe_exception_message
+from subscriptions.mixins import check_engine_access
+
+_ENGINE_ANALYZE_FUNCS = {
+    AnalysisEngine.GPT: analyze_with_gpt,
+    AnalysisEngine.DEEPSEEK: analyze_with_deepseek,
+    AnalysisEngine.OLLAMA: analyze_with_ollama,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +64,15 @@ class StartupPitchAnalyzer(APIView):
             startup_name = (request.data.get("startup_name", "") or "").strip()
             industry = (request.data.get("industry", "") or "").strip()
             financial_data = request.data.get('financial_data', {})
-            model_source = str(request.data.get("model_source", "local")).strip().lower()
-            if model_source not in {"local", "gpt"}:
-                model_source = "local"
+            model_source = normalize_engine(request.data.get("model_source"))
+
+            if model_source != AnalysisEngine.LOCAL:
+                allowed, _ = check_engine_access(request.user, model_source)
+                if not allowed:
+                    return Response(
+                        {"error": f"The '{model_source}' analysis engine requires a higher subscription plan."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
 
             extracted_text = extract_text_from_uploaded_file(text_file)
             text = merge_pitch_text(text, extracted_text, youtube_url)
@@ -96,8 +112,9 @@ class StartupPitchAnalyzer(APIView):
                 engine_used = model_source
                 report_language = normalize_ui_language(getattr(request, "ui_language", None))
 
-                if model_source == "gpt":
-                    prediction, report, engine_used = analyze_with_gpt(
+                analyze_func = _ENGINE_ANALYZE_FUNCS.get(model_source)
+                if analyze_func is not None:
+                    prediction, report, engine_used = analyze_func(
                         text, financial_data, metadata, language=report_language,
                     )
 
