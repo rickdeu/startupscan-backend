@@ -166,6 +166,41 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Pitch PDF generator -->
+            <div class="card mb-3 animate-fade-up">
+                <div class="card-body">
+                    <div class="section-hd mb-3">
+                        <div class="section-hd-icon" style="background:rgba(245,158,11,.14);color:#fbbf24;"><i class="fas fa-file-powerpoint"></i></div>
+                        <h6>{{ ui_text.pitch_pdf_slides_with_design|default:"Pitch PDF com Design" }}</h6>
+                    </div>
+                    <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end"
+                          onsubmit="event.preventDefault(); openPdfPreview(this.action + '?' + new URLSearchParams(new FormData(this)).toString(), {title: '{{ ui_text.generate_pitch_pdf|default:"Gerar PDF"|escapejs }}'});">
+                        <div class="col-md-5">
+                            <label class="form-label" style="font-size:.8rem;">{{ ui_text.design_mode|default:"Modo de design" }}</label>
+                            <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
+                                {% for value, label in pitch_design_mode_choices %}
+                                <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" style="font-size:.8rem;">{{ ui_text.premium_manual_template|default:"Template" }}</label>
+                            <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate"
+                                    onchange="var m=document.getElementById('resultPitchDesignMode'); if(m && m.options.length>1){m.value=m.options[m.options.length-1].value;}">
+                                {% for value, label in pitch_design_template_choices %}
+                                <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                                <i class="fas fa-download me-1"></i>{{ ui_text.generate_pitch_pdf|default:"Gerar PDF" }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <!-- Tab: Category scores -->
@@ -231,39 +266,6 @@
                                 {% endfor %}
                             </ul>
                         </div>
-                    </div>
-
-                    <!-- Pitch PDF generator -->
-                    <div class="mt-4 pt-3" style="border-top:1px solid #2a2c31;">
-                        <div class="section-hd mb-3">
-                            <div class="section-hd-icon" style="background:rgba(245,158,11,.14);color:#fbbf24;"><i class="fas fa-file-powerpoint"></i></div>
-                            <h6>{{ ui_text.pitch_pdf_slides_with_design|default:"Pitch PDF com Design" }}</h6>
-                        </div>
-                        <form method="get" action="{% url 'pitch_investor_pdf' analysis.id %}" class="row g-2 align-items-end"
-                              onsubmit="event.preventDefault(); openPdfPreview(this.action + '?' + new URLSearchParams(new FormData(this)).toString(), {title: '{{ ui_text.generate_pitch_pdf|default:"Gerar PDF"|escapejs }}'});">
-                            <div class="col-md-5">
-                                <label class="form-label" style="font-size:.8rem;">{{ ui_text.design_mode|default:"Modo de design" }}</label>
-                                <select class="form-select form-select-sm" name="design_mode" id="resultPitchDesignMode">
-                                    {% for value, label in pitch_design_mode_choices %}
-                                    <option value="{{ value }}" {% if selected_pitch_design_mode == value %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" style="font-size:.8rem;">{{ ui_text.premium_manual_template|default:"Template" }}</label>
-                                <select class="form-select form-select-sm" name="design_template" id="resultPitchDesignTemplate"
-                                        onchange="var m=document.getElementById('resultPitchDesignMode'); if(m && m.options.length>1){m.value=m.options[m.options.length-1].value;}">
-                                    {% for value, label in pitch_design_template_choices %}
-                                    <option value="{{ value }}" {% if selected_pitch_design_template == value %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <button type="submit" class="btn btn-sm btn-outline-warning w-100">
-                                    <i class="fas fa-download me-1"></i>{{ ui_text.generate_pitch_pdf|default:"Gerar PDF" }}
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             </div>

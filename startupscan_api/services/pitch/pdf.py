@@ -1,3 +1,4 @@
+import math
 import os
 import re
 from datetime import datetime
@@ -63,6 +64,69 @@ def _font_for(language: str, bold: bool = False) -> str:
     if (language or "").strip().lower() == "zh-hans":
         return _CJK_FONT
     return F_BOLD if bold else F_REG
+
+
+# ─────────────────────────────────────────────────────────────
+#  Per-template style profile.
+#
+#  _draw_template_bg (below) already gives each of the 6 manual templates a
+#  distinct decorative background. This profile makes the rest of the deck
+#  look genuinely different per template too — corner rounding, the bullet
+#  marker shape, the section-header treatment, the cover badge shape and
+#  the title alignment — while every renderer still shares one code path
+#  (so a future content/quality fix still applies identically everywhere).
+# ─────────────────────────────────────────────────────────────
+
+_TEMPLATE_STYLES = {
+    "orbit":    {"corner": 16, "marker": "circle",  "badge": "circle",  "header": "band",   "title_align": "left"},
+    "grid":     {"corner": 0,  "marker": "square",  "badge": "square",  "header": "rule",   "title_align": "left"},
+    "wave":     {"corner": 28, "marker": "circle",  "badge": "circle",  "header": "band",   "title_align": "left"},
+    "diagonal": {"corner": 0,  "marker": "diamond", "badge": "diamond", "header": "tag",    "title_align": "left"},
+    "aurora":   {"corner": 22, "marker": "hex",     "badge": "circle",  "header": "band",   "title_align": "center"},
+    "ribbon":   {"corner": 10, "marker": "circle",  "badge": "circle",  "header": "ribbon", "title_align": "left"},
+}
+
+
+def _style_for(template: str) -> dict:
+    return _TEMPLATE_STYLES.get((template or "orbit").strip().lower(), _TEMPLATE_STYLES["orbit"])
+
+
+def _draw_marker_shape(pdf: canvas.Canvas, cx: float, cy: float, r: float, shape: str, fill_color=None,
+                        stroke_color=None, stroke_width: float = 1.0) -> None:
+    """Draws the bullet/badge marker in the shape the current template calls for.
+    Pass fill_color for a filled marker, stroke_color (with fill_color=None) for an outline-only ring."""
+    do_fill = fill_color is not None
+    do_stroke = stroke_color is not None
+    if not do_fill and not do_stroke:
+        return
+    if do_fill:
+        pdf.setFillColor(fill_color)
+    if do_stroke:
+        pdf.setStrokeColor(stroke_color)
+        pdf.setLineWidth(stroke_width)
+    shape = (shape or "circle").lower()
+    fill_flag, stroke_flag = int(do_fill), int(do_stroke)
+    if shape == "square":
+        pdf.roundRect(cx - r, cy - r, r * 2, r * 2, r * 0.25, stroke=stroke_flag, fill=fill_flag)
+    elif shape == "diamond":
+        p = pdf.beginPath()
+        p.moveTo(cx, cy + r)
+        p.lineTo(cx + r, cy)
+        p.lineTo(cx, cy - r)
+        p.lineTo(cx - r, cy)
+        p.close()
+        pdf.drawPath(p, stroke=stroke_flag, fill=fill_flag)
+    elif shape == "hex":
+        p = pdf.beginPath()
+        pts = [(cx + r * math.cos(math.radians(60 * i - 30)), cy + r * math.sin(math.radians(60 * i - 30)))
+               for i in range(6)]
+        p.moveTo(*pts[0])
+        for pt in pts[1:]:
+            p.lineTo(*pt)
+        p.close()
+        pdf.drawPath(p, stroke=stroke_flag, fill=fill_flag)
+    else:  # circle
+        pdf.circle(cx, cy, r, stroke=stroke_flag, fill=fill_flag)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -433,18 +497,82 @@ def _draw_left_stripe(pdf: canvas.Canvas, height: float, palette: dict) -> None:
 
 
 def _draw_top_band(pdf: canvas.Canvas, width: float, height: float,
-                   palette: dict, label: str, language: str = _DEFAULT_LANGUAGE) -> None:
+                   palette: dict, label: str, language: str = _DEFAULT_LANGUAGE,
+                   style: dict | None = None) -> None:
+    """
+    Renders the section header. Keeps a fixed 54pt height across every
+    template (so title placement below it never has to shift), but the
+    visual treatment itself — a solid band, a minimalist double rule, an
+    angled corner tag, or a notched ribbon — comes from the template's
+    style profile (_style_for), which is the main thing that makes each
+    template read as a genuinely different design rather than just a
+    different background pattern.
+    """
+    style = style or _TEMPLATE_STYLES["orbit"]
+    header = style.get("header", "band")
     band_h = 54
-    pdf.setFillColor(palette["band"])
-    pdf.rect(0, height - band_h, width, band_h, stroke=0, fill=1)
-    # Accent highlight strip at top edge
-    pdf.setFillColor(_with_alpha(palette["accent"], 0.5))
-    pdf.rect(0, height - 3, width, 3, stroke=0, fill=1)
-    # Label text inside band
-    if label:
-        pdf.setFillColor(colors.white)
-        pdf.setFont(_font_for(language, True), 11)
-        pdf.drawString(20, height - band_h + 20, label.upper())
+    top = height - band_h
+    font = _font_for(language, True)
+
+    if header == "rule":
+        pdf.setStrokeColor(_with_alpha(palette["accent"], 0.7))
+        pdf.setLineWidth(1.2)
+        pdf.line(20, height - 15, width - 20, height - 15)
+        pdf.setStrokeColor(_with_alpha(palette["band"], 0.5))
+        pdf.setLineWidth(0.6)
+        pdf.line(20, top + 8, width - 20, top + 8)
+        if label:
+            pdf.setFillColor(palette["accent"])
+            pdf.setFont(font, 10.5)
+            pdf.drawString(20, top + 20, label.upper())
+
+    elif header == "tag":
+        tag_w = min(width * 0.44, 90 + (stringWidth(label.upper(), font, 10.5) if label else 0))
+        p = pdf.beginPath()
+        p.moveTo(0, top)
+        p.lineTo(tag_w, top)
+        p.lineTo(tag_w - 24, height)
+        p.lineTo(0, height)
+        p.close()
+        pdf.setFillColor(palette["band"])
+        pdf.drawPath(p, stroke=0, fill=1)
+        pdf.setFillColor(_with_alpha(palette["accent"], 0.6))
+        pdf.rect(0, height - 3, tag_w, 3, stroke=0, fill=1)
+        if label:
+            pdf.setFillColor(colors.white)
+            pdf.setFont(font, 10.5)
+            pdf.drawString(20, top + 20, label.upper())
+
+    elif header == "ribbon":
+        notch = 18
+        p = pdf.beginPath()
+        p.moveTo(0, top)
+        p.lineTo(width - notch, top)
+        p.lineTo(width, top + band_h / 2)
+        p.lineTo(width - notch, height)
+        p.lineTo(0, height)
+        p.close()
+        pdf.setFillColor(palette["band"])
+        pdf.drawPath(p, stroke=0, fill=1)
+        pdf.setFillColor(_with_alpha(palette["accent"], 0.5))
+        pdf.rect(0, height - 3, width - notch, 3, stroke=0, fill=1)
+        if label:
+            pdf.setFillColor(colors.white)
+            pdf.setFont(font, 11)
+            pdf.drawString(20, top + 20, label.upper())
+
+    else:  # band (default: orbit / wave / aurora)
+        pdf.setFillColor(palette["band"])
+        pdf.rect(0, top, width, band_h, stroke=0, fill=1)
+        pdf.setFillColor(_with_alpha(palette["accent"], 0.5))
+        pdf.rect(0, height - 3, width, 3, stroke=0, fill=1)
+        if label:
+            pdf.setFillColor(colors.white)
+            pdf.setFont(font, 11)
+            if style.get("title_align") == "center":
+                pdf.drawCentredString(width / 2, top + 20, label.upper())
+            else:
+                pdf.drawString(20, top + 20, label.upper())
 
 
 def _draw_slide_number_watermark(pdf: canvas.Canvas, width: float, height: float,
@@ -500,25 +628,37 @@ def _draw_footer_bar(pdf: canvas.Canvas, width: float, page: int, total: int,
 
 def _draw_single_bullet(pdf: canvas.Canvas, text: str, x: float, y: float,
                          max_width: float, palette: dict, font_size: float = 10.5,
-                         language: str = _DEFAULT_LANGUAGE, index: int | None = None) -> float:
-    """Draw one bullet item (numbered circle when `index` is given, plain dot otherwise). Returns new y."""
+                         language: str = _DEFAULT_LANGUAGE, index: int | None = None,
+                         max_lines: int = 3, marker_shape: str = "circle") -> float:
+    """
+    Draw one bullet item (numbered circle when `index` is given, plain dot
+    otherwise). Returns new y.
+
+    `max_lines` bounds how much of `text` gets shown — it is NOT a fixed
+    220-character/3-line cap regardless of content, because the enrichment
+    step (services/pitch/enricher.py) deliberately writes full, detailed
+    sentences (up to ~340 chars); cutting them short here just to fit an
+    arbitrary limit undoes that work and leaves slides looking terse. The
+    truncation budget instead scales with how many lines the caller has
+    room for, so short bullet lists (bigger font, more line budget) show
+    their full text, and only genuinely long content ever gets an ellipsis.
+    """
     marker_r = 8.0 if index is not None else 2.6
     text_x = x + marker_r * 2 + (10 if index is not None else 7)
     max_chars = max(20, int(max_width / (font_size * 0.58)))
-    wrapped = _wrap_text_lines(_truncate_text(_safe_str(text, ""), 220), max_chars=max_chars)[:3]
+    char_budget = max(220, max_lines * max_chars + 40)
+    wrapped = _wrap_text_lines(_truncate_text(_safe_str(text, ""), char_budget), max_chars=max_chars)[:max_lines]
     if not wrapped:
         return y
 
     marker_cy = y + font_size * 0.38
     if index is not None:
-        pdf.setFillColor(palette["band"])
-        pdf.circle(x + marker_r, marker_cy, marker_r, stroke=0, fill=1)
+        _draw_marker_shape(pdf, x + marker_r, marker_cy, marker_r, marker_shape, palette["band"])
         pdf.setFillColor(colors.white)
         pdf.setFont(_font_for(language, True), 7.5)
         pdf.drawCentredString(x + marker_r, marker_cy - 2.6, str(index))
     else:
-        pdf.setFillColor(palette["accent"])
-        pdf.circle(x + marker_r, marker_cy, marker_r, stroke=0, fill=1)
+        _draw_marker_shape(pdf, x + marker_r, marker_cy, marker_r, marker_shape, palette["accent"])
 
     pdf.setFillColor(palette["text"])
     pdf.setFont(_font_for(language), font_size)
@@ -597,6 +737,7 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
                   page: int, total: int, engine: str, key: str,
                   language: str = _DEFAULT_LANGUAGE) -> None:
     t = _deck_strings(language)
+    style = _style_for(template)
     # Solid background
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
@@ -625,13 +766,11 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     initials = (startup_name[:2]).upper()
     badge_cx = width - 90
     badge_cy = height - 74
-    pdf.setFillColor(palette["band"])
-    pdf.circle(badge_cx, badge_cy, 52, stroke=0, fill=1)
-    pdf.setFillColor(_with_alpha(palette["accent"], 0.3))
-    pdf.circle(badge_cx, badge_cy, 52, stroke=0, fill=1)
-    pdf.setStrokeColor(_with_alpha(palette["accent"], 0.7))
-    pdf.setLineWidth(2)
-    pdf.circle(badge_cx, badge_cy, 52, stroke=1, fill=0)
+    badge_shape = style["badge"]
+    _draw_marker_shape(pdf, badge_cx, badge_cy, 52, badge_shape, fill_color=palette["band"])
+    _draw_marker_shape(pdf, badge_cx, badge_cy, 52, badge_shape, fill_color=_with_alpha(palette["accent"], 0.3))
+    _draw_marker_shape(pdf, badge_cx, badge_cy, 52, badge_shape,
+                        stroke_color=_with_alpha(palette["accent"], 0.7), stroke_width=2)
     pdf.setFillColor(colors.white)
     pdf.setFont(_font_for(language, True), 28)
     tw = stringWidth(initials, _font_for(language, True), 28)
@@ -646,16 +785,21 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     for prefix in ("Pitch de Negócio - ", "Pitch de Negocio - "):
         if title.startswith(prefix):
             title = title[len(prefix):]
+    centered = style.get("title_align") == "center"
     pdf.setFillColor(colors.white)
     pdf.setFont(_font_for(language, True), 40)
     title_y = height - 110
     for line in _wrap_text_lines(title, max_chars=28)[:2]:
-        pdf.drawString(28, title_y, line)
+        if centered:
+            pdf.drawCentredString(width / 2, title_y, line)
+        else:
+            pdf.drawString(28, title_y, line)
         title_y -= 50
 
     # Accent underline
     pdf.setFillColor(palette["accent"])
-    pdf.rect(28, title_y + 8, 80, 3, stroke=0, fill=1)
+    underline_x = (width - 80) / 2 if centered else 28
+    pdf.rect(underline_x, title_y + 8, 80, 3, stroke=0, fill=1)
     title_y -= 18
 
     # ── Tagline / slogan ──
@@ -663,11 +807,17 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
     pdf.setFillColor(palette["muted"])
     pdf.setFont(_font_for(language), 14)
     for line in _wrap_text_lines(_truncate_text(slogan, 160), max_chars=62)[:3]:
-        pdf.drawString(28, title_y, line)
+        if centered:
+            pdf.drawCentredString(width / 2, title_y, line)
+        else:
+            pdf.drawString(28, title_y, line)
         title_y -= 20
 
     # ── Info card (lower section) ──
-    card_x, card_y, card_w, card_h = 28, 46, width * 0.58, 112
+    card_w = width * 0.58
+    card_x = (width - card_w) / 2 if centered else 28
+    card_y, card_h = 46, 112
+    corner = style["corner"]
 
     # ── Funding snapshot chips: fills the gap between the tagline and the
     # info card with a preview of the ask, using whatever room the (variable
@@ -690,13 +840,14 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
         n = len(stat_chips)
         gap = 8
         chip_w = (card_w - gap * (n - 1)) / n
+        chip_corner = min(8, corner) if corner else 0
         for i, (label, value) in enumerate(stat_chips):
             cx0 = card_x + i * (chip_w + gap)
             pdf.setFillColor(_with_alpha(palette["card"], 0.6))
-            pdf.roundRect(cx0, strip_y, chip_w, strip_h, 8, stroke=0, fill=1)
+            pdf.roundRect(cx0, strip_y, chip_w, strip_h, chip_corner, stroke=0, fill=1)
             pdf.setStrokeColor(_with_alpha(palette["accent"], 0.35))
             pdf.setLineWidth(0.8)
-            pdf.roundRect(cx0, strip_y, chip_w, strip_h, 8, stroke=1, fill=0)
+            pdf.roundRect(cx0, strip_y, chip_w, strip_h, chip_corner, stroke=1, fill=0)
             pdf.setFillColor(palette["accent"])
             pdf.setFont(_font_for(language, True), 7.5)
             pdf.drawString(cx0 + 10, strip_y + strip_h - 16, label)
@@ -710,15 +861,15 @@ def _render_cover(pdf: canvas.Canvas, width: float, height: float,
                 pdf.drawString(cx0 + 10, base_y - li * (value_font + 2), vline)
 
     pdf.setFillColor(_with_alpha(palette["card"], 0.9))
-    pdf.roundRect(card_x, card_y, card_w, card_h, 12, stroke=0, fill=1)
+    pdf.roundRect(card_x, card_y, card_w, card_h, corner, stroke=0, fill=1)
     pdf.setStrokeColor(_with_alpha(palette["band"], 0.5))
     pdf.setLineWidth(1)
-    pdf.roundRect(card_x, card_y, card_w, card_h, 12, stroke=1, fill=0)
+    pdf.roundRect(card_x, card_y, card_w, card_h, corner, stroke=1, fill=0)
 
     # "PITCH DECK EXECUTIVO" tag
     tag_w = 180
     pdf.setFillColor(palette["tag_bg"])
-    pdf.roundRect(card_x + 14, card_y + card_h - 28, tag_w, 22, 5, stroke=0, fill=1)
+    pdf.roundRect(card_x + 14, card_y + card_h - 28, tag_w, 22, min(11, corner), stroke=0, fill=1)
     pdf.setFillColor(colors.white)
     pdf.setFont(_font_for(language, True), 8.5)
     pdf.drawString(card_x + 22, card_y + card_h - 18, t.get("exec_confidential_tag", "EXECUTIVE PITCH DECK  ·  CONFIDENTIAL"))
@@ -751,12 +902,14 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
                               language: str = _DEFAULT_LANGUAGE) -> None:
     """Dedicated layout for investment/funding slides with KPI boxes."""
     t = _deck_strings(language)
+    style = _style_for(template)
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
     _draw_template_bg(pdf, width, height, palette, template, seed)
     _draw_left_stripe(pdf, height, palette)
     _draw_top_band(pdf, width, height, palette,
-                    slide.get("subtitle") or t.get("investment_title", "Fundraising & Use of Capital"), language)
+                    slide.get("subtitle") or t.get("investment_title", "Fundraising & Use of Capital"),
+                    language, style=style)
     _draw_slide_number_watermark(pdf, width, height, page, palette, language)
 
     title = _safe_str(slide.get("title"), t.get("investment_default_title", "Fundraising"))
@@ -785,12 +938,13 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
     kpi_w = (width - 44 - (n_kpis - 1) * 14) / n_kpis
     kpi_y = height - 180
     kpi_h = 68
+    kpi_corner = min(10, style["corner"]) if style["corner"] else 0
     for i, (label, value) in enumerate(kpi_items):
         kx = 22 + i * (kpi_w + 14)
         pdf.setFillColor(_with_alpha(palette["card"], 0.95))
-        pdf.roundRect(kx, kpi_y, kpi_w, kpi_h, 10, stroke=0, fill=1)
+        pdf.roundRect(kx, kpi_y, kpi_w, kpi_h, kpi_corner, stroke=0, fill=1)
         pdf.setFillColor(palette["band"])
-        pdf.roundRect(kx, kpi_y + kpi_h - 28, kpi_w, 28, 10, stroke=0, fill=1)
+        pdf.roundRect(kx, kpi_y + kpi_h - 28, kpi_w, 28, min(kpi_corner, 11), stroke=0, fill=1)
         pdf.setFillColor(colors.white)
         pdf.setFont(_font_for(language, True), 9)
         pdf.drawCentredString(kx + kpi_w / 2, kpi_y + kpi_h - 12, label)
@@ -832,7 +986,8 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
     for i, bullet in enumerate(alloc_bullets[:6], start=1):
         if body_y < 46:
             break
-        body_y = _draw_single_bullet(pdf, bullet, 22, body_y, width - 44, palette, 10.5, language=language, index=i)
+        body_y = _draw_single_bullet(pdf, bullet, 22, body_y, width - 44, palette, 10.5,
+                                      language=language, index=i, max_lines=4, marker_shape=style["marker"])
 
     _draw_progress_dots(pdf, width, page, total, palette)
     _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
@@ -843,6 +998,7 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
                            page: int, total: int, engine: str, key: str,
                            language: str = _DEFAULT_LANGUAGE) -> None:
     t = _deck_strings(language)
+    style = _style_for(template)
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
     _draw_template_bg(pdf, width, height, palette, template, seed)
@@ -853,30 +1009,36 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
     bullets = [str(b).strip() for b in (slide.get("bullets") or []) if str(b).strip()]
 
     band_label = subtitle or title
-    _draw_top_band(pdf, width, height, palette, band_label, language)
+    _draw_top_band(pdf, width, height, palette, band_label, language, style=style)
     _draw_slide_number_watermark(pdf, width, height, page, palette, language)
 
     # Title
+    centered = style["title_align"] == "center"
     pdf.setFillColor(palette["text"])
     pdf.setFont(_font_for(language, True), 28)
     title_y = height - 82
     for line in _wrap_text_lines(title, max_chars=44)[:1]:
-        pdf.drawString(22, title_y, line)
+        if centered:
+            pdf.drawCentredString(width / 2, title_y, line)
+        else:
+            pdf.drawString(22, title_y, line)
 
     # Accent underline
     pdf.setFillColor(palette["accent"])
-    pdf.rect(22, title_y - 9, 60, 2.5, stroke=0, fill=1)
+    underline_x = (width - 60) / 2 if centered else 22
+    pdf.rect(underline_x, title_y - 9, 60, 2.5, stroke=0, fill=1)
 
     # ── Main content card ──
     card_x = 22
     card_y = 46
     card_w = width - 44
     card_h = height - 150
+    corner = style["corner"]
     pdf.setFillColor(_with_alpha(palette["card"], 0.85))
-    pdf.roundRect(card_x, card_y, card_w, card_h, 14, stroke=0, fill=1)
+    pdf.roundRect(card_x, card_y, card_w, card_h, corner, stroke=0, fill=1)
     pdf.setStrokeColor(_with_alpha(palette["band"], 0.3))
     pdf.setLineWidth(0.8)
-    pdf.roundRect(card_x, card_y, card_w, card_h, 14, stroke=1, fill=0)
+    pdf.roundRect(card_x, card_y, card_w, card_h, corner, stroke=1, fill=0)
 
     mode = (layout or "focus").strip().lower()
 
@@ -899,17 +1061,77 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
         left_body_w = divider_x - card_x - 30
         right_body_w = card_x + card_w - divider_x - 30
 
+        def _column_tier(count: int) -> tuple[float, int]:
+            if count <= 1:
+                return 12.5, 7
+            if count <= 2:
+                return 11.5, 5
+            return 10.0, 3
+
+        left_font, left_lines = _column_tier(len(left_bullets[:5]))
+        right_font, right_lines = _column_tier(len(right_bullets[:5]))
+
         ly = card_y + card_h - 46
         for i, b in enumerate(left_bullets[:5], start=1):
             if ly < card_y + 26:
                 break
-            ly = _draw_single_bullet(pdf, b, card_x + 16, ly, left_body_w, palette, 10, language=language, index=i)
+            ly = _draw_single_bullet(pdf, b, card_x + 16, ly, left_body_w, palette, left_font,
+                                      language=language, index=i, max_lines=left_lines, marker_shape=style["marker"])
 
         ry = card_y + card_h - 46
         for i, b in enumerate(right_bullets[:5], start=1):
             if ry < card_y + 26:
                 break
-            ry = _draw_single_bullet(pdf, b, divider_x + 14, ry, right_body_w, palette, 10, language=language, index=i)
+            ry = _draw_single_bullet(pdf, b, divider_x + 14, ry, right_body_w, palette, right_font,
+                                      language=language, index=i, max_lines=right_lines, marker_shape=style["marker"])
+
+    elif mode == "cards" and bullets:
+        # A grid of individually-boxed cards instead of one stacked list —
+        # chunking each point into its own tile reads as more explicit and
+        # naturally fills a wide card even with just a handful of points.
+        n = min(6, len(bullets))
+        cols = 1 if n == 1 else 2
+        rows = max(1, math.ceil(n / cols))
+        gap = 10
+        grid_x = card_x + 14
+        grid_top = card_y + card_h - 18
+        grid_w = card_w - 28
+        grid_h = card_h - 30
+        cell_w = (grid_w - gap * (cols - 1)) / cols
+        cell_h = (grid_h - gap * (rows - 1)) / rows
+        cell_corner = min(10, corner) if corner else 0
+        marker_r = 10.0
+
+        for idx, b in enumerate(bullets[:6]):
+            col = idx % cols
+            row = idx // cols
+            bx = grid_x + col * (cell_w + gap)
+            by = grid_top - (row + 1) * cell_h - row * gap
+            pdf.setFillColor(_with_alpha(palette["bg"], 0.35))
+            pdf.roundRect(bx, by, cell_w, cell_h, cell_corner, stroke=0, fill=1)
+            pdf.setStrokeColor(_with_alpha(palette["accent"], 0.3))
+            pdf.setLineWidth(0.7)
+            pdf.roundRect(bx, by, cell_w, cell_h, cell_corner, stroke=1, fill=0)
+
+            marker_cx, marker_cy = bx + 20, by + cell_h - 20
+            _draw_marker_shape(pdf, marker_cx, marker_cy, marker_r, style["marker"], fill_color=palette["band"])
+            pdf.setFillColor(colors.white)
+            pdf.setFont(_font_for(language, True), 8.5)
+            pdf.drawCentredString(marker_cx, marker_cy - 3, str(idx + 1))
+
+            text_x = bx + 38
+            text_w = cell_w - 48
+            font_sz = 9.3
+            max_chars = max(14, int(text_w / (font_sz * 0.55)))
+            lines_avail = max(2, int((cell_h - 24) / (font_sz + 3)))
+            char_budget = max(160, lines_avail * max_chars + 30)
+            wrapped = _wrap_text_lines(_truncate_text(_safe_str(b, ""), char_budget), max_chars=max_chars)[:lines_avail]
+            pdf.setFillColor(palette["text"])
+            pdf.setFont(_font_for(language), font_sz)
+            ty = by + cell_h - 24
+            for line in wrapped:
+                pdf.drawString(text_x, ty, line)
+                ty -= font_sz + 3
 
     elif mode == "timeline":
         line_x = card_x + 74
@@ -924,40 +1146,84 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
         pdf.setFont(_font_for(language, True), 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 28, t.get("narrative_flow", "NARRATIVE FLOW"))
 
-        step_y = top_y - 10
-        for idx, raw in enumerate(bullets[:6], start=1):
-            if step_y < bot_y + 8:
-                break
-            # Step circle with number
-            pdf.setFillColor(palette["band"])
-            pdf.circle(line_x, step_y + 5, 9, stroke=0, fill=1)
+        # Steps are spaced into even slots across the whole available height
+        # (not just stacked tightly from the top), so a short list of steps
+        # still uses the full card instead of leaving its lower half empty.
+        n_steps = max(1, min(6, len(bullets)))
+        available_h = (top_y - 10) - bot_y
+        slot_h = available_h / n_steps
+        text_w = (card_x + card_w - 18) - (line_x + 18)
+        text_font = 10.5
+        max_chars = max(30, int(text_w / (text_font * 0.52)))
+        slot_lines = max(1, int((slot_h - 6) / 13))
+
+        for idx, raw in enumerate(bullets[:n_steps], start=1):
+            step_y = top_y - 10 - (idx - 1) * slot_h
+            # Step marker with number
+            _draw_marker_shape(pdf, line_x, step_y + 5, 9, style["marker"], fill_color=palette["band"])
             pdf.setFillColor(colors.white)
             pdf.setFont(_font_for(language, True), 7.5)
             pdf.drawCentredString(line_x, step_y + 2, str(idx))
-            # Text
+            # Text — wrapped to the card's actual remaining width, and to as
+            # many lines as its even-height slot allows, so the timeline
+            # uses the whole slide instead of just its left third.
             pdf.setFillColor(palette["text"])
-            pdf.setFont(_font_for(language), 10)
-            txt = _truncate_text(_safe_str(raw, ""), 170)
-            for i, line in enumerate(_wrap_text_lines(txt, max_chars=55)[:2]):
+            pdf.setFont(_font_for(language), text_font)
+            txt = _truncate_text(_safe_str(raw, ""), max(240, max_chars * slot_lines + 40))
+            step_lines = _wrap_text_lines(txt, max_chars=max_chars)[:slot_lines]
+            for i, line in enumerate(step_lines):
                 pdf.drawString(line_x + 18, step_y - i * 13, line)
-            step_y -= max(30, len(_wrap_text_lines(txt, max_chars=55)[:2]) * 13 + 14)
+            step_y -= max(30, len(step_lines) * 13 + 14)
 
     else:  # focus (default)
         pdf.setFillColor(palette["accent"])
         pdf.setFont(_font_for(language, True), 9.5)
         pdf.drawString(card_x + 16, card_y + card_h - 26, t.get("key_points", "KEY POINTS"))
 
-        # Fewer bullets get a larger, more generous type size instead of
-        # leaving the card looking sparse — same content, better fit.
+        # Fewer bullets get a larger type size AND a bigger per-bullet line
+        # budget — the enrichment step writes full, detailed sentences, so
+        # a short bullet list should show them in full rather than clipping
+        # to a fixed line count that leaves the card looking sparse.
         n = max(1, len(bullets[:7]))
-        bullet_font = 15.0 if n <= 2 else (12.5 if n <= 4 else 10.5)
+        if n == 1:
+            bullet_font, max_lines = 16.5, 11
+        elif n == 2:
+            bullet_font, max_lines = 14.0, 7
+        elif n <= 4:
+            bullet_font, max_lines = 12.0, 4
+        else:
+            bullet_font, max_lines = 10.5, 3
 
-        body_y = card_y + card_h - 50
+        if n <= 2:
+            # A slide carrying only one or two big ideas gets a large
+            # translucent quote mark anchored to the card's corner so it
+            # doesn't read as empty, drawn first so bullet text sits on top.
+            pdf.setFillColor(_with_alpha(palette["shape2"], 0.5))
+            pdf.setFont(_font_for(language, True), 170)
+            pdf.drawString(card_x + card_w - 150, card_y + 6, "”")
+
+        top_y = card_y + card_h - 50
+        bottom_y = card_y + 26
+        body_y = top_y
+        if n == 1:
+            # A single paragraph rarely fills the whole card even at a
+            # large size; centering it in the available area (instead of
+            # pinning it to the top) reads as a deliberate layout rather
+            # than a slide that ran out of content.
+            preview_w = card_w - 32
+            preview_chars = max(20, int(preview_w / (bullet_font * 0.58)))
+            preview_budget = max(220, max_lines * preview_chars + 40)
+            preview_lines = _wrap_text_lines(_truncate_text(_safe_str(bullets[0], ""), preview_budget),
+                                              max_chars=preview_chars)[:max_lines]
+            text_h = len(preview_lines) * (bullet_font + 2)
+            body_y = min(top_y, bottom_y + (top_y - bottom_y + text_h) / 2)
+
         for i, b in enumerate(bullets[:7], start=1):
             if body_y < card_y + 26:
                 break
             body_y = _draw_single_bullet(pdf, b, card_x + 16, body_y, card_w - 32, palette,
-                                          bullet_font, language=language, index=i)
+                                          bullet_font, language=language, index=i, max_lines=max_lines,
+                                          marker_shape=style["marker"])
 
     _draw_progress_dots(pdf, width, page, total, palette)
     _draw_footer_bar(pdf, width, page, total, engine, key, palette, language)
@@ -969,6 +1235,7 @@ def _render_closing_slide(pdf: canvas.Canvas, width: float, height: float,
                            language: str = _DEFAULT_LANGUAGE) -> None:
     """A dedicated, centered 'thank you' finale instead of one more bulleted card."""
     t = _deck_strings(language)
+    style = _style_for(template)
     pdf.setFillColor(palette["bg"])
     pdf.rect(0, 0, width, height, stroke=0, fill=1)
     _draw_template_bg(pdf, width, height, palette, template, seed)
@@ -990,11 +1257,11 @@ def _render_closing_slide(pdf: canvas.Canvas, width: float, height: float,
 
     body_lines = []
     for b in (slide.get("bullets") or []):
-        body_lines.extend(_wrap_text_lines(_truncate_text(_safe_str(b, ""), 260), max_chars=72)[:3])
+        body_lines.extend(_wrap_text_lines(_truncate_text(_safe_str(b, ""), 500), max_chars=72)[:7])
     y = height * 0.62 - 40
     pdf.setFillColor(palette["muted"])
     pdf.setFont(_font_for(language), 12.5)
-    for line in body_lines[:5]:
+    for line in body_lines[:7]:
         pdf.drawCentredString(width / 2, y, line)
         y -= 20
 
@@ -1003,7 +1270,7 @@ def _render_closing_slide(pdf: canvas.Canvas, width: float, height: float,
     cta_x = width / 2 - cta_w / 2
     cta_y = max(70, y - 20)
     pdf.setFillColor(palette["tag_bg"])
-    pdf.roundRect(cta_x, cta_y, cta_w, 30, 15, stroke=0, fill=1)
+    pdf.roundRect(cta_x, cta_y, cta_w, 30, min(15, style["corner"] + 4) if style["corner"] else 4, stroke=0, fill=1)
     pdf.setFillColor(colors.white)
     pdf.setFont(_font_for(language, True), 10)
     pdf.drawCentredString(width / 2, cta_y + 11, cta.upper())
@@ -1034,9 +1301,13 @@ def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) 
 
     elevator = _safe_str(pitch_payload.get("elevator_pitch"), "")
     if elevator:
+        # Kept as a single full-text item (not pre-split into wrapped-line
+        # fragments) so the renderer treats it as one coherent paragraph
+        # with one number, instead of chopping it into several arbitrarily
+        # numbered "bullets" at whatever column a line-wrap happened to end.
         slides.append({"kind": "content", "title": t.get("elevator_title", "Elevator Pitch"),
                         "subtitle": t.get("elevator_subtitle", "Core message in under 90 seconds"),
-                        "bullets": _wrap_text_lines(_truncate_text(elevator, 480), max_chars=100)[:5]})
+                        "bullets": [_truncate_text(elevator, 600)]})
 
     deck = pitch_payload.get("pitch_deck") or []
     if deck:
@@ -1059,7 +1330,7 @@ def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) 
             slides.append({"kind": "content",
                             "title": _safe_str(sec.get("title"), t.get("section_default_title", "Section")),
                             "subtitle": t.get("section_subtitle", "Strategic summary"),
-                            "bullets": _wrap_text_lines(_truncate_text(content, 460), max_chars=100)[:5]})
+                            "bullets": [_truncate_text(content, 600)]})
 
     # Script / roadmap slide
     script = pitch_payload.get("script_3min") or []
@@ -1093,7 +1364,7 @@ def _build_pitch_slides(pitch_payload: dict, language: str = _DEFAULT_LANGUAGE) 
     slides.append({"kind": "closing",
                     "title": t.get("closing_title", "Conclusion"),
                     "subtitle": t.get("closing_subtitle", "Final message to the investor"),
-                    "bullets": _wrap_text_lines(_truncate_text(closing, 460), max_chars=100)[:5]})
+                    "bullets": [_truncate_text(closing, 500)]})
 
     return slides
 

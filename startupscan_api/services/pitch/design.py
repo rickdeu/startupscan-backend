@@ -221,7 +221,7 @@ def _build_pitch_design_profile(
         "retail": ["orbit", "diagonal", "grid", "ribbon"],
         "geral": ["orbit", "grid", "wave", "diagonal", "aurora", "ribbon"],
     }
-    layout_options = ["focus", "split", "timeline"]
+    layout_options = ["focus", "split", "timeline", "cards"]
 
     template_list = template_by_context.get(context, template_by_context["geral"])
     template_name = normalized_template if mode == PITCH_DESIGN_MODE_MANUAL else template_list[seed % len(template_list)]
