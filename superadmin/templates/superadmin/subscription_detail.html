@@ -1,0 +1,25 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Subscription — {{ subscription.user.username }}{% endblock %}
+{% block header_title %}Subscription — {{ subscription.user.username }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:subscription_edit' subscription.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:subscription_delete' subscription.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:subscription_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">User</div><div class="sa-detail-value">
+            <a href="{% url 'superadmin:user_detail' subscription.user.pk %}">{{ subscription.user.username }}</a>
+        </div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Plan</div><div class="sa-detail-value">{{ subscription.plan.name|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Status</div><div class="sa-detail-value">{{ subscription.get_status_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Cancel at period end</div><div class="sa-detail-value">{{ subscription.cancel_at_period_end|yesno:"Yes,No" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Trial end</div><div class="sa-detail-value">{{ subscription.trial_end|date:"d/m/Y H:i"|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Current period</div><div class="sa-detail-value">{{ subscription.current_period_start|date:"d/m/Y"|default:"—" }} → {{ subscription.current_period_end|date:"d/m/Y"|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Stripe customer</div><div class="sa-detail-value">{{ subscription.stripe_customer_id|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Stripe subscription</div><div class="sa-detail-value">{{ subscription.stripe_subscription_id|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Created / updated</div><div class="sa-detail-value">{{ subscription.created_at|date:"d/m/Y H:i" }} / {{ subscription.updated_at|date:"d/m/Y H:i" }}</div></div>
+    </div>
+</div>
+{% endblock %}

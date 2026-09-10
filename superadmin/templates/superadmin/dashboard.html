@@ -1,0 +1,153 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block header_title %}Analytics dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="sa-grid sa-grid-4">
+    <div class="sa-card sa-stat sa-stat-accent">
+        <div class="sa-stat-label"><i class="fas fa-users"></i> Total users</div>
+        <div class="sa-stat-value">{{ total_users }}</div>
+        <div class="sa-stat-sub">{{ superusers_count }} superadmin(s)</div>
+    </div>
+    <div class="sa-card sa-stat sa-stat-accent">
+        <div class="sa-stat-label"><i class="fas fa-file-invoice"></i> Pitch analyses</div>
+        <div class="sa-stat-value">{{ total_analyses }}</div>
+    </div>
+    <div class="sa-card sa-stat sa-stat-accent">
+        <div class="sa-stat-label"><i class="fas fa-credit-card"></i> Estimated MRR</div>
+        <div class="sa-stat-value">${{ mrr_estimate }}</div>
+        <div class="sa-stat-sub">{{ active_subscriptions }} active subscriptions</div>
+    </div>
+    <div class="sa-card sa-stat sa-stat-accent">
+        <div class="sa-stat-label"><i class="fas fa-clock-rotate-left"></i> Operations logged</div>
+        <div class="sa-stat-value">{{ total_operations }}</div>
+    </div>
+</div>
+
+<div class="sa-section-title"><i class="fas fa-bolt"></i> Quick access</div>
+<div class="sa-quicklinks">
+    <a class="sa-quicklink" href="{% url 'superadmin:user_list' %}"><i class="fas fa-users"></i><span>Users</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:group_list' %}"><i class="fas fa-user-shield"></i><span>Groups &amp; permissions</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:pitch_list' %}"><i class="fas fa-file-invoice"></i><span>Pitch analyses</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:idea_list' %}"><i class="fas fa-lightbulb"></i><span>Idea pitches</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:idea_feedback_list' %}"><i class="fas fa-comment-dots"></i><span>Idea feedback</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:investor_interest_list' %}"><i class="fas fa-hand-holding-dollar"></i><span>Investor interests</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:plan_list' %}"><i class="fas fa-tags"></i><span>Subscription plans</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:subscription_list' %}"><i class="fas fa-credit-card"></i><span>Subscriptions</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:usage_list' %}"><i class="fas fa-gauge-high"></i><span>Monthly usage</span></a>
+    <a class="sa-quicklink" href="{% url 'superadmin:activity_list' %}"><i class="fas fa-clock-rotate-left"></i><span>Activity log</span></a>
+</div>
+
+<div class="sa-section-title"><i class="fas fa-chart-line"></i> Report</div>
+<div class="sa-tabs" id="reportTabs">
+    <a href="#" class="sa-tab active" data-period="daily">Daily <span class="sa-tab-hint">last 14 days</span></a>
+    <a href="#" class="sa-tab" data-period="weekly">Weekly <span class="sa-tab-hint">last 12 weeks</span></a>
+    <a href="#" class="sa-tab" data-period="monthly">Monthly <span class="sa-tab-hint">last 12 months</span></a>
+</div>
+
+<div class="sa-grid sa-grid-4">
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">New users</div>
+        <div class="sa-stat-value" id="statNewUsers">0</div>
+    </div>
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">New analyses</div>
+        <div class="sa-stat-value" id="statNewAnalyses">0</div>
+    </div>
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">New idea pitches</div>
+        <div class="sa-stat-value" id="statNewIdeas">0</div>
+    </div>
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">Operations logged</div>
+        <div class="sa-stat-value" id="statOperations">0</div>
+    </div>
+</div>
+
+<div class="sa-grid sa-grid-2">
+    <div class="sa-chart-card">
+        <div class="sa-chart-title">Pitch analyses created</div>
+        <canvas id="trendChart" height="130"></canvas>
+    </div>
+    <div class="sa-chart-card">
+        <div class="sa-chart-title">Operations by type</div>
+        <canvas id="actionChart" height="130"></canvas>
+    </div>
+</div>
+
+<div class="sa-section-title"><i class="fas fa-list"></i> Recent activity</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead>
+        <tr><th>When</th><th>Action</th><th>User</th><th>Target</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for log in recent_activity %}
+        <tr>
+            <td>{{ log.created_at|date:"d/m/Y H:i" }}</td>
+            <td><span class="sa-badge sa-badge-primary">{{ log.get_action_display }}</span></td>
+            <td>{{ log.user.username|default:"—" }}</td>
+            <td>{{ log.target_repr|default:"—" }}</td>
+            <td><a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:activity_detail' log.pk %}"><i class="fas fa-eye"></i></a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="sa-empty">No operations logged yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div style="margin-top:12px;">
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:activity_list' %}">View full activity log <i class="fas fa-arrow-right"></i></a>
+</div>
+
+<script>
+Chart.defaults.color = '#9aa0aa';
+Chart.defaults.borderColor = '#2a2c31';
+const PRIMARY = '#f5580d';
+const PALETTE = ['#f5580d', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#a855f7', '#14b8a6'];
+const PERIODS = {{ periods_json|safe }};
+
+let trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Analyses', data: [], borderColor: PRIMARY, backgroundColor: 'rgba(245,88,13,0.15)', tension: 0.35, fill: true }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+});
+let actionChart = new Chart(document.getElementById('actionChart'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: PALETTE }] },
+    options: { plugins: { legend: { position: 'bottom' } } },
+});
+
+function renderPeriod(period) {
+    const data = PERIODS[period];
+    if (!data) return;
+    document.getElementById('statNewUsers').textContent = data.new_users;
+    document.getElementById('statNewAnalyses').textContent = data.new_analyses;
+    document.getElementById('statNewIdeas').textContent = data.new_ideas;
+    document.getElementById('statOperations').textContent = data.operations;
+
+    trendChart.data.labels = data.trend_labels;
+    trendChart.data.datasets[0].data = data.trend_totals;
+    trendChart.update();
+
+    actionChart.data.labels = data.action_labels;
+    actionChart.data.datasets[0].data = data.action_totals;
+    actionChart.update();
+}
+
+document.querySelectorAll('#reportTabs .sa-tab').forEach(function (tab) {
+    tab.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelectorAll('#reportTabs .sa-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        renderPeriod(tab.dataset.period);
+    });
+});
+
+renderPeriod('daily');
+</script>
+{% endblock %}

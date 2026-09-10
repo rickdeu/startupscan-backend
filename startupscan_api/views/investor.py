@@ -20,6 +20,8 @@ from startupscan_api.services.model_registry import get_active_model_name
 from .helpers import _redirect_back_or_default
 from .mixins import RoleRequiredMixin
 from subscriptions.mixins import check_limit_access
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +184,10 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
             if get_user_role(investor) != ROLE_ADMIN:
                 from subscriptions.models import MonthlyUsage
                 MonthlyUsage.increment(investor, 'investor_interests_count')
+            log_activity(
+                request, action=ActivityLog.ACTION_INVESTOR_INTEREST_SENT,
+                target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+            )
             messages.success(request, _ui_text_for_request(request).get(
                 "msg_interest_registered_success",
                 "Interest registered successfully. The entrepreneur has been notified internally.",

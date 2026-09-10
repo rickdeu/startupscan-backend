@@ -1,0 +1,21 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Usage — {{ usage.user.username }}{% endblock %}
+{% block header_title %}Monthly usage — {{ usage.user.username }} ({{ usage.year }}/{{ usage.month }}){% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:usage_edit' usage.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:usage_delete' usage.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:usage_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">User</div><div class="sa-detail-value">
+            <a href="{% url 'superadmin:user_detail' usage.user.pk %}">{{ usage.user.username }}</a>
+        </div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Period</div><div class="sa-detail-value">{{ usage.year }}/{{ usage.month }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Analyses</div><div class="sa-detail-value">{{ usage.analyses_count }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Videos</div><div class="sa-detail-value">{{ usage.videos_count }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Investor interests</div><div class="sa-detail-value">{{ usage.investor_interests_count }}</div></div>
+    </div>
+</div>
+{% endblock %}

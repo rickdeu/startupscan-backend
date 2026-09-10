@@ -26,6 +26,8 @@ from startupscan_api.services.pitch_builder import (
 from .helpers import _resolve_pitch_design_selection
 from .mixins import RoleRequiredMixin
 from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 import os
 from django.conf import settings
@@ -98,6 +100,10 @@ class IdeaPitchBuilderView(RoleRequiredMixin, View):
                 user=request.user if request.user.is_authenticated else None,
                 **{k: v for k, v in form_data.items() if k != "model_source"},
                 model_source=form_data["model_source"],
+            )
+            log_activity(
+                request, action=ActivityLog.ACTION_IDEA_CREATED,
+                target=f"IdeaPitchSubmission #{submission.id} ({submission.startup_name})",
             )
             messages.success(request, _ui_text_for_request(request).get(
                 "msg_idea_info_saved",
@@ -399,6 +405,10 @@ class IdeaPitchPDFView(RoleRequiredMixin, View):
         export_pitch_pdf(submission.generated_pitch, output_path, design_mode=design_mode, manual_template=design_template,
                           language=report_language)
 
+        log_activity(
+            request, action=ActivityLog.ACTION_IDEA_PDF_GENERATED,
+            target=f"IdeaPitchSubmission #{submission.id} ({submission.startup_name})",
+        )
         return FileResponse(
             open(output_path, "rb"),
             as_attachment=True,

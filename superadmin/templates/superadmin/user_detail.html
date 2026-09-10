@@ -1,0 +1,57 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}{{ target.username }}{% endblock %}
+{% block header_title %}User — {{ target.username }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:user_edit' target.pk %}"><i class="fas fa-pen"></i> Edit / permissions</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:user_delete' target.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:user_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+
+<div class="sa-grid sa-grid-4">
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">Pitch analyses</div>
+        <div class="sa-stat-value">{{ analyses_count }}</div>
+    </div>
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">Idea pitches</div>
+        <div class="sa-stat-value">{{ ideas_count }}</div>
+    </div>
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">Subscription</div>
+        <div class="sa-stat-value" style="font-size:1.1rem;">{{ subscription.plan.name|default:"—" }}</div>
+        <div class="sa-stat-sub">{{ subscription.get_status_display|default:"No subscription" }}</div>
+    </div>
+    <div class="sa-card sa-stat">
+        <div class="sa-stat-label">Access</div>
+        <div class="sa-stat-value" style="font-size:1.1rem;">
+            {% if target.is_superuser %}Superadmin{% elif target.is_staff %}Staff{% else %}Regular{% endif %}
+        </div>
+        <div class="sa-stat-sub">{{ target.is_active|yesno:"Active,Inactive" }}</div>
+    </div>
+</div>
+
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Username</div><div class="sa-detail-value">{{ target.username }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Email</div><div class="sa-detail-value">{{ target.email|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Full name</div><div class="sa-detail-value">{{ target.get_full_name|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Access profile (app role)</div><div class="sa-detail-value">{{ target.profile.get_role_display|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Joined / last login</div><div class="sa-detail-value">{{ target.date_joined|date:"d/m/Y H:i" }} / {{ target.last_login|date:"d/m/Y H:i"|default:"never" }}</div></div>
+    </div>
+
+    <div class="sa-detail-section-title">Groups</div>
+    <div class="sa-detail-value">
+        {% for g in target.groups.all %}
+        <a class="sa-badge sa-badge-primary" style="margin:2px;" href="{% url 'superadmin:group_detail' g.pk %}">{{ g.name }}</a>
+        {% empty %}—{% endfor %}
+    </div>
+
+    <div class="sa-detail-section-title">Individual permissions</div>
+    <div class="sa-detail-value">
+        {% for perm in target.user_permissions.all %}
+        <span class="sa-badge sa-badge-muted" style="margin:2px;">{{ perm.content_type.app_label }}.{{ perm.codename }}</span>
+        {% empty %}—{% endfor %}
+    </div>
+</div>
+{% endblock %}

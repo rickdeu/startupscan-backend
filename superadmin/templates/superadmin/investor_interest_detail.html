@@ -1,0 +1,26 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Interest #{{ interest.id }}{% endblock %}
+{% block header_title %}Investor connection interest #{{ interest.id }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:investor_interest_edit' interest.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:investor_interest_delete' interest.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:investor_interest_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Startup</div><div class="sa-detail-value">
+            {% if interest.analysis %}<a href="{% url 'superadmin:pitch_detail' interest.analysis.pk %}">{{ interest.analysis.startup_name|default:"—" }}</a>{% else %}—{% endif %}
+        </div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Status</div><div class="sa-detail-value">{{ interest.get_status_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Investor</div><div class="sa-detail-value">{{ interest.investor.username }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Entrepreneur</div><div class="sa-detail-value">{{ interest.entrepreneur.username|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Created / updated</div><div class="sa-detail-value">{{ interest.created_at|date:"d/m/Y H:i" }} / {{ interest.updated_at|date:"d/m/Y H:i" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Responded at</div><div class="sa-detail-value">{{ interest.responded_at|date:"d/m/Y H:i"|default:"—" }}</div></div>
+    </div>
+    <div class="sa-detail-section-title">Investor message</div>
+    <div class="sa-detail-value">{{ interest.investor_message|linebreaksbr|default:"—" }}</div>
+    <div class="sa-detail-section-title">Entrepreneur reply</div>
+    <div class="sa-detail-value">{{ interest.entrepreneur_reply|linebreaksbr|default:"—" }}</div>
+</div>
+{% endblock %}

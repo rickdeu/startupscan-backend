@@ -1,0 +1,58 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Subscription plan{% endblock %}
+{% block header_title %}{% if object %}Edit plan{% else %}New plan{% endif %}{% endblock %}
+{% block content %}
+<div class="sa-card">
+    <form method="post" class="sa-simple-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="sa-detail-section-title" style="margin-top:0;">Identification</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.name %}
+            {% include "superadmin/_field.html" with field=form.tier %}
+            {% include "superadmin/_field.html" with field=form.interval %}
+            {% include "superadmin/_field.html" with field=form.trial_days %}
+            {% include "superadmin/_field.html" with field=form.is_active %}
+        </div>
+
+        <div class="sa-detail-section-title">Pricing</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.price_usd %}
+            {% include "superadmin/_field.html" with field=form.price_eur %}
+            {% include "superadmin/_field.html" with field=form.price_aoa %}
+        </div>
+
+        <div class="sa-detail-section-title">Monthly limits (0 = unlimited)</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.analyses_per_month %}
+            {% include "superadmin/_field.html" with field=form.videos_per_month %}
+            {% include "superadmin/_field.html" with field=form.investor_interests_per_month %}
+            {% include "superadmin/_field.html" with field=form.batch_max_rows %}
+        </div>
+
+        <div class="sa-detail-section-title">Included features</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.gpt_analysis %}
+            {% include "superadmin/_field.html" with field=form.audio_upload %}
+            {% include "superadmin/_field.html" with field=form.video_upload %}
+            {% include "superadmin/_field.html" with field=form.youtube_url %}
+            {% include "superadmin/_field.html" with field=form.financial_data %}
+            {% include "superadmin/_field.html" with field=form.pdf_report %}
+            {% include "superadmin/_field.html" with field=form.pdf_investor %}
+            {% include "superadmin/_field.html" with field=form.pitch_template_choice %}
+            {% include "superadmin/_field.html" with field=form.pitch_gpt %}
+            {% include "superadmin/_field.html" with field=form.pitch_pdf %}
+            {% include "superadmin/_field.html" with field=form.batch_analysis %}
+            {% include "superadmin/_field.html" with field=form.investor_dashboard %}
+            {% include "superadmin/_field.html" with field=form.video_generation %}
+            {% include "superadmin/_field.html" with field=form.business_model_canvas %}
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:plan_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

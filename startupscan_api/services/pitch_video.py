@@ -182,7 +182,14 @@ def _load_font(size: int):
 
 
 def _analysis_payload(analysis):
+    from startupscan_api.utils.currency import format_currency
+
     report = analysis.report or {}
+    # This module's narration is Portuguese-only (see _int_to_pt_word /
+    # _number_for_speech_pt below), so — like the pitch-deck payload in
+    # views/pitch.py — its currency follows the app's Portuguese/Angola
+    # convention: revenue is stored in EUR, spoken/displayed here as AOA.
+    _symbol, revenue_aoa = format_currency(analysis.revenue, "pt")
     return {
         "startup_name": analysis.startup_name or f"Startup {analysis.id}",
         "score": float(analysis.success_score or 0),
@@ -191,7 +198,7 @@ def _analysis_payload(analysis):
         "recommendations": report.get("recommendations", [])[:3],
         "investor_pitch": report.get("investor_pitch", {}),
         "category_scores": report.get("category_scores", {}),
-        "revenue": float(analysis.revenue or 0),
+        "revenue": revenue_aoa,
         "growth_rate": float(analysis.growth_rate or 0),
         "profit_margin": float(analysis.profit_margin or 0),
     }
@@ -1014,6 +1021,26 @@ def _did_create_and_download_talk(
     }
 
 
+_RENDER_PROGRESS_STRINGS = {
+    "en": {
+        "phase_rendering": "rendering",
+        "msg_segment": "Generating segment {idx}/{total} in cinematic mode",
+        "msg_scene": "Rendering scene {idx}/{total}",
+    },
+    "pt": {
+        "phase_rendering": "renderização",
+        "msg_segment": "Gerando segmento {idx}/{total} no modo cinematográfico",
+        "msg_scene": "Renderizando cena {idx}/{total}",
+    },
+}
+
+
+def _render_progress_text(language: str, key: str, **kwargs) -> str:
+    strings = _RENDER_PROGRESS_STRINGS.get(language) or _RENDER_PROGRESS_STRINGS["en"]
+    template = strings.get(key) or _RENDER_PROGRESS_STRINGS["en"].get(key, key)
+    return template.format(**kwargs) if kwargs else template
+
+
 def _try_generate_realistic_video_did(
     plan: VideoPlan,
     source_image_url: str,
@@ -1022,6 +1049,7 @@ def _try_generate_realistic_video_did(
     presenter_gender: str | None = None,
     real_image_only: bool = False,
     progress_callback=None,
+    language: str = "en",
 ):
     """
     Uses D-ID to generate a realistic avatar video with gestures/lip-sync.
@@ -1092,8 +1120,8 @@ def _try_generate_realistic_video_did(
                     pct = 36 + int(((idx + 1) / max(1, len(segments))) * 46)
                     progress_callback(
                         pct,
-                        "renderizacao",
-                        f"Gerando segmento {idx + 1}/{len(segments)} no modo cinematográfico",
+                        _render_progress_text(language, "phase_rendering"),
+                        _render_progress_text(language, "msg_segment", idx=idx + 1, total=len(segments)),
                     )
                 except Exception:
                     pass
@@ -1946,6 +1974,7 @@ def generate_explainer_video(
     presenter_gender_override: str | None = None,
     generation_mode: str = "auto",
     progress_callback=None,
+    language: str = "en",
 ):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     mode = str(generation_mode or "auto").strip().lower()
@@ -1988,6 +2017,7 @@ def generate_explainer_video(
             presenter_gender=presenter_gender,
             real_image_only=(mode == "did_only"),
             progress_callback=progress_callback,
+            language=language,
         )
     if realistic_meta and realistic_meta.get("status") == "done":
         return {
@@ -2051,8 +2081,8 @@ def generate_explainer_video(
                     pct = 36 + int((idx / max(1, len(plan.scenes))) * 44)
                     progress_callback(
                         pct,
-                        "renderizacao",
-                        f"Renderizando cena {idx}/{len(plan.scenes)}",
+                        _render_progress_text(language, "phase_rendering"),
+                        _render_progress_text(language, "msg_scene", idx=idx, total=len(plan.scenes)),
                     )
                 except Exception:
                     pass

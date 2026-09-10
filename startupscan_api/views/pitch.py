@@ -34,6 +34,7 @@ from startupscan_api.services.pitch_builder import (
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.utils import generate_interpretable_report, prepare_features
+from startupscan_api.utils.currency import format_currency
 from .helpers import (
     _infer_error_field,
     _is_meaningful_pitch_text,
@@ -43,6 +44,8 @@ from .helpers import (
 from .jobs import _video_generation_cache_key
 from .mixins import RoleRequiredMixin
 from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -83,13 +86,16 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
         cleaned = [str(v).strip() for v in values if str(v).strip()]
         return " ".join(cleaned[:3]) if cleaned else fallback
 
-    revenue = float(analysis.revenue or 0)
+    # This payload's prose is always Portuguese (see note above), so its
+    # currency follows the same Portuguese/Angola convention as the rest of
+    # the app (revenue is stored in EUR; displayed here converted to AOA).
+    currency_symbol, revenue = format_currency(analysis.revenue, "pt")
     growth_rate = float(analysis.growth_rate or 0)
     profit_margin = float(analysis.profit_margin or 0)
     success_score = float(analysis.success_score or 0)
 
-    funding_goal_aoa = max(8_000_000, int(max(revenue * 0.55, 0)))
-    funding_goal = f"AOA {funding_goal_aoa:,.0f} para acelerar escala e execução comercial."
+    funding_goal_amount = max(8_000_000, int(max(revenue * 0.55, 0)))
+    funding_goal = f"{currency_symbol} {funding_goal_amount:,.0f} para acelerar escala e execução comercial."
 
     return {
         "startup_name": startup_name,
@@ -101,7 +107,7 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
         "business_model": "Modelo orientado a geração de receita recorrente e expansão comercial disciplinada.",
         "competitive_advantage": _join_list(strengths, "Execução rápida, leitura de métricas e adaptação contínua ao mercado."),
         "traction": (
-            f"Score {success_score:.1f}/10, receita AOA {revenue:,.0f}, "
+            f"Score {success_score:.1f}/10, receita {currency_symbol} {revenue:,.0f}, "
             f"crescimento {growth_rate:.1f}% e margem {profit_margin:.1f}%."
         ),
         "team": "Equipe focada em execução e melhoria contínua com orientação a metas de crescimento.",
@@ -382,7 +388,7 @@ class PitchFormView(RoleRequiredMixin, View):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
-        return PitchAnalysis.objects.create(
+        analysis = PitchAnalysis.objects.create(
             user=request.user if request.user.is_authenticated else None,
             startup_name=startup_name or None,
             industry=industry,
@@ -399,6 +405,11 @@ class PitchFormView(RoleRequiredMixin, View):
             metadata=metadata,
             ip_address=ip,
         )
+        log_activity(
+            request, action=ActivityLog.ACTION_ANALYSIS_CREATED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
+        return analysis
 
     def _check_pitch_gates(self, request, *, model_source, has_audio, has_video, has_youtube):
         allowed, _ = check_limit_access(request.user, 'analyses_per_month', 'analyses_count')
@@ -485,6 +496,10 @@ class PitchResultsView(RoleRequiredMixin, View):
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        log_activity(
+            request, action=ActivityLog.ACTION_REPORT_VIEWED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
         user_role = get_user_role(request.user)
         interests_qs = InvestorConnectionInterest.objects.filter(analysis=analysis).select_related("investor", "entrepreneur")
 
@@ -591,6 +606,10 @@ class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
             include_business_canvas=include_canvas,
         )
 
+        log_activity(
+            request, action=ActivityLog.ACTION_REPORT_DOWNLOADED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
         return FileResponse(
             open(output_path, "rb"),
             as_attachment=True,
@@ -654,6 +673,10 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
 
+            log_activity(
+                request, action=ActivityLog.ACTION_PITCH_PDF_GENERATED,
+                target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+            )
             return FileResponse(
                 open(output_path, "rb"),
                 as_attachment=True,

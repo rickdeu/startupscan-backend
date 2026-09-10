@@ -1,0 +1,13 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Delete confirmation{% endblock %}
+{% block header_title %}Delete confirmation{% endblock %}
+{% block content %}
+<div class="sa-card" style="max-width:520px;">
+    <p>Are you sure you want to delete <strong>{{ object }}</strong>? This action cannot be undone.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="sa-btn sa-btn-danger"><i class="fas fa-trash"></i> Delete</button>
+        <a href="{{ cancel_url }}" class="sa-btn sa-btn-ghost">Cancel</a>
+    </form>
+</div>
+{% endblock %}

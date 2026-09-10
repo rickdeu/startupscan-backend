@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'startupscan_api',
     'subscriptions',
+    'superadmin',
 ]
 
 MIDDLEWARE = [

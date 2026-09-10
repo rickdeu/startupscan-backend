@@ -96,7 +96,7 @@ class PitchAnalysisAdmin(admin.ModelAdmin):
 
     def financial_metrics(self, obj):
         return format_html(
-            'AOA {}<br>{}% Growth<br>{}% Margin',
+            '€ {}<br>{}% Growth<br>{}% Margin',
             f"{obj.revenue:,.2f}",
             obj.growth_rate,
             obj.profit_margin,

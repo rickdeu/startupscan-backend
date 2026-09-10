@@ -1,0 +1,46 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Plan — {{ plan.name }}{% endblock %}
+{% block header_title %}Subscription plan — {{ plan.name }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:plan_edit' plan.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:plan_delete' plan.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:plan_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Tier</div><div class="sa-detail-value">{{ plan.get_tier_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Interval</div><div class="sa-detail-value">{{ plan.get_interval_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Price</div><div class="sa-detail-value">${{ plan.price_usd }} / €{{ plan.price_eur_display }} / {{ plan.price_aoa_display }} Kz</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Active</div><div class="sa-detail-value">{{ plan.is_active|yesno:"Yes,No" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Trial days</div><div class="sa-detail-value">{{ plan.trial_days }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Stripe product / price</div><div class="sa-detail-value">{{ plan.stripe_product_id|default:"—" }} / {{ plan.stripe_price_id|default:"—" }}</div></div>
+    </div>
+
+    <div class="sa-detail-section-title">Monthly limits (0 = unlimited)</div>
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Analyses/month</div><div class="sa-detail-value">{{ plan.analyses_per_month }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Videos/month</div><div class="sa-detail-value">{{ plan.videos_per_month }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Investor interests/month</div><div class="sa-detail-value">{{ plan.investor_interests_per_month }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Batch max rows</div><div class="sa-detail-value">{{ plan.batch_max_rows }}</div></div>
+    </div>
+
+    <div class="sa-detail-section-title">Included features</div>
+    <div class="sa-detail-value">
+        <span class="sa-badge {% if plan.gpt_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">GPT analysis</span>
+        <span class="sa-badge {% if plan.audio_upload %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Audio upload</span>
+        <span class="sa-badge {% if plan.video_upload %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Video upload</span>
+        <span class="sa-badge {% if plan.youtube_url %}sa-badge-success{% else %}sa-badge-muted{% endif %}">YouTube URL</span>
+        <span class="sa-badge {% if plan.financial_data %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Financial data</span>
+        <span class="sa-badge {% if plan.pdf_report %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Analysis PDF</span>
+        <span class="sa-badge {% if plan.pdf_investor %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Investor PDF</span>
+        <span class="sa-badge {% if plan.pitch_template_choice %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Template choice</span>
+        <span class="sa-badge {% if plan.pitch_gpt %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Pitch via GPT</span>
+        <span class="sa-badge {% if plan.pitch_pdf %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Pitch PDF</span>
+        <span class="sa-badge {% if plan.batch_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Batch analysis</span>
+        <span class="sa-badge {% if plan.investor_dashboard %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Investor dashboard</span>
+        <span class="sa-badge {% if plan.video_generation %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Explainer video</span>
+        <span class="sa-badge {% if plan.business_model_canvas %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Business canvas</span>
+    </div>
+</div>
+{% endblock %}

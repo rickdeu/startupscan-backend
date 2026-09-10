@@ -1,0 +1,11 @@
+{% if is_paginated %}
+<div class="sa-pagination">
+    {% if page_obj.has_previous %}
+    <a class="sa-btn sa-btn-sm sa-btn-ghost" href="?page={{ page_obj.previous_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Previous</a>
+    {% endif %}
+    <span class="sa-btn sa-btn-sm sa-btn-ghost">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a class="sa-btn sa-btn-sm sa-btn-ghost" href="?page={{ page_obj.next_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Next</a>
+    {% endif %}
+</div>
+{% endif %}

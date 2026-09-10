@@ -1,0 +1,40 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Activity log{% endblock %}
+{% block header_title %}Activity log — operations performed{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="User, target...">
+        <select class="sa-input" name="action">
+            <option value="">All actions</option>
+            {% for value, label in action_choices %}
+            <option value="{{ value }}" {% if value == selected_action %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Filter</button>
+    </form>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>When</th><th>Action</th><th>User</th><th>Target</th><th>IP</th><th></th></tr></thead>
+        <tbody>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+            <td><span class="sa-badge sa-badge-primary">{{ log.get_action_display }}</span></td>
+            <td>{{ log.user.username|default:"—" }}</td>
+            <td>{{ log.target_repr|default:"—" }}</td>
+            <td>{{ log.ip_address|default:"—" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:activity_detail' log.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:activity_delete' log.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="sa-empty">No operations logged yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.views import View
 
 from startupscan_api.models import PitchAnalysis
+from startupscan_api.utils.currency import format_currency
 from startupscan_api.roles import (
     ROLE_ADMIN,
     ROLE_ANALYST,
@@ -113,7 +114,8 @@ class DashboardView(RoleRequiredMixin, View):
         chart_labels = [f"#{item.id}" for item in history]
         chart_ids = [item.id for item in history]
         chart_scores = [float(item.success_score or 0) for item in history]
-        chart_revenues = [float(item.revenue or 0) for item in history]
+        _display_language = getattr(request, "ui_language", None) or request.session.get("ui_language")
+        chart_revenues = [format_currency(item.revenue, _display_language)[1] for item in history]
         chart_growth = [float(item.growth_rate or 0) for item in history]
         score_distribution = [
             all_scored.filter(success_score__lt=5).count(),

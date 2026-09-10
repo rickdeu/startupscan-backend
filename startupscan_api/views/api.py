@@ -9,6 +9,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
+
 try:
     from celery.result import AsyncResult
 except Exception:
@@ -231,6 +234,8 @@ class BatchAnalysisView(APIView):
             status_data = cache.get(cache_key) or {}
             status_data['task_id'] = getattr(task, 'id', None)
             cache.set(cache_key, status_data, 86400)
+
+            log_activity(request, action=ActivityLog.ACTION_BATCH_ANALYSIS, target=f"Batch #{batch_id}")
 
             return Response({
                 'batch_id': batch_id,

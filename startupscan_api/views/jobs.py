@@ -34,6 +34,56 @@ MODEL_TRAINING_TTL_SECONDS = 60 * 60 * 24
 VIDEO_GENERATION_CACHE_PREFIX = "explainer_video_job"
 VIDEO_GENERATION_TTL_SECONDS = 60 * 60 * 24
 
+# Video generation runs in a background thread with no request context, so
+# its phase/message strings can't read startupscan_api.i18n's ui_language
+# from the request. Only English and Portuguese are implemented; any other
+# selected language falls back to English (never Portuguese), matching the
+# same product decision applied to the pitch-deck generator.
+_VIDEO_JOB_STRINGS = {
+    "en": {
+        "phase_fila": "queued",
+        "phase_inicializacao": "initializing",
+        "phase_preparacao": "preparing",
+        "phase_renderizacao": "rendering",
+        "phase_persistencia": "saving",
+        "phase_concluido": "completed",
+        "phase_falha": "failed",
+        "msg_default_queued": "Waiting for video generation to start",
+        "msg_job_created": "Video job created, waiting to run",
+        "msg_initializing": "Initializing explainer video generation",
+        "msg_preparing": "Preparing visual and audio resources",
+        "msg_rendering_start": "Creating executive script and starting rendering",
+        "msg_processing_default": "Processing video...",
+        "msg_persisting": "Saving video to the analysis result",
+        "msg_completed": "Explainer video generated successfully",
+        "msg_failed": "Failed to generate video: {detail}",
+    },
+    "pt": {
+        "phase_fila": "fila",
+        "phase_inicializacao": "inicialização",
+        "phase_preparacao": "preparação",
+        "phase_renderizacao": "renderização",
+        "phase_persistencia": "persistência",
+        "phase_concluido": "concluído",
+        "phase_falha": "falha",
+        "msg_default_queued": "Aguardando início da geração de vídeo",
+        "msg_job_created": "Job de vídeo criado, aguardando execução",
+        "msg_initializing": "Inicializando geração do vídeo explicativo",
+        "msg_preparing": "Preparando recursos visuais e áudio",
+        "msg_rendering_start": "Criando roteiro executivo e iniciando renderização",
+        "msg_processing_default": "Processando vídeo...",
+        "msg_persisting": "Salvando vídeo no resultado da análise",
+        "msg_completed": "Vídeo explicativo gerado com sucesso",
+        "msg_failed": "Falha ao gerar vídeo: {detail}",
+    },
+}
+
+
+def _video_job_text(language: str, key: str, **kwargs) -> str:
+    strings = _VIDEO_JOB_STRINGS.get(language) or _VIDEO_JOB_STRINGS["en"]
+    template = strings.get(key) or _VIDEO_JOB_STRINGS["en"].get(key, key)
+    return template.format(**kwargs) if kwargs else template
+
 
 def _model_training_cache_key(job_id: str) -> str:
     return f"{MODEL_TRAINING_CACHE_PREFIX}:{job_id}"
@@ -57,14 +107,14 @@ def _write_model_training_state(job_id: str, **updates):
     return state
 
 
-def _write_video_generation_state(job_id: str, **updates):
+def _write_video_generation_state(job_id: str, *, language: str = "en", **updates):
     key = _video_generation_cache_key(job_id)
     state = cache.get(key) or {
         "job_id": job_id,
         "status": "PENDING",
         "progress": 0,
-        "phase": "fila",
-        "message": "Aguardando início da geração de vídeo",
+        "phase": _video_job_text(language, "phase_fila"),
+        "message": _video_job_text(language, "msg_default_queued"),
     }
     state.update(updates)
     state["updated_at"] = timezone.now().isoformat()
@@ -80,6 +130,7 @@ def _run_explainer_video_job(
     presenter_source_urls=None,
     presenter_gender_choice: str = "auto",
     generation_mode: str = "auto",
+    language: str = "en",
 ):
     temp_output = None
     try:
@@ -88,8 +139,8 @@ def _run_explainer_video_job(
             job_id,
             status="RUNNING",
             progress=8,
-            phase="inicializacao",
-            message="Inicializando geração do vídeo explicativo",
+            phase=_video_job_text(language, "phase_inicializacao"),
+            message=_video_job_text(language, "msg_initializing"),
             analysis_id=analysis_id,
             generation_mode=generation_mode,
         )
@@ -116,10 +167,10 @@ def _run_explainer_video_job(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         temp_output = os.path.join(temp_dir, f"explainer_{analysis.id}_{timestamp}.mp4")
 
-        _write_video_generation_state(job_id, status="RUNNING", progress=24, phase="preparacao",
-                                      message="Preparando recursos visuais e áudio")
-        _write_video_generation_state(job_id, status="RUNNING", progress=35, phase="renderizacao",
-                                      message="Criando roteiro executivo e iniciando renderização")
+        _write_video_generation_state(job_id, status="RUNNING", progress=24, phase=_video_job_text(language, "phase_preparacao"),
+                                      message=_video_job_text(language, "msg_preparing"))
+        _write_video_generation_state(job_id, status="RUNNING", progress=35, phase=_video_job_text(language, "phase_renderizacao"),
+                                      message=_video_job_text(language, "msg_rendering_start"))
 
         def _video_progress_callback(progress_pct: int, phase: str, message: str):
             bounded = max(35, min(94, int(progress_pct)))
@@ -127,8 +178,8 @@ def _run_explainer_video_job(
                 job_id,
                 status="RUNNING",
                 progress=bounded,
-                phase=phase or "renderizacao",
-                message=message or "Processando vídeo...",
+                phase=phase or _video_job_text(language, "phase_renderizacao"),
+                message=message or _video_job_text(language, "msg_processing_default"),
             )
 
         video_meta = _generate_explainer_video_lazy(
@@ -140,10 +191,11 @@ def _run_explainer_video_job(
             presenter_gender_override=presenter_gender_choice,
             generation_mode=generation_mode,
             progress_callback=_video_progress_callback,
+            language=language,
         )
 
-        _write_video_generation_state(job_id, status="RUNNING", progress=78, phase="persistencia",
-                                      message="Salvando vídeo no resultado da análise")
+        _write_video_generation_state(job_id, status="RUNNING", progress=78, phase=_video_job_text(language, "phase_persistencia"),
+                                      message=_video_job_text(language, "msg_persisting"))
 
         final_name = f"explainer_{analysis.id}.mp4"
         with open(temp_output, "rb") as fh:
@@ -166,8 +218,8 @@ def _run_explainer_video_job(
             job_id,
             status="COMPLETED",
             progress=100,
-            phase="concluido",
-            message="Vídeo explicativo gerado com sucesso",
+            phase=_video_job_text(language, "phase_concluido"),
+            message=_video_job_text(language, "msg_completed"),
             result={
                 "analysis_id": analysis_id,
                 "video_url": analysis.explainer_video_file.url if analysis.explainer_video_file else "",
@@ -211,8 +263,8 @@ def _run_explainer_video_job(
             job_id,
             status="FAILED",
             progress=100,
-            phase="falha",
-            message=f"Falha ao gerar vídeo: {error_detail[:220]}",
+            phase=_video_job_text(language, "phase_falha"),
+            message=_video_job_text(language, "msg_failed", detail=error_detail[:220]),
             error=error_detail,
             did_status=did_status,
             did_error=did_error,
@@ -238,14 +290,15 @@ def _start_explainer_video_job(
     presenter_source_urls=None,
     presenter_gender_choice: str = "auto",
     generation_mode: str = "auto",
+    language: str = "en",
 ) -> str:
     job_id = str(uuid.uuid4())
     _write_video_generation_state(
         job_id,
         status="PENDING",
         progress=0,
-        phase="fila",
-        message="Job de vídeo criado, aguardando execução",
+        phase=_video_job_text(language, "phase_fila"),
+        message=_video_job_text(language, "msg_job_created"),
         analysis_id=analysis.id,
         generation_mode=generation_mode,
         presenter_gender_choice=presenter_gender_choice,
@@ -260,6 +313,7 @@ def _start_explainer_video_job(
             "presenter_source_urls": presenter_source_urls or [],
             "presenter_gender_choice": presenter_gender_choice,
             "generation_mode": generation_mode,
+            "language": language,
         },
         daemon=True,
     )

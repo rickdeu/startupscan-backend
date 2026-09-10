@@ -2,12 +2,16 @@ import os
 from datetime import datetime
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     HRFlowable,
+    Image,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -15,12 +19,45 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Circle, Drawing, Line, Rect, String
+
+
+# ── Typography ───────────────────────────────────────────────────────────────
+# DejaVu Sans ships inside matplotlib (a pinned dependency of this project),
+# so it is always available on the deployment host without bundling extra
+# font assets. It gives a more distinctive, editorial look than the bare
+# Helvetica base-14 font and has broad glyph coverage for the symbols used
+# throughout the report (✔ ✘ ▸ ● ★ ✦).
+def _register_report_fonts():
+    try:
+        import matplotlib
+
+        base = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
+        pdfmetrics.registerFont(TTFont("DejaVuSans", os.path.join(base, "DejaVuSans.ttf")))
+        pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", os.path.join(base, "DejaVuSans-Bold.ttf")))
+        pdfmetrics.registerFont(TTFont("DejaVuSans-Oblique", os.path.join(base, "DejaVuSans-Oblique.ttf")))
+        pdfmetrics.registerFont(TTFont("DejaVuSans-BoldOblique", os.path.join(base, "DejaVuSans-BoldOblique.ttf")))
+        pdfmetrics.registerFontFamily(
+            "DejaVuSans",
+            normal="DejaVuSans",
+            bold="DejaVuSans-Bold",
+            italic="DejaVuSans-Oblique",
+            boldItalic="DejaVuSans-BoldOblique",
+        )
+        return "DejaVuSans", "DejaVuSans-Bold", "DejaVuSans-Oblique", "DejaVuSans-BoldOblique"
+    except Exception:
+        return "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique"
+
+
+F_REG, F_BOLD, F_ITALIC, F_BOLDITALIC = _register_report_fonts()
+
 
 # ── Color palette ───────────────────────────────────────────────────────────
-C_NAVY    = colors.HexColor("#0f172a")
-C_BLUE    = colors.HexColor("#2563eb")
-C_BLUE_LT = colors.HexColor("#dbeafe")
-C_BLUE_MD = colors.HexColor("#bfdbfe")
+C_NAVY    = colors.HexColor("#14161a")
+C_BLUE    = colors.HexColor("#f5580d")
+C_BLUE_LT = colors.HexColor("#ffede0")
+C_BLUE_MD = colors.HexColor("#ffd9bc")
 C_SLATE   = colors.HexColor("#475569")
 C_SLATE_LT = colors.HexColor("#f8fafc")
 C_BORDER  = colors.HexColor("#e2e8f0")
@@ -30,13 +67,29 @@ C_RED     = colors.HexColor("#dc2626")
 C_RED_LT  = colors.HexColor("#fee2e2")
 C_AMBER   = colors.HexColor("#d97706")
 C_AMBER_LT = colors.HexColor("#fef3c7")
-C_VIOLET  = colors.HexColor("#7c3aed")
-C_VIOLET_LT = colors.HexColor("#ede9fe")
-C_VIOLET_MD = colors.HexColor("#c4b5fd")
+C_VIOLET  = colors.HexColor("#b8720a")
+C_VIOLET_LT = colors.HexColor("#fbf0dc")
+C_VIOLET_MD = colors.HexColor("#f0d8a8")
 C_WHITE   = colors.white
+C_KICKER  = colors.HexColor("#ffb27a")
 
 PAGE_W, PAGE_H = A4
 MARGIN = 1.5 * cm
+
+LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "static", "img", "icon.png")
+
+
+def _logo_flowable(height: float = 20):
+    """Returns a proportionally-scaled logo Image flowable, or None if the asset is missing."""
+    if not os.path.exists(LOGO_PATH):
+        return None
+    try:
+        from PIL import Image as PILImage
+        with PILImage.open(LOGO_PATH) as im:
+            ratio = im.width / im.height
+    except Exception:
+        ratio = 0.75
+    return Image(LOGO_PATH, width=height * ratio, height=height)
 
 
 # ── Styles ───────────────────────────────────────────────────────────────────
@@ -44,49 +97,54 @@ def _build_styles():
     base = getSampleStyleSheet()
 
     def s(name, **kw):
+        kw.setdefault("fontName", F_REG)
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
     return {
-        "cover_title": s("cover_title", fontSize=26, textColor=C_WHITE,
-                         fontName="Helvetica-Bold", leading=32, spaceAfter=6),
-        "cover_sub":   s("cover_sub",   fontSize=13, textColor=colors.HexColor("#cbd5e1"),
-                         leading=18, spaceAfter=4),
-        "cover_meta":  s("cover_meta",  fontSize=9,  textColor=colors.HexColor("#94a3b8"),
+        "cover_meta":  s("cover_meta",  fontSize=9,  textColor=colors.HexColor("#cbd5e1"),
                          leading=14),
         "section_h":   s("section_h",   fontSize=13, textColor=C_NAVY,
-                         fontName="Helvetica-Bold", spaceBefore=14, spaceAfter=6),
+                         fontName=F_BOLD, spaceBefore=14, spaceAfter=6),
         "sub_h":       s("sub_h",       fontSize=10, textColor=C_BLUE,
-                         fontName="Helvetica-Bold", spaceBefore=8, spaceAfter=4),
+                         fontName=F_BOLD, spaceBefore=8, spaceAfter=4),
         "body":        s("body",        fontSize=9,  textColor=C_NAVY,
                          leading=14, spaceAfter=4),
         "bullet":      s("bullet",      fontSize=9,  textColor=C_NAVY,
                          leading=14, leftIndent=12, spaceAfter=3),
         "small":       s("small",       fontSize=8,  textColor=C_SLATE,
                          leading=12),
-        "score_big":   s("score_big",   fontSize=36, textColor=C_BLUE,
-                         fontName="Helvetica-Bold", alignment=TA_CENTER),
-        "label_center": s("label_center", fontSize=8, textColor=C_SLATE,
-                          alignment=TA_CENTER),
+        "caption":     s("caption",     fontSize=8.3, textColor=C_SLATE,
+                         leading=12, spaceAfter=6, fontName=F_ITALIC),
         "kpi_value":   s("kpi_value",   fontSize=16, textColor=C_NAVY,
-                         fontName="Helvetica-Bold", alignment=TA_CENTER),
+                         fontName=F_BOLD, alignment=TA_CENTER),
         "kpi_label":   s("kpi_label",   fontSize=7,  textColor=C_SLATE,
                          alignment=TA_CENTER),
+        "kpi_icon":    s("kpi_icon",    fontSize=10, textColor=C_BLUE,
+                         alignment=TA_CENTER),
         "tag_green":   s("tag_green",   fontSize=8,  textColor=C_GREEN,
-                         fontName="Helvetica-Bold"),
+                         fontName=F_BOLD),
         "tag_amber":   s("tag_amber",   fontSize=8,  textColor=C_AMBER,
-                         fontName="Helvetica-Bold"),
+                         fontName=F_BOLD),
         "tag_red":     s("tag_red",     fontSize=8,  textColor=C_RED,
-                         fontName="Helvetica-Bold"),
+                         fontName=F_BOLD),
         "footer":      s("footer",      fontSize=7,  textColor=C_SLATE,
                          alignment=TA_CENTER),
         "canvas_block_title": s("canvas_block_title", fontSize=8.5, textColor=C_VIOLET,
-                                fontName="Helvetica-Bold", leading=11, spaceAfter=3),
+                                fontName=F_BOLD, leading=11, spaceAfter=3),
         "canvas_item": s("canvas_item", fontSize=7.3, textColor=C_NAVY,
                          leading=10, spaceAfter=2),
         "canvas_intro": s("canvas_intro", fontSize=9, textColor=C_SLATE,
-                          leading=13, spaceAfter=8, fontName="Helvetica-Oblique"),
-        "pro_badge": s("pro_badge", fontSize=7, textColor=C_WHITE,
-                       fontName="Helvetica-Bold", alignment=TA_CENTER),
+                          leading=13, spaceAfter=8, fontName=F_ITALIC),
+        "pill_text":   s("pill_text",   fontSize=7.6, fontName=F_BOLD,
+                         alignment=TA_CENTER),
+        "card_title":  s("card_title",  fontSize=9,  textColor=C_NAVY,
+                         fontName=F_BOLD, leading=12, spaceAfter=4),
+        "card_item":   s("card_item",   fontSize=7.6, textColor=C_NAVY,
+                         leading=11, spaceAfter=2),
+        "card_item_lg": s("card_item_lg", fontSize=8.7, textColor=C_NAVY,
+                          leading=13, spaceAfter=3),
+        "callout_body": s("callout_body", fontSize=9, textColor=C_NAVY,
+                          leading=14),
     }
 
 
@@ -103,58 +161,197 @@ def _score_color(score: float):
     return C_RED, C_RED_LT
 
 
-def _readiness_style(text: str, styles):
-    t = (text or "").lower()
-    if "strong" in t:
-        return styles["tag_green"]
-    if "ready" in t:
-        return styles["tag_amber"]
-    return styles["tag_red"]
+def _score_tier_label(score: float, t: dict) -> str:
+    if score >= 8:
+        return t.get("report_pdf_score_excellent", "Excelente")
+    if score >= 6.5:
+        return t.get("report_pdf_score_good", "Bom")
+    if score >= 5:
+        return t.get("report_pdf_score_regular", "Regular")
+    return t.get("report_pdf_rating_weak", "Fraco")
+
+
+def _tracked_label(text: str, font_name: str, font_size: float, color, tracking: float = 1.6):
+    """
+    Letter-spaced "eyebrow" label rendered as individually-placed glyphs.
+    ReportLab's Paragraph line-breaker tokenizes on any whitespace
+    (including thin/em-space tricks) and re-flows every gap to the font's
+    plain space width, so inserting Unicode spacing characters into a
+    Paragraph string can't produce real letter-tracking. Drawing each
+    character at a manually advanced x position sidesteps that entirely.
+    """
+    x = 0.0
+    positions = []
+    for ch in text.upper():
+        positions.append((ch, x))
+        x += stringWidth(ch, font_name, font_size) + tracking
+    total_width = max(1.0, x - tracking)
+    height = font_size * 1.3
+    d = Drawing(total_width, height)
+    baseline = height * 0.26
+    for ch, cx in positions:
+        d.add(String(cx, baseline, ch, fontName=font_name, fontSize=font_size, fillColor=color))
+    return d
+
+
+def _truncate(text: str, limit: int) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _hexval(color) -> str:
+    return color.hexval()[2:] if hasattr(color, "hexval") else "0f172a"
+
+
+def _pill(text: str, fg, bg):
+    """Small rounded chip used for badges/tags (score tier, industry, id...)."""
+    style = ParagraphStyle("pill", fontSize=7.6, fontName=F_BOLD,
+                            textColor=fg, alignment=TA_CENTER, leading=10)
+    tbl = Table([[Paragraph(text, style)]])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, -1), bg),
+        ("ROUNDEDCORNERS", [8]),
+        ("TOPPADDING",   (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 9),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+    ]))
+    return tbl
+
+
+def _chip_row(chips: list):
+    if not chips:
+        return None
+    row = Table([chips])
+    style = [
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]
+    for i in range(len(chips) - 1):
+        style.append(("RIGHTPADDING", (i, 0), (i, 0), 6))
+    row.setStyle(TableStyle(style))
+    return row
+
+
+# ── Score gauge (donut) ──────────────────────────────────────────────────────
+def _build_score_gauge(score: float, fg_color, size: float = 98):
+    d = Drawing(size, size)
+    pie = Pie()
+    pie.x = 0
+    pie.y = 0
+    pie.width = size
+    pie.height = size
+    pie.data = [max(0.05, score), max(0.05, 10.0 - score)]
+    pie.slices.strokeWidth = 0
+    pie.slices.label_visible = 0
+    pie.slices[0].fillColor = fg_color
+    pie.slices[1].fillColor = C_BORDER
+    pie.startAngle = 90
+    pie.direction = "clockwise"
+    d.add(pie)
+
+    hole_r = size * 0.34
+    cx = cy = size / 2.0
+    d.add(Circle(cx, cy, hole_r, fillColor=C_WHITE, strokeColor=None))
+    d.add(String(cx, cy + size * 0.01, f"{score:.1f}", textAnchor="middle",
+                 fontName=F_BOLD, fontSize=size * 0.24, fillColor=C_NAVY))
+    d.add(String(cx, cy - size * 0.20, "/ 10", textAnchor="middle",
+                 fontName=F_REG, fontSize=size * 0.09, fillColor=C_SLATE))
+    return d
+
+
+# ── Mini inline progress bar (used in the category table) ──────────────────
+def _mini_bar(value: float, color, max_value: float = 10.0, width: float = 62, height: float = 7):
+    d = Drawing(width, height)
+    r = height / 2.0
+    d.add(Rect(0, 0, width, height, rx=r, ry=r, fillColor=C_BORDER, strokeColor=None))
+    filled_w = max(height, width * max(0.0, min(1.0, value / max_value)))
+    d.add(Rect(0, 0, filled_w, height, rx=r, ry=r, fillColor=color, strokeColor=None))
+    return d
 
 
 # ── Native bar chart ─────────────────────────────────────────────────────────
 def _build_category_chart(categories: dict, t: dict, category_labels: dict | None = None):
     from reportlab.graphics.charts.barcharts import VerticalBarChart
-    from reportlab.graphics.shapes import Drawing, String
 
     category_labels = category_labels or {}
     labels = [category_labels.get(k) or k.replace("_", " ").title() for k in categories.keys()]
-    values = [[float(v) for v in categories.values()]]
+    values_list = [float(v) for v in categories.values()]
+    average = sum(values_list) / len(values_list) if values_list else 0.0
 
-    d = Drawing(460, 190)
+    d = Drawing(460, 212)
     chart = VerticalBarChart()
     chart.x = 60
-    chart.y = 40
+    chart.y = 48
     chart.width = 380
-    chart.height = 130
-    chart.data = values
+    chart.height = 128
+    chart.data = [values_list]
     chart.categoryAxis.categoryNames = labels
     chart.categoryAxis.labels.angle = 28
     chart.categoryAxis.labels.dy = -14
     chart.categoryAxis.labels.fontSize = 7
+    chart.categoryAxis.labels.fontName = F_REG
     chart.valueAxis.valueMin = 0
     chart.valueAxis.valueMax = 10
     chart.valueAxis.valueStep = 2
-    chart.bars[0].fillColor = C_BLUE
-    chart.bars[0].strokeColor = colors.HexColor("#1d4ed8")
-    chart.bars[0].strokeWidth = 0.4
-
-    title = String(230, 184, t.get("report_pdf_category_score_chart_title", "Pontuação por Categoria (0–10)"),
-                   textAnchor="middle", fontSize=8.5, fillColor=C_NAVY)
+    chart.valueAxis.labels.fontSize = 7
+    chart.valueAxis.labels.fontName = F_REG
+    chart.bars.strokeColor = None
+    chart.barLabelFormat = "%0.1f"
+    chart.barLabels.nudge = 7
+    chart.barLabels.fontName = F_BOLD
+    chart.barLabels.fontSize = 7
+    chart.barLabels.boxAnchor = "n"
+    for i, v in enumerate(values_list):
+        fg, _bg = _score_color(v)
+        chart.bars[(0, i)].fillColor = fg
     d.add(chart)
+
+    title = String(230, 198, t.get("report_pdf_category_score_chart_title", "Pontuação por Categoria (0–10)"),
+                   textAnchor="middle", fontName=F_BOLD, fontSize=8.5, fillColor=C_NAVY)
     d.add(title)
+
+    if values_list:
+        avg_y = chart.y + (average / 10.0) * chart.height
+        d.add(Line(chart.x, avg_y, chart.x + chart.width, avg_y,
+                    strokeColor=C_SLATE, strokeWidth=0.6, strokeDashArray=(2, 2)))
+        d.add(String(chart.x + chart.width + 4, avg_y - 3,
+                      f"{t.get('report_pdf_average_label', 'Average')} {average:.1f}",
+                      fontName=F_REG, fontSize=6.3, fillColor=C_SLATE))
+
+    legend_items = [
+        (t.get("report_pdf_rating_strong", "Strong"), C_GREEN),
+        (t.get("report_pdf_rating_moderate", "Moderate"), C_AMBER),
+        (t.get("report_pdf_rating_weak", "Weak"), C_RED),
+    ]
+    lx = chart.x
+    for label_text, c in legend_items:
+        d.add(Rect(lx, 8, 7, 7, fillColor=c, strokeColor=None))
+        d.add(String(lx + 10, 8, label_text, fontName=F_REG, fontSize=6.3, fillColor=C_SLATE))
+        lx += 10 + stringWidth(label_text, F_REG, 6.3) + 16
     return d
 
 
 # ── Financial KPI table ──────────────────────────────────────────────────────
-def _build_kpi_table(analysis, styles, t: dict):
+def _build_kpi_table(analysis, styles, t: dict, language: str | None = None):
+    from startupscan_api.utils.currency import format_currency
+
     score = float(analysis.success_score or 0)
     fg, bg = _score_color(score)
+    currency_symbol, display_revenue = format_currency(analysis.revenue, language)
 
     kpi_data = [
         [
+            Paragraph("★", styles["kpi_icon"]),
+            Paragraph(currency_symbol, styles["kpi_icon"]),
+            Paragraph("▲", styles["kpi_icon"]),
+            Paragraph("◆", styles["kpi_icon"]),
+        ],
+        [
             Paragraph(f"{score:.1f}/10", styles["kpi_value"]),
-            Paragraph(f"AOA {float(analysis.revenue or 0):,.0f}", styles["kpi_value"]),
+            Paragraph(f"{display_revenue:,.0f}", styles["kpi_value"]),
             Paragraph(f"{float(analysis.growth_rate or 0):.1f}%", styles["kpi_value"]),
             Paragraph(f"{float(analysis.profit_margin or 0):.1f}%", styles["kpi_value"]),
         ],
@@ -166,18 +363,18 @@ def _build_kpi_table(analysis, styles, t: dict):
         ],
     ]
     col_w = (PAGE_W - 2 * MARGIN) / 4
-    t = Table(kpi_data, colWidths=[col_w] * 4, rowHeights=[28, 16])
-    t.setStyle(TableStyle([
-        ("BACKGROUND",  (0, 0), (0, 0), bg),
-        ("BACKGROUND",  (1, 0), (-1, 0), C_SLATE_LT),
-        ("BACKGROUND",  (0, 1), (-1, 1), C_BORDER),
+    tbl = Table(kpi_data, colWidths=[col_w] * 4, rowHeights=[16, 26, 16])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",  (0, 0), (0, 1), bg),
+        ("BACKGROUND",  (1, 0), (-1, 1), C_SLATE_LT),
+        ("BACKGROUND",  (0, 2), (-1, 2), C_BORDER),
         ("GRID",        (0, 0), (-1, -1), 0.4, C_BORDER),
         ("ROUNDEDCORNERS", [4]),
         ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",  (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING",  (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
-    return t
+    return tbl
 
 
 # ── Category score table ─────────────────────────────────────────────────────
@@ -187,12 +384,14 @@ def _build_category_table(categories: dict, styles, t: dict, category_labels: di
         [
             Paragraph(f"<b>{t.get('category', 'Categoria')}</b>", styles["small"]),
             Paragraph(f"<b>{t.get('report_pdf_grade', 'Nota')}</b>", styles["small"]),
+            "",
             Paragraph(f"<b>{t.get('report_pdf_rating', 'Avaliação')}</b>", styles["small"]),
         ]
     ]
     for key, val in categories.items():
         v = float(val)
         label = category_labels.get(key) or key.replace("_", " ").title()
+        fg, _bg = _score_color(v)
         if v >= 7.5:
             rating = Paragraph(f"● {t.get('report_pdf_rating_strong', 'Forte')}", styles["tag_green"])
         elif v >= 5.0:
@@ -202,19 +401,21 @@ def _build_category_table(categories: dict, styles, t: dict, category_labels: di
         rows.append([
             Paragraph(label, styles["body"]),
             Paragraph(f"{v:.1f}", styles["body"]),
+            _mini_bar(v, fg),
             rating,
         ])
 
     avail_w = PAGE_W - 2 * MARGIN
-    t = Table(rows, colWidths=[avail_w * 0.55, avail_w * 0.12, avail_w * 0.33])
-    t.setStyle(TableStyle([
+    tbl = Table(rows, colWidths=[avail_w * 0.38, avail_w * 0.10, avail_w * 0.24, avail_w * 0.28])
+    tbl.setStyle(TableStyle([
         ("BACKGROUND",  (0, 0), (-1, 0), C_BLUE_LT),
         ("GRID",        (0, 0), (-1, -1), 0.4, C_BLUE_MD),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [C_WHITE, C_SLATE_LT]),
         ("PADDING",     (0, 0), (-1, -1), 5),
         ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN",       (2, 1), (2, -1), "CENTER"),
     ]))
-    return t
+    return tbl
 
 
 # ── Investor thesis table ────────────────────────────────────────────────────
@@ -238,15 +439,90 @@ def _build_investor_table(investor_pitch: dict, styles, t: dict):
         return None
 
     avail_w = PAGE_W - 2 * MARGIN
-    t = Table(rows, colWidths=[avail_w * 0.28, avail_w * 0.72])
-    t.setStyle(TableStyle([
+    tbl = Table(rows, colWidths=[avail_w * 0.28, avail_w * 0.72])
+    tbl.setStyle(TableStyle([
         ("BACKGROUND",  (0, 0), (0, -1), C_BLUE_LT),
         ("GRID",        (0, 0), (-1, -1), 0.4, C_BLUE_MD),
         ("ROWBACKGROUNDS", (1, 0), (1, -1), [C_WHITE, C_SLATE_LT]),
         ("PADDING",     (0, 0), (-1, -1), 6),
         ("VALIGN",      (0, 0), (-1, -1), "TOP"),
     ]))
-    return t
+    return tbl
+
+
+# ── Capital use / risk mitigation / investor fit cards ──────────────────────
+def _build_extra_investor_cards(investor_pitch: dict, styles, t: dict):
+    candidates = [
+        (t.get("report_pdf_capital_use_plan", "Capital Use Plan"), investor_pitch.get("capital_use_plan") or [], C_BLUE_LT, C_BLUE),
+        (t.get("report_pdf_risk_mitigation", "Risk Mitigation"), investor_pitch.get("risk_mitigation") or [], C_AMBER_LT, C_VIOLET),
+        (t.get("report_pdf_investor_fit", "Investor Fit"), investor_pitch.get("investor_fit") or [], C_VIOLET_LT, C_VIOLET),
+    ]
+    cards = [c for c in candidates if c[1]]
+    if not cards:
+        return None
+
+    avail_w = PAGE_W - 2 * MARGIN
+    col_w = avail_w / len(cards)
+    cells = []
+    for title, items, _bg, accent in cards:
+        flow = [Paragraph(f'<font color="#{_hexval(accent)}"><b>{title}</b></font>', styles["card_title"])]
+        for item in items[:4]:
+            flow.append(Paragraph(f"▸ {item}", styles["card_item"]))
+        cells.append(flow)
+
+    tbl = Table([cells], colWidths=[col_w] * len(cards))
+    style = [
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 8),
+    ]
+    for i, (_title, _items, bg, _accent) in enumerate(cards):
+        style.append(("BACKGROUND", (i, 0), (i, 0), bg))
+    if len(cards) > 1:
+        style.append(("GRID", (0, 0), (-1, -1), 0.4, C_BORDER))
+    tbl.setStyle(TableStyle(style))
+    return tbl
+
+
+# ── Strengths / risks side-by-side panel ─────────────────────────────────────
+def _build_strengths_risks_panel(strengths: list, weaknesses: list, styles, t: dict):
+    if not strengths and not weaknesses:
+        return None
+
+    avail_w = PAGE_W - 2 * MARGIN
+    left = [Paragraph(f'<font color="#{_hexval(C_GREEN)}"><b>{t.get("strengths", "Pontos Fortes")}</b></font>', styles["card_title"])]
+    for item in strengths:
+        left.append(Paragraph(f"✔ {item}", styles["card_item"]))
+    if not strengths:
+        left.append(Paragraph("—", styles["card_item"]))
+
+    right = [Paragraph(f'<font color="#{_hexval(C_RED)}"><b>{t.get("report_pdf_weaknesses", "Riscos e Pontos a Melhorar")}</b></font>', styles["card_title"])]
+    for item in weaknesses:
+        right.append(Paragraph(f"✘ {item}", styles["card_item"]))
+    if not weaknesses:
+        right.append(Paragraph("—", styles["card_item"]))
+
+    tbl = Table([[left, right]], colWidths=[avail_w * 0.5, avail_w * 0.5])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), C_GREEN_LT),
+        ("BACKGROUND", (1, 0), (1, 0), C_RED_LT),
+        ("VALIGN",     (0, 0), (-1, -1), "TOP"),
+        ("PADDING",    (0, 0), (-1, -1), 9),
+        ("LEFTPADDING", (1, 0), (1, 0), 14),
+    ]))
+    return tbl
+
+
+# ── Highlighted "unique narrative angle" callout ─────────────────────────────
+def _build_callout(kicker: str, text: str, accent, bg):
+    style = ParagraphStyle("callout", fontSize=9, fontName=F_REG, textColor=C_NAVY, leading=14)
+    body = Paragraph(f'<font color="#{_hexval(accent)}"><b>✦ {kicker}</b></font><br/>{text}', style)
+    tbl = Table([[body]], colWidths=[PAGE_W - 2 * MARGIN])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",  (0, 0), (-1, -1), bg),
+        ("LINEBEFORE",  (0, 0), (0, 0), 3, accent),
+        ("PADDING",     (0, 0), (-1, -1), 10),
+    ]))
+    return tbl
 
 
 # ── Business Model Canvas (Pro tier) ─────────────────────────────────────────
@@ -261,10 +537,22 @@ _CANVAS_BLOCK_FILLS = {
     "cost_structure": C_SLATE_LT,
     "revenue_streams": C_SLATE_LT,
 }
+_CANVAS_BLOCK_ICONS = {
+    "key_partners": "●",
+    "key_activities": "▸",
+    "value_propositions": "★",
+    "key_resources": "■",
+    "customer_relationships": "◆",
+    "customer_segments": "▲",
+    "channels": "▸",
+    "cost_structure": "●",
+    "revenue_streams": "★",
+}
 
 
-def _canvas_cell(block: dict, styles, max_items: int = 2):
-    flow = [Paragraph(block["title"], styles["canvas_block_title"])]
+def _canvas_cell(key: str, block: dict, styles, max_items: int = 2):
+    icon = _CANVAS_BLOCK_ICONS.get(key, "●")
+    flow = [Paragraph(f'<font color="#{_hexval(C_VIOLET)}">{icon}</font> {block["title"]}', styles["canvas_block_title"])]
     for item in (block.get("items") or [])[:max_items]:
         flow.append(Paragraph(f"• {item}", styles["canvas_item"]))
     return flow
@@ -288,7 +576,7 @@ def _build_business_canvas(canvas: dict, styles):
         ("key_resources", "customer_relationships", "customer_segments"),
         ("channels", "cost_structure", "revenue_streams"),
     ]
-    data = [[_canvas_cell(b[key], styles) for key in row] for row in order]
+    data = [[_canvas_cell(key, b[key], styles) for key in row] for row in order]
 
     table = Table(data, colWidths=col_w)
     style = [
@@ -303,60 +591,72 @@ def _build_business_canvas(canvas: dict, styles):
     return table
 
 
-# ── Section with colored bullet list ─────────────────────────────────────────
-def _bullet_section(title: str, items: list, story, styles,
-                    bullet_char="▸", color=C_NAVY):
-    if not items:
-        return
-    story.append(Paragraph(f"<b>{title}</b>", styles["sub_h"]))
-    for item in items:
-        txt = str(item).strip()
-        if not txt:
-            continue
-        story.append(
-            Paragraph(f'<font color="#{color.hexval()[2:] if hasattr(color, "hexval") else "0f172a"}">{bullet_char}</font> {txt}',
-                      styles["bullet"])
-        )
-    story.append(Spacer(1, 0.2 * cm))
+# ── Cover / highlights ───────────────────────────────────────────────────────
+def _build_highlight_lines(report: dict, t: dict) -> list:
+    lines = []
+    strengths = report.get("strengths") or []
+    if strengths:
+        lines.append(str(strengths[0]))
+
+    category_scores = report.get("category_scores") or {}
+    if category_scores:
+        category_labels = report.get("category_labels") or {}
+        top_key = max(category_scores, key=lambda k: category_scores[k])
+        top_label = category_labels.get(top_key) or top_key.replace("_", " ").title()
+        lines.append(f"{top_label}: {float(category_scores[top_key]):.1f}/10")
+
+    investor_pitch = report.get("investor_pitch") or {}
+    thesis = investor_pitch.get("investment_thesis")
+    if thesis:
+        lines.append(_truncate(str(thesis), 150))
+
+    return lines[:3]
 
 
-def _bullet_section_simple(title: str, items: list, story, styles, prefix="●"):
-    if not items:
-        return
-    story.append(Paragraph(f"<b>{title}</b>", styles["sub_h"]))
-    for item in items:
-        txt = str(item).strip()
-        if not txt:
-            continue
-        story.append(Paragraph(f"{prefix} {txt}", styles["bullet"]))
-    story.append(Spacer(1, 0.2 * cm))
-
-
-# ── Inline cover (no canvas) ────────────────────────────────────────────────
-def _build_cover_block(analysis, styles, t: dict):
+def _build_cover_page(analysis, styles, t: dict, report: dict):
     story = []
-    startup_name = (analysis.metadata or {}).get("startup_name", "") if analysis.metadata else ""
+    metadata = analysis.metadata or {}
+    startup_name = str(metadata.get("startup_name", "") or "").strip()
+    industry = str(metadata.get("industry", "") or "").strip()
     score = float(analysis.success_score or 0)
     fg, bg = _score_color(score)
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    # Blue header rendered as a background table
-    header_data = [[
-        Paragraph(
-            f"<b>{t.get('report_pdf_cover_title', 'StartupScan — Relatório de Avaliação de Pitch')}</b>",
-            ParagraphStyle("ch", fontSize=16, textColor=C_WHITE,
-                           fontName="Helvetica-Bold", leading=22),
-        )
-    ]]
     avail_w = PAGE_W - 2 * MARGIN
-    header_t = Table(header_data, colWidths=[avail_w], rowHeights=[48])
-    header_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), C_NAVY),
-        ("PADDING",       (0, 0), (-1, -1), 14),
-        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-    ]))
+
+    # Banner: kicker (real glyph tracking, see _tracked_label) + title, with the
+    # platform logo docked to the right so every report carries the brand mark.
+    kicker = _tracked_label(
+        t.get("report_pdf_kicker_report", "AI-POWERED PITCH INTELLIGENCE"),
+        F_BOLD, 7.5, C_KICKER, tracking=1.8,
+    )
+    title_style = ParagraphStyle("ch", fontName=F_BOLD, fontSize=17, textColor=C_WHITE, leading=20)
+    title_p = Paragraph(t.get("report_pdf_cover_title", "StartupScan — Relatório de Avaliação de Pitch"), title_style)
+    logo_img = _logo_flowable(26)
+    if logo_img:
+        header_t = Table(
+            [[kicker, logo_img], [title_p, ""]],
+            colWidths=[avail_w - 50, 50], rowHeights=[16, 38],
+        )
+    else:
+        header_t = Table([[kicker], [title_p]], colWidths=[avail_w], rowHeights=[16, 38])
+    header_style = [
+        ("BACKGROUND", (0, 0), (-1, -1), C_NAVY),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+        ("TOPPADDING", (0, 0), (0, 0), 10),
+        ("BOTTOMPADDING", (0, 0), (0, 0), 2),
+        ("TOPPADDING", (0, 1), (0, 1), 2),
+        ("BOTTOMPADDING", (0, 1), (0, 1), 10),
+        ("VALIGN",     (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN",      (1, 0), (1, -1), "CENTER"),
+        ("TOPPADDING",    (1, 0), (1, 1), 0),
+        ("BOTTOMPADDING", (1, 0), (1, 1), 0),
+    ]
+    if logo_img:
+        header_style.append(("SPAN", (1, 0), (1, 1)))
+    header_t.setStyle(TableStyle(header_style))
     story.append(header_t)
-    story.append(Spacer(1, 0.4 * cm))
+    story.append(Spacer(1, 0.35 * cm))
 
     # Metadata line
     meta_parts = [f"<b>{t.get('report_pdf_analysis_number_prefix', 'Análise')} #{analysis.id}</b>"]
@@ -367,28 +667,38 @@ def _build_cover_block(analysis, styles, t: dict):
     story.append(_hr(C_BLUE, thickness=1.2))
     story.append(Spacer(1, 0.3 * cm))
 
-    # Highlighted score
-    score_label = (
-        t.get("report_pdf_score_excellent", "Excelente") if score >= 8
-        else (t.get("report_pdf_score_good", "Bom") if score >= 6.5
-        else (t.get("report_pdf_score_regular", "Regular") if score >= 5
-        else t.get("report_pdf_rating_weak", "Fraco"))))
-    score_data = [[
-        Paragraph(f"{score:.1f}", ParagraphStyle("sv", fontSize=40, textColor=fg,
-                                                  fontName="Helvetica-Bold", alignment=TA_CENTER)),
-        Paragraph(f"<b>/ 10</b><br/>{score_label}",
-                  ParagraphStyle("sl", fontSize=12, textColor=C_SLATE,
-                                  leading=18, alignment=TA_LEFT)),
-    ]]
-    score_t = Table(score_data, colWidths=[avail_w * 0.20, avail_w * 0.80], rowHeights=[52])
-    score_t.setStyle(TableStyle([
-        ("BACKGROUND",  (0, 0), (-1, -1), bg),
-        ("PADDING",     (0, 0), (-1, -1), 10),
-        ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-        ("GRID",        (0, 0), (-1, -1), 0, C_WHITE),
+    # Score gauge + tag chips
+    gauge = _build_score_gauge(score, fg, size=98)
+    chips = [_pill(_score_tier_label(score, t), fg, bg)]
+    if industry:
+        chips.append(_pill(f"{t.get('report_pdf_industry_label', 'Setor')}: {industry}", C_NAVY, C_SLATE_LT))
+    uniqueness_key = report.get("narrative_uniqueness_key")
+    if uniqueness_key:
+        chips.append(_pill(f"#{uniqueness_key}", C_VIOLET, C_VIOLET_LT))
+    right_col = [_chip_row(chips)]
+    combo = Table([[gauge, right_col]], colWidths=[avail_w * 0.24, avail_w * 0.76])
+    combo.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (1, 0), (1, 0), 16),
     ]))
-    story.append(score_t)
-    story.append(Spacer(1, 0.5 * cm))
+    story.append(combo)
+    story.append(Spacer(1, 0.4 * cm))
+
+    # Highlights box
+    highlight_lines = _build_highlight_lines(report, t)
+    if highlight_lines:
+        flow = [Paragraph(f'<font color="#{_hexval(C_BLUE)}"><b>{t.get("report_pdf_snapshot_label", "Destaques")}</b></font>', styles["card_title"])]
+        for line in highlight_lines:
+            flow.append(Paragraph(f"▸ {line}", styles["card_item_lg"]))
+        hl_tbl = Table([[flow]], colWidths=[avail_w])
+        hl_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), C_SLATE_LT),
+            ("LINEBEFORE", (0, 0), (0, 0), 3, C_BLUE),
+            ("PADDING",    (0, 0), (-1, -1), 10),
+        ]))
+        story.append(hl_tbl)
+        story.append(Spacer(1, 0.4 * cm))
+
     return story
 
 
@@ -402,9 +712,6 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
 
     styles = _build_styles()
     story = []
-
-    # ── Cover / header ────────────────────────────────────────────────────────
-    story.extend(_build_cover_block(analysis, styles, t))
 
     report = analysis.report or {}
     metadata = analysis.metadata or {}
@@ -422,10 +729,18 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
     category_labels = report.get("category_labels", {})
     startup_name = str(metadata.get("startup_name", "") or "").strip() or t.get("startup_label", "Startup")
 
+    # ── Cover ─────────────────────────────────────────────────────────────────
+    story.extend(_build_cover_page(analysis, styles, t, report))
+
     # ── Financial KPIs ────────────────────────────────────────────────────────
     story.append(Paragraph(f"<b>{t.get('financial_indicators', 'Indicadores Financeiros')}</b>", styles["section_h"]))
-    story.append(_build_kpi_table(analysis, styles, t))
-    story.append(Spacer(1, 0.5 * cm))
+    story.append(_build_kpi_table(analysis, styles, t, language))
+    story.append(Paragraph(
+        t.get("report_pdf_financial_indicators_caption",
+              "Principais sinais financeiros informados na submissão do pitch, utilizados como entradas diretas do modelo de pontuação."),
+        styles["caption"],
+    ))
+    story.append(Spacer(1, 0.3 * cm))
 
     # ── Executive summary ─────────────────────────────────────────────────────
     story.append(_hr())
@@ -454,46 +769,53 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
 
     # ── Category assessment ───────────────────────────────────────────────────
     if category_scores:
-        story.append(PageBreak())
+        story.append(_hr())
         story.append(Paragraph(f"<b>{t.get('report_pdf_category_assessment', 'Avaliação Detalhada por Categoria')}</b>", styles["section_h"]))
+        story.append(Paragraph(
+            t.get("report_pdf_category_assessment_intro",
+                  "Cada dimensão abaixo é avaliada numa escala de 0 a 10, combinando sinais quantitativos com a estrutura qualitativa do pitch."),
+            styles["caption"],
+        ))
         story.append(_build_category_table(category_scores, styles, t, category_labels))
-        story.append(Spacer(1, 0.4 * cm))
+        story.append(Spacer(1, 0.35 * cm))
         story.append(_build_category_chart(category_scores, t, category_labels))
-        story.append(Spacer(1, 0.5 * cm))
+        story.append(Spacer(1, 0.4 * cm))
 
-    # ── Strengths ─────────────────────────────────────────────────────────────
+    # ── Strengths / risks / recommendations ──────────────────────────────────
     strengths = report.get("strengths", [])
     weaknesses = report.get("weaknesses", [])
     recommendations = report.get("recommendations", [])
+    narrative_key = report.get("narrative_uniqueness_key")
 
     if strengths or weaknesses or recommendations:
         story.append(_hr())
         story.append(Paragraph(f"<b>{t.get('report_pdf_qualitative_analysis', 'Análise Qualitativa')}</b>", styles["section_h"]))
 
-    if strengths:
-        story.append(Paragraph(f"<b>{t.get('strengths', 'Pontos Fortes')}</b>", styles["sub_h"]))
-        for item in strengths:
-            story.append(Paragraph(f"✔ {item}", styles["bullet"]))
-        story.append(Spacer(1, 0.3 * cm))
+    panel = _build_strengths_risks_panel(strengths, weaknesses, styles, t)
+    if panel:
+        story.append(panel)
+        story.append(Spacer(1, 0.35 * cm))
 
-    if weaknesses:
-        story.append(Paragraph(f"<b>{t.get('report_pdf_weaknesses', 'Riscos e Pontos a Melhorar')}</b>", styles["sub_h"]))
-        for item in weaknesses:
-            story.append(Paragraph(f"✘ {item}", styles["bullet"]))
+    remaining_recommendations = recommendations
+    if narrative_key and recommendations:
+        story.append(_build_callout(
+            t.get("report_pdf_narrative_signature_label", "Ângulo Narrativo Único"),
+            str(recommendations[0]), C_BLUE, C_BLUE_LT,
+        ))
         story.append(Spacer(1, 0.3 * cm))
+        remaining_recommendations = recommendations[1:]
 
-    if recommendations:
+    if remaining_recommendations:
         story.append(Paragraph(f"<b>{t.get('report_pdf_recommendations', 'Recomendações Acionáveis')}</b>", styles["sub_h"]))
-        for i, item in enumerate(recommendations, 1):
+        for i, item in enumerate(remaining_recommendations, 1):
             story.append(Paragraph(f"{i}. {item}", styles["bullet"]))
         story.append(Spacer(1, 0.4 * cm))
 
     # ── Investor thesis ───────────────────────────────────────────────────────
     investor_pitch = report.get("investor_pitch", {})
     if investor_pitch:
-        story.append(PageBreak())
-        story.append(Paragraph(f"<b>{t.get('report_pdf_investor_perspective', 'Perspectiva para Investidores')}</b>", styles["section_h"]))
         story.append(_hr(C_BLUE, 0.8))
+        story.append(Paragraph(f"<b>{t.get('report_pdf_investor_perspective', 'Perspectiva para Investidores')}</b>", styles["section_h"]))
 
         thesis = investor_pitch.get("investment_thesis", "")
         if thesis:
@@ -504,6 +826,11 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
         inv_table = _build_investor_table(investor_pitch, styles, t)
         if inv_table:
             story.append(inv_table)
+            story.append(Spacer(1, 0.35 * cm))
+
+        extra_cards = _build_extra_investor_cards(investor_pitch, styles, t)
+        if extra_cards:
+            story.append(extra_cards)
             story.append(Spacer(1, 0.4 * cm))
 
     # ── Legacy (fallback: old investor_pitch without rich fields) ────────────
@@ -521,9 +848,9 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
         canvas = generate_business_model_canvas(analysis, language=language)
         story.append(PageBreak())
         story.append(Paragraph(
-            f'<font color="#{C_VIOLET.hexval()[2:]}">★</font> '
+            f'<font color="#{_hexval(C_VIOLET)}">★</font> '
             f"<b>{canvas['section_title']}</b> "
-            f'<font size="7" color="#{C_VIOLET.hexval()[2:]}">PRO</font>',
+            f'<font size="7" color="#{_hexval(C_VIOLET)}">PRO</font>',
             styles["section_h"],
         ))
         story.append(_hr(C_VIOLET, 0.8))
@@ -565,7 +892,7 @@ def export_analysis_pdf(analysis, output_path: str, language: str = "en", includ
         canvas_obj.setStrokeColor(C_BORDER)
         canvas_obj.setLineWidth(0.4)
         canvas_obj.line(MARGIN, MARGIN * 0.55, PAGE_W - MARGIN, MARGIN * 0.55)
-        canvas_obj.setFont("Helvetica", 7.5)
+        canvas_obj.setFont(F_REG, 7.5)
         canvas_obj.setFillColor(C_SLATE)
         canvas_obj.drawString(MARGIN, MARGIN * 0.32, f"StartupScanAI  •  {startup_short}")
         canvas_obj.drawRightString(

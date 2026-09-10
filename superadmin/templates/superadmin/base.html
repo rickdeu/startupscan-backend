@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}Super Admin{% endblock %} · StartupScanAI</title>
+    <link rel="icon" type="image/png" href="{% static 'img/icon.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'superadmin/css/admin.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="sa-body">
+<div class="sa-shell">
+    <aside class="sa-sidebar">
+        <a href="{% url 'superadmin:dashboard' %}" class="sa-brand">
+            <img src="{% static 'img/icon.png' %}" alt="StartupScanAI">
+            <span>
+                startupscan<span class="accent">ai</span>
+                <span class="tag">Super Admin</span>
+            </span>
+        </a>
+
+        <div class="sa-nav-caption">Analytics</div>
+        <a class="sa-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'superadmin:dashboard' %}">
+            <i class="fas fa-chart-pie"></i> Dashboard
+        </a>
+        <a class="sa-nav-link {% if request.resolver_match.url_name == 'activity_list' %}active{% endif %}" href="{% url 'superadmin:activity_list' %}">
+            <i class="fas fa-clock-rotate-left"></i> Activity log
+        </a>
+
+        <div class="sa-nav-caption">Access control</div>
+        <a class="sa-nav-link {% if 'user_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:user_list' %}">
+            <i class="fas fa-users"></i> Users
+        </a>
+        <a class="sa-nav-link {% if 'group_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:group_list' %}">
+            <i class="fas fa-user-shield"></i> Groups &amp; permissions
+        </a>
+
+        <div class="sa-nav-caption">Platform data</div>
+        <a class="sa-nav-link {% if 'pitch_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:pitch_list' %}">
+            <i class="fas fa-file-invoice"></i> Pitch analyses
+        </a>
+        <a class="sa-nav-link {% if request.resolver_match.url_name|slice:':4' == 'idea' and 'feedback' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:idea_list' %}">
+            <i class="fas fa-lightbulb"></i> Idea pitches
+        </a>
+        <a class="sa-nav-link {% if 'idea_feedback' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:idea_feedback_list' %}">
+            <i class="fas fa-comment-dots"></i> Idea feedback
+        </a>
+        <a class="sa-nav-link {% if 'investor_interest' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:investor_interest_list' %}">
+            <i class="fas fa-hand-holding-dollar"></i> Investor interests
+        </a>
+
+        <div class="sa-nav-caption">Billing</div>
+        <a class="sa-nav-link {% if 'plan_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:plan_list' %}">
+            <i class="fas fa-tags"></i> Subscription plans
+        </a>
+        <a class="sa-nav-link {% if request.resolver_match.url_name|slice:':13' == 'subscription_' %}active{% endif %}" href="{% url 'superadmin:subscription_list' %}">
+            <i class="fas fa-credit-card"></i> Subscriptions
+        </a>
+        <a class="sa-nav-link {% if 'usage_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'superadmin:usage_list' %}">
+            <i class="fas fa-gauge-high"></i> Monthly usage
+        </a>
+
+        <div class="sa-nav-caption">&nbsp;</div>
+        <a class="sa-nav-link" href="{% url 'role_home' %}">
+            <i class="fas fa-arrow-left"></i> Back to app
+        </a>
+    </aside>
+
+    <div class="sa-main">
+        <div class="sa-topbar">
+            <h1>{% block header_title %}{% endblock %}</h1>
+            <div>
+                <span class="sa-user"><i class="fas fa-user-shield"></i> {{ request.user.username }}</span>
+                <a class="sa-logout" href="{% url 'logout' %}"><i class="fas fa-right-from-bracket"></i> Sign out</a>
+            </div>
+        </div>
+        <div class="sa-content">
+            {% if messages %}
+            <div class="sa-messages">
+                {% for message in messages %}
+                <div class="sa-message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

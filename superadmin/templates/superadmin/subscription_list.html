@@ -1,0 +1,35 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Subscriptions{% endblock %}
+{% block header_title %}Subscriptions{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="User, email, Stripe ID...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:subscription_create' %}"><i class="fas fa-plus"></i> New subscription</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Period end</th><th></th></tr></thead>
+        <tbody>
+        {% for s in subscriptions %}
+        <tr>
+            <td>{{ s.user.username }}</td>
+            <td>{{ s.plan.name|default:"—" }}</td>
+            <td><span class="sa-badge {% if s.status == 'active' %}sa-badge-success{% elif s.status == 'canceled' %}sa-badge-danger{% else %}sa-badge-warning{% endif %}">{{ s.get_status_display }}</span></td>
+            <td>{{ s.current_period_end|date:"d/m/Y"|default:"—" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:subscription_detail' s.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:subscription_edit' s.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:subscription_delete' s.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="sa-empty">No subscriptions yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}
