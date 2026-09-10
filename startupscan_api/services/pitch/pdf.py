@@ -175,6 +175,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ALOCAÇÃO",
         "allocation_chart_title": "USO DO CAPITAL",
+        "timeline_phase_deploy": "Alocar capital",
+        "timeline_phase_execute": "Executar plano",
+        "timeline_phase_milestone": "Atingir marcos",
+        "timeline_phase_raise": "Próxima rodada",
     },
     "en": {
         "cover_subtitle_default": "Executive presentation for investors",
@@ -211,6 +215,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ALLOCATION",
         "allocation_chart_title": "USE OF CAPITAL",
+        "timeline_phase_deploy": "Deploy capital",
+        "timeline_phase_execute": "Execute plan",
+        "timeline_phase_milestone": "Hit milestones",
+        "timeline_phase_raise": "Next round",
     },
     "ru": {
         "cover_subtitle_default": "Презентация для инвесторов",
@@ -247,6 +255,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "РАСПРЕДЕЛЕНИЕ",
         "allocation_chart_title": "ИСПОЛЬЗОВАНИЕ КАПИТАЛА",
+        "timeline_phase_deploy": "Вложить капитал",
+        "timeline_phase_execute": "Реализовать план",
+        "timeline_phase_milestone": "Достичь целей",
+        "timeline_phase_raise": "Следующий раунд",
     },
     "de": {
         "cover_subtitle_default": "Investorenpräsentation",
@@ -283,6 +295,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ALLOKATION",
         "allocation_chart_title": "MITTELVERWENDUNG",
+        "timeline_phase_deploy": "Kapital einsetzen",
+        "timeline_phase_execute": "Plan ausführen",
+        "timeline_phase_milestone": "Meilensteine erreichen",
+        "timeline_phase_raise": "Nächste Runde",
     },
     "es": {
         "cover_subtitle_default": "Presentación ejecutiva para inversores",
@@ -319,6 +335,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "ASIGNACIÓN",
         "allocation_chart_title": "USO DEL CAPITAL",
+        "timeline_phase_deploy": "Desplegar capital",
+        "timeline_phase_execute": "Ejecutar el plan",
+        "timeline_phase_milestone": "Alcanzar hitos",
+        "timeline_phase_raise": "Próxima ronda",
     },
     "zh-hans": {
         "cover_subtitle_default": "面向投资者的高管演示",
@@ -355,6 +375,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "分配",
         "allocation_chart_title": "资金使用情况",
+        "timeline_phase_deploy": "投入资金",
+        "timeline_phase_execute": "执行计划",
+        "timeline_phase_milestone": "达成里程碑",
+        "timeline_phase_raise": "下一轮融资",
     },
     "umb": {
         "cover_subtitle_default": "Apresentação yokolele ku investidores",
@@ -391,6 +415,10 @@ _DECK_STRINGS = {
         "kpi_runway": "RUNWAY",
         "kpi_allocation": "OKUAVELA",
         "allocation_chart_title": "OKUAVELA KWA KAPITAL",
+        "timeline_phase_deploy": "Yikola ombongo",
+        "timeline_phase_execute": "Linga upange",
+        "timeline_phase_milestone": "Wana oyipimo",
+        "timeline_phase_raise": "Rodada yakwavo",
     },
 }
 
@@ -488,6 +516,11 @@ def _draw_template_bg(pdf: canvas.Canvas, width: float, height: float,
         pdf.setLineWidth(32)
         pdf.circle(width * 0.06 + shift, height * 0.22 + shift, 220, stroke=1, fill=0)
 
+    # Reset to a sane default: several branches above set a large line
+    # width for their own decorative rings and never restore it, which
+    # would otherwise leak into whatever gets stroked next on this page.
+    pdf.setLineWidth(1)
+
 
 def _draw_left_stripe(pdf: canvas.Canvas, height: float, palette: dict) -> None:
     pdf.setFillColor(palette["band"])
@@ -583,6 +616,129 @@ def _draw_slide_number_watermark(pdf: canvas.Canvas, width: float, height: float
     pdf.setFont(font, 120)
     tw = stringWidth(txt, font, 120)
     pdf.drawString(width - tw - 22, 14, txt)
+
+
+# ─────────────────────────────────────────────────────────────
+#  Slide topic icons — simple abstract vector glyphs (no external
+#  image/font assets) drawn with plain canvas primitives, so every
+#  content slide gets a visual anchor instead of being a wall of text.
+# ─────────────────────────────────────────────────────────────
+_TOPIC_ICON_KEYWORDS = [
+    ("problem", ("problem", "problema")),
+    ("solution", ("solution", "solução", "solucao", "diferencial")),
+    ("market", ("market", "mercado", "segmenta")),
+    ("business_model", ("business model", "modelo de negócio", "modelo de negocio", "unit economics")),
+    ("traction", ("traction", "tração", "tracao", "validation", "validação", "validacao")),
+    ("team", ("team", "time", "equipe")),
+    ("gtm", ("go-to-market", "gtm", "estratégia", "estrategia")),
+    ("competitive", ("competitive", "vantagem", "moat")),
+    ("funding", ("fundraising", "captação", "captacao", "capital", "investment", "investimento")),
+    ("vision", ("vision", "visão", "visao", "roadmap")),
+    ("conclusion", ("conclusion", "conclusão", "conclusao", "call to action")),
+]
+
+
+def _infer_topic_icon(title: str) -> str:
+    low = (title or "").strip().lower()
+    for icon_key, keywords in _TOPIC_ICON_KEYWORDS:
+        if any(kw in low for kw in keywords):
+            return icon_key
+    return "generic"
+
+
+def _poly(pdf: canvas.Canvas, points: list[tuple[float, float]], *, fill: bool = True, stroke: bool = False) -> None:
+    path = pdf.beginPath()
+    path.moveTo(*points[0])
+    for pt in points[1:]:
+        path.lineTo(*pt)
+    path.close()
+    pdf.drawPath(path, fill=fill, stroke=stroke)
+
+
+def _draw_topic_icon(pdf: canvas.Canvas, cx: float, cy: float, r: float,
+                      icon_key: str, badge_color, glyph_color) -> None:
+    """Draws a circular badge of radius r centered at (cx, cy) with a
+    small abstract glyph representing the slide's topic."""
+    pdf.setFillColor(badge_color)
+    pdf.circle(cx, cy, r, stroke=0, fill=1)
+
+    pdf.setFillColor(glyph_color)
+    pdf.setStrokeColor(glyph_color)
+    # Some branches below stroke a shape before setting their own line
+    # width (or never set one at all, e.g. "funding"/"competitive"/the
+    # generic fallback). Without a reset here they inherit whatever width
+    # a *previous, unrelated* shape left on the canvas — on the "orbit"
+    # template's 18-32pt accent rings that turns a thin glyph outline into
+    # a stroke thick enough to blot out the entire badge as a solid blob.
+    pdf.setLineWidth(1.4)
+    g = r * 0.5  # glyph half-extent
+
+    if icon_key == "problem":
+        _poly(pdf, [(cx, cy + g), (cx - g, cy - g * 0.7), (cx + g, cy - g * 0.7)], fill=False, stroke=True)
+        pdf.setLineWidth(1.6)
+        pdf.line(cx, cy + g * 0.25, cx, cy - g * 0.15)
+        pdf.circle(cx, cy - g * 0.45, 1.4, stroke=0, fill=1)
+    elif icon_key == "solution":
+        pdf.circle(cx, cy + g * 0.15, g * 0.55, stroke=1, fill=0)
+        pdf.setLineWidth(1.4)
+        for dx, dy in ((0, 1), (0.85, 0.55), (-0.85, 0.55), (0.85, -0.2), (-0.85, -0.2)):
+            pdf.line(cx + dx * g * 0.85, cy + g * 0.15 + dy * g * 0.85,
+                      cx + dx * g * 1.25, cy + g * 0.15 + dy * g * 1.25)
+        pdf.rect(cx - g * 0.22, cy - g * 0.65, g * 0.44, g * 0.3, stroke=1, fill=0)
+    elif icon_key == "market":
+        pdf.circle(cx, cy, g * 0.85, stroke=1, fill=0)
+        pdf.setLineWidth(1.1)
+        pdf.line(cx - g * 0.85, cy, cx + g * 0.85, cy)
+        pdf.ellipse(cx - g * 0.4, cy - g * 0.85, cx + g * 0.4, cy + g * 0.85, stroke=1, fill=0)
+    elif icon_key == "business_model":
+        pdf.setLineWidth(1.3)
+        pdf.circle(cx - g * 0.35, cy, g * 0.55, stroke=1, fill=0)
+        pdf.circle(cx + g * 0.35, cy, g * 0.55, stroke=1, fill=0)
+    elif icon_key == "traction":
+        bar_w = g * 0.4
+        for i, h in enumerate((0.5, 0.85, 1.2)):
+            bx = cx - g * 0.9 + i * (bar_w + 4)
+            pdf.rect(bx, cy - g * 0.7, bar_w, g * h, stroke=0, fill=1)
+        pdf.setLineWidth(1.4)
+        pdf.line(cx - g * 0.9, cy - g * 0.75, cx + g * 0.95, cy + g * 0.55)
+        _poly(pdf, [(cx + g * 0.95, cy + g * 0.55), (cx + g * 0.55, cy + g * 0.5),
+                    (cx + g * 0.85, cy + g * 0.2)], fill=True)
+    elif icon_key == "team":
+        for dx in (-0.55, 0, 0.55):
+            pdf.circle(cx + dx * g, cy + g * 0.25, g * 0.32, stroke=0, fill=1)
+        pdf.setLineWidth(1.1)
+        pdf.line(cx - g * 0.55, cy + g * 0.05, cx + g * 0.55, cy + g * 0.05)
+    elif icon_key == "gtm":
+        pdf.setLineWidth(1.2)
+        for rad in (g * 0.9, g * 0.55):
+            pdf.circle(cx, cy, rad, stroke=1, fill=0)
+        pdf.circle(cx, cy, g * 0.2, stroke=0, fill=1)
+    elif icon_key == "competitive":
+        _poly(pdf, [(cx, cy + g), (cx + g * 0.85, cy + g * 0.45), (cx + g * 0.6, cy - g * 0.8),
+                    (cx, cy - g), (cx - g * 0.6, cy - g * 0.8), (cx - g * 0.85, cy + g * 0.45)],
+              fill=False, stroke=True)
+    elif icon_key == "funding":
+        for i, dy in enumerate((-0.35, 0, 0.35)):
+            pdf.ellipse(cx - g * 0.75, cy + dy * g - g * 0.15, cx + g * 0.75, cy + dy * g + g * 0.15,
+                        stroke=1, fill=(i == 1))
+    elif icon_key == "vision":
+        pdf.setLineWidth(1.4)
+        prev = None
+        for i, (dx, dy) in enumerate(((-0.8, -0.6), (-0.3, -0.1), (0.3, 0.3), (0.8, 0.7))):
+            pt = (cx + dx * g, cy + dy * g)
+            if prev:
+                pdf.line(*prev, *pt)
+            pdf.circle(pt[0], pt[1], 2.2, stroke=0, fill=1)
+            prev = pt
+        _poly(pdf, [(cx + 0.8 * g, cy + 0.7 * g), (cx + 0.8 * g + 8, cy + 0.7 * g + 4),
+                    (cx + 0.8 * g, cy + 0.7 * g + 8)], fill=True)
+    elif icon_key == "conclusion":
+        pdf.setLineWidth(1.8)
+        pdf.line(cx - g * 0.5, cy, cx - g * 0.1, cy - g * 0.4)
+        pdf.line(cx - g * 0.1, cy - g * 0.4, cx + g * 0.6, cy + g * 0.5)
+    else:  # generic
+        pdf.circle(cx, cy, g * 0.4, stroke=1, fill=0)
+        pdf.circle(cx, cy, g * 0.85, stroke=1, fill=0)
 
 
 def _draw_progress_dots(pdf: canvas.Canvas, width: float, page: int,
@@ -918,6 +1074,7 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
     pdf.drawString(22, height - 82, title)
     pdf.setFillColor(palette["accent"])
     pdf.rect(22, height - 90, min(120, len(title) * 8), 3, stroke=0, fill=1)
+    _draw_topic_icon(pdf, width - 52, height - 82, 26, "funding", palette["band"], colors.white)
 
     bullets = slide.get("bullets") or []
     investment = slide.get("investment") or {}
@@ -954,7 +1111,9 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
             pdf.drawCentredString(kx + kpi_w / 2, kpi_y + kpi_h - 46 - j * 13, vline)
 
     # ── Capital allocation: a real stacked bar when the free-text use-of-funds
-    # summary parses into percentages, otherwise fall back to a plain list. ──
+    # summary parses into percentages; otherwise a decorative 4-phase
+    # deployment timeline gives the slide the same illustrative rhythm
+    # either way, instead of just falling back to a plain bullet list. ──
     use_of_funds_text = _safe_str(investment.get("use_of_funds"), "")
     allocation_items = _parse_allocation(use_of_funds_text)
     allocation_label = t.get("allocation_prefix", "Allocation")
@@ -978,6 +1137,30 @@ def _render_investment_slide(pdf: canvas.Canvas, width: float, height: float,
         pdf.setFont(_font_for(language, True), 9)
         pdf.drawString(22, kpi_y - 16, t.get("allocation_chart_title", "USE OF CAPITAL"))
         body_y = _draw_allocation_bar(pdf, 22, kpi_y - 40, width - 44, allocation_items, palette, language) - 6
+    else:
+        # ── Decorative capital-deployment timeline (illustrative, not a
+        #    literal projection of exact dates) — shown only when there is no
+        #    real percentage breakdown to chart instead. ──
+        timeline_y = kpi_y - 22
+        timeline_x0, timeline_x1 = 26, width - 26
+        pdf.setStrokeColor(_with_alpha(palette["accent"], 0.4))
+        pdf.setLineWidth(1.6)
+        pdf.line(timeline_x0, timeline_y, timeline_x1, timeline_y)
+        phase_labels = [
+            t.get("timeline_phase_deploy", "Deploy capital"),
+            t.get("timeline_phase_execute", "Execute plan"),
+            t.get("timeline_phase_milestone", "Hit milestones"),
+            t.get("timeline_phase_raise", "Next round"),
+        ]
+        n_phases = len(phase_labels)
+        for i, label in enumerate(phase_labels):
+            px = timeline_x0 + (timeline_x1 - timeline_x0) * (i / (n_phases - 1))
+            _draw_marker_shape(pdf, px, timeline_y, 4.5, style["marker"],
+                                fill_color=palette["accent"] if i == 0 else palette["band"])
+            pdf.setFillColor(_with_alpha(palette["text"], 0.85))
+            pdf.setFont(_font_for(language), 7.5)
+            pdf.drawCentredString(px, timeline_y - 13, label)
+        body_y = timeline_y - 30
 
     if milestones:
         alloc_bullets = [b for b in alloc_bullets if _safe_str(b, "") != milestones]
@@ -1027,6 +1210,9 @@ def _render_content_slide(pdf: canvas.Canvas, width: float, height: float,
     pdf.setFillColor(palette["accent"])
     underline_x = (width - 60) / 2 if centered else 22
     pdf.rect(underline_x, title_y - 9, 60, 2.5, stroke=0, fill=1)
+
+    # Topic icon badge, top-right of the title band
+    _draw_topic_icon(pdf, width - 52, height - 82, 26, _infer_topic_icon(title), palette["band"], colors.white)
 
     # ── Main content card ──
     card_x = 22

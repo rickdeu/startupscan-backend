@@ -12,14 +12,14 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy application code
-COPY backend /app
+COPY . /app
 
 # Install Python dependencies
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Celery entrypoint
-COPY backend/celery/start-celery.sh /start-celery.sh
+COPY celery/start-celery.sh /start-celery.sh
 RUN chmod +x /start-celery.sh
 
 CMD ["/start-celery.sh"]

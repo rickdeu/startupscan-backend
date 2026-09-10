@@ -615,9 +615,9 @@ def _local_pitch_fallback_pt(idea_data: dict) -> dict:
     }
 
 
-def _normalize_payload(data: dict, engine_used: str, *, enrich: bool = True) -> dict:
+def _normalize_payload(data: dict, engine_used: str, *, enrich: bool = True, language: str = "en") -> dict:
     data = data if isinstance(data, dict) else {}
-    data.setdefault("title", "Pitch de Negócio")
+    data.setdefault("title", "Pitch de Negócio" if language == "pt" else "Business Pitch")
     data.setdefault("slogan", "")
     data.setdefault("sections", [])
     data.setdefault("investment", {})
@@ -628,7 +628,7 @@ def _normalize_payload(data: dict, engine_used: str, *, enrich: bool = True) -> 
     data.setdefault("narrative_uniqueness_key", "")
     data.setdefault("engine_used", engine_used)
     if enrich:
-        return enrich_pitch_payload(data)
+        return enrich_pitch_payload(data, language=language)
     return data
 
 
@@ -664,4 +664,6 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local", langu
             except Exception:
                 pass
 
-    return _normalize_payload(_local_pitch_fallback(idea_data, language=language), "local", enrich=True)
+    return _normalize_payload(
+        _local_pitch_fallback(idea_data, language=language), "local", enrich=True, language=language,
+    )
