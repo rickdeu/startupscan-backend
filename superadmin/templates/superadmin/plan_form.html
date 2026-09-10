@@ -31,9 +31,16 @@
             {% include "superadmin/_field.html" with field=form.batch_max_rows %}
         </div>
 
+        <div class="sa-detail-section-title">Analysis engines</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.local_analysis %}
+            {% include "superadmin/_field.html" with field=form.gpt_analysis %}
+            {% include "superadmin/_field.html" with field=form.deepseek_analysis %}
+            {% include "superadmin/_field.html" with field=form.ollama_analysis %}
+        </div>
+
         <div class="sa-detail-section-title">Included features</div>
         <div class="sa-form-grid sa-form-grid-3">
-            {% include "superadmin/_field.html" with field=form.gpt_analysis %}
             {% include "superadmin/_field.html" with field=form.audio_upload %}
             {% include "superadmin/_field.html" with field=form.video_upload %}
             {% include "superadmin/_field.html" with field=form.youtube_url %}

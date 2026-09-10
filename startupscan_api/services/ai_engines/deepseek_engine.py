@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 
+from startupscan_api.engines import AnalysisEngine
 from startupscan_api.modeling import _ensure_unique_report_language
 from startupscan_api.services.ai_engines.prompts import build_pitch_analysis_prompts
 
@@ -22,11 +23,11 @@ def analyze_with_deepseek(text, financial_data, metadata, language: str = "en"):
     try:
         from openai import OpenAI
 
-        model_name = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        model_name = os.getenv("DEEPSEEK_MODEL", "deepseek-flash")
         base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         client = OpenAI(api_key=api_key, base_url=base_url)
         system_prompt, user_prompt, startup_name, uniqueness_key = build_pitch_analysis_prompts(
-            text, financial_data, metadata, language,
+            text, financial_data, metadata, language, engine=AnalysisEngine.DEEPSEEK,
         )
 
         response = client.chat.completions.create(

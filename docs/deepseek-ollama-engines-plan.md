@@ -109,7 +109,7 @@ Novo pacote `startupscan_api/services/ai_engines/` (evita inchar ainda mais `mod
 
 - **`prompts.py`** — extrai o prompt system/user hoje hardcoded dentro de `analyze_with_gpt` (incluindo os helpers já existentes `_build_uniqueness_key` e `_ensure_unique_report_language`, ambos em `modeling.py`, que evitam respostas genéricas/repetidas entre análises), para reuso entre GPT/DeepSeek/Ollama sem duplicar texto.
 - **`deepseek_engine.py`** — `analyze_with_deepseek(text, financial_data, metadata, language="en") -> (score, report, engine_used)`, mesmo contrato de retorno de `analyze_with_gpt`, mesmo padrão de fallback. Usa o client `openai.OpenAI` apontando para um `base_url` customizado (DeepSeek expõe uma API compatível com a da OpenAI), evitando nova dependência.
-  - Env vars: `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` (default `deepseek-chat`), `DEEPSEEK_BASE_URL` (default `https://api.deepseek.com`).
+  - Env vars: `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` (default `deepseek-flash`), `DEEPSEEK_BASE_URL` (default `https://api.deepseek.com`).
 - **`ollama_engine.py`** — `analyze_with_ollama(...)`, mesmo contrato, via `requests.post(f"{OLLAMA_BASE_URL}/api/chat", json={"model": OLLAMA_MODEL, "messages": [...], "format": "json", "stream": False}, timeout=OLLAMA_REQUEST_TIMEOUT)`.
   - Env vars: `OLLAMA_BASE_URL` (default `http://ollama:11434`, nome do serviço Docker), `OLLAMA_MODEL` (default `llama3.1:8b`), `OLLAMA_REQUEST_TIMEOUT` (default `120` segundos — CPU é lento).
   - O backend **não** tenta `ollama pull` sob demanda dentro do request do usuário (travaria minutos) — se o modelo não existir no host Ollama, cai direto no fallback Local.
@@ -178,7 +178,7 @@ O serviço `ollama-init` roda uma vez, baixa o modelo default e encerra — padr
 | Variável | Default sugerido | Descrição |
 |---|---|---|
 | `DEEPSEEK_API_KEY` | — (obrigatória) | Chave de API da DeepSeek |
-| `DEEPSEEK_MODEL` | `deepseek-chat` | Modelo usado nas chamadas |
+| `DEEPSEEK_MODEL` | `deepseek-flash` | Modelo usado nas chamadas |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Endpoint compatível com OpenAI SDK |
 | `OLLAMA_BASE_URL` | `http://ollama:11434` | Host do serviço Ollama (nome do serviço Docker) |
 | `OLLAMA_MODEL` | `llama3.1:8b` | Modelo local usado nas chamadas |

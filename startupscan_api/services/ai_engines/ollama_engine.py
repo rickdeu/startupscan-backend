@@ -5,6 +5,7 @@ import os
 import numpy as np
 import requests
 
+from startupscan_api.engines import AnalysisEngine
 from startupscan_api.modeling import _ensure_unique_report_language
 from startupscan_api.services.ai_engines.prompts import build_pitch_analysis_prompts
 
@@ -27,7 +28,7 @@ def analyze_with_ollama(text, financial_data, metadata, language: str = "en"):
 
     try:
         system_prompt, user_prompt, startup_name, uniqueness_key = build_pitch_analysis_prompts(
-            text, financial_data, metadata, language,
+            text, financial_data, metadata, language, engine=AnalysisEngine.OLLAMA,
         )
 
         response = requests.post(

@@ -422,12 +422,13 @@ def analyze_with_gpt(text, financial_data, metadata, language: str = "en"):
     try:
         from openai import OpenAI
 
+        from startupscan_api.engines import AnalysisEngine
         from startupscan_api.services.ai_engines.prompts import build_pitch_analysis_prompts
 
         model_name = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         client = OpenAI(api_key=api_key)
         system_prompt, user_prompt, startup_name, uniqueness_key = build_pitch_analysis_prompts(
-            text, financial_data, metadata, language,
+            text, financial_data, metadata, language, engine=AnalysisEngine.GPT,
         )
 
         response = client.chat.completions.create(

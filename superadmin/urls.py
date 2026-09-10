@@ -35,6 +35,13 @@ from .views.pitch import (
     PitchAnalysisListView,
     PitchAnalysisUpdateView,
 )
+from .views.prompts import (
+    PromptTemplateCreateView,
+    PromptTemplateDeleteView,
+    PromptTemplateDetailView,
+    PromptTemplateListView,
+    PromptTemplateUpdateView,
+)
 from .views.subscriptions import (
     PlanCreateView,
     PlanDeleteView,
@@ -106,6 +113,13 @@ urlpatterns = [
     path("investor-interests/<int:pk>/", InvestorInterestDetailView.as_view(), name="investor_interest_detail"),
     path("investor-interests/<int:pk>/edit/", InvestorInterestUpdateView.as_view(), name="investor_interest_edit"),
     path("investor-interests/<int:pk>/delete/", InvestorInterestDeleteView.as_view(), name="investor_interest_delete"),
+
+    # LLM prompt templates
+    path("prompts/", PromptTemplateListView.as_view(), name="prompt_list"),
+    path("prompts/new/", PromptTemplateCreateView.as_view(), name="prompt_create"),
+    path("prompts/<int:pk>/", PromptTemplateDetailView.as_view(), name="prompt_detail"),
+    path("prompts/<int:pk>/edit/", PromptTemplateUpdateView.as_view(), name="prompt_edit"),
+    path("prompts/<int:pk>/delete/", PromptTemplateDeleteView.as_view(), name="prompt_delete"),
 
     # Subscription plans
     path("plans/", PlanListView.as_view(), name="plan_list"),

@@ -25,6 +25,14 @@
         <div class="sa-detail-row"><div class="sa-detail-label">Batch max rows</div><div class="sa-detail-value">{{ plan.batch_max_rows }}</div></div>
     </div>
 
+    <div class="sa-detail-section-title">Analysis engines</div>
+    <div class="sa-detail-value">
+        <span class="sa-badge {% if plan.local_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Fast (local)</span>
+        <span class="sa-badge {% if plan.ollama_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Balanced (Ollama)</span>
+        <span class="sa-badge {% if plan.deepseek_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Advanced (DeepSeek)</span>
+        <span class="sa-badge {% if plan.gpt_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">Elite (GPT)</span>
+    </div>
+
     <div class="sa-detail-section-title">Included features</div>
     <div class="sa-detail-value">
         <span class="sa-badge {% if plan.gpt_analysis %}sa-badge-success{% else %}sa-badge-muted{% endif %}">GPT analysis</span>
