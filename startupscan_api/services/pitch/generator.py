@@ -634,17 +634,22 @@ def _normalize_payload(data: dict, engine_used: str, *, enrich: bool = True, lan
 
 def generate_pitch_from_idea(idea_data: dict, model_source: str = "local", language: str = "en") -> dict:
     model_source = (model_source or "local").strip().lower()
-    if model_source not in {"local", "gpt"}:
+    if model_source not in {"local", "gpt", "deepseek", "ollama"}:
         model_source = "local"
 
-    if model_source == "gpt":
-        api_key = os.getenv("OPENAI_API_KEY")
+    if model_source in ("gpt", "deepseek"):
+        env_prefix = "OPENAI" if model_source == "gpt" else "DEEPSEEK"
+        api_key = os.getenv(f"{env_prefix}_API_KEY")
         if api_key:
             try:
                 from openai import OpenAI
 
-                model_name = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-                client = OpenAI(api_key=api_key)
+                default_model = "gpt-4.1-mini" if model_source == "gpt" else "deepseek-chat"
+                model_name = os.getenv(f"{env_prefix}_MODEL", default_model)
+                client_kwargs = {"api_key": api_key}
+                if model_source == "deepseek":
+                    client_kwargs["base_url"] = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+                client = OpenAI(**client_kwargs)
                 uniqueness_key = _build_pitch_uniqueness_key(idea_data)
 
                 response = client.chat.completions.create(
@@ -659,10 +664,42 @@ def generate_pitch_from_idea(idea_data: dict, model_source: str = "local", langu
                 data = json.loads(response.choices[0].message.content)
                 if isinstance(data, dict):
                     data["narrative_uniqueness_key"] = uniqueness_key
-                    # GPT already produces rich content — skip filler enrichment
-                    return _normalize_payload(data, "gpt", enrich=False)
+                    # LLM already produces rich content — skip filler enrichment
+                    return _normalize_payload(data, model_source, enrich=False)
             except Exception:
                 pass
+
+    elif model_source == "ollama":
+        try:
+            import requests
+
+            base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+            model_name = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+            timeout = float(os.getenv("OLLAMA_REQUEST_TIMEOUT", "120"))
+            uniqueness_key = _build_pitch_uniqueness_key(idea_data)
+
+            response = requests.post(
+                f"{base_url.rstrip('/')}/api/chat",
+                json={
+                    "model": model_name,
+                    "stream": False,
+                    "format": "json",
+                    "options": {"temperature": 0.72},
+                    "messages": [
+                        {"role": "system", "content": _build_gpt_system_prompt(language)},
+                        {"role": "user", "content": _build_gpt_user_prompt(idea_data, uniqueness_key)},
+                    ],
+                },
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            content = (response.json().get("message") or {}).get("content", "")
+            data = json.loads(content)
+            if isinstance(data, dict):
+                data["narrative_uniqueness_key"] = uniqueness_key
+                return _normalize_payload(data, "ollama", enrich=False)
+        except Exception:
+            pass
 
     return _normalize_payload(
         _local_pitch_fallback(idea_data, language=language), "local", enrich=True, language=language,

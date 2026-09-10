@@ -23,6 +23,29 @@ services:
     networks:
       - startupscan_network
 
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - startupscan_network
+
+  # One-shot init container: pulls the default balanced-engine model once so
+  # the `ollama` service has it ready. Never runs `ollama pull` from inside a
+  # Django request — that can take minutes and would block the response.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 3 && OLLAMA_HOST=http://ollama:11434 ollama pull ${OLLAMA_MODEL:-llama3.1:8b}"
+    networks:
+      - startupscan_network
+    restart: "no"
+
   web:
     build:
       context: .
@@ -88,6 +111,7 @@ volumes:
   media_volume:
   static_volume:
   ai_models_volume:
+  ollama_data:
 
 networks:
   startupscan_network:

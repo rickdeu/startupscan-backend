@@ -1,4 +1,5 @@
 {% extends "analyzer/base.html" %}
+{% load dict_extras %}
 
 {% block topbar_title %}{{ ui_text.pitch_form_topbar_title }}{% endblock %}
 {% block topbar_subtitle %}{{ ui_text.pitch_form_topbar_subtitle }}{% endblock %}
@@ -220,24 +221,23 @@
                     <div class="col-12">
                         <label class="form-label fw-semibold" style="font-size:.85rem;">{{ ui_text.pitch_form_analysis_engine }}</label>
                         <div class="row g-2">
+                            {% for engine in available_engines %}
                             <div class="col-md-6">
-                                <label class="d-flex align-items-start gap-3 p-3 rounded cursor-pointer engine-opt {% if form_data.model_source|default:'local' == 'local' %}engine-selected{% endif %}" style="border:1px solid #2a2c31;border-radius:12px;cursor:pointer;transition:all .2s;">
-                                    <input type="radio" name="model_source" value="local" {% if form_data.model_source|default:'local' == 'local' %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#f5580d;">
+                                <label class="d-flex align-items-start gap-3 p-3 rounded cursor-pointer engine-opt {% if form_data.model_source|default:'local' == engine %}engine-selected{% endif %}" style="border:1px solid #2a2c31;border-radius:12px;cursor:pointer;transition:all .2s;">
+                                    <input type="radio" name="model_source" value="{{ engine }}" {% if form_data.model_source|default:'local' == engine %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#f5580d;">
                                     <div>
-                                        <div class="fw-semibold" style="font-size:.88rem;"><i class="fas fa-microchip me-1" style="color:#ff8a4d;"></i>{{ ui_text.pitch_form_engine_local }}</div>
-                                        <div class="small" style="color:#94a3b8;">{{ ui_text.pitch_form_engine_local_desc|default:"Rápido, offline, sem custo adicional" }}</div>
+                                        <div class="fw-semibold" style="font-size:.88rem;">
+                                            {% if engine == 'local' %}<i class="fas fa-bolt me-1" style="color:#ff8a4d;"></i>
+                                            {% elif engine == 'ollama' %}<i class="fas fa-scale-balanced me-1" style="color:#4dd0e1;"></i>
+                                            {% elif engine == 'deepseek' %}<i class="fas fa-brain me-1" style="color:#c084fc;"></i>
+                                            {% else %}<i class="fas fa-crown me-1" style="color:#e0a845;"></i>{% endif %}
+                                            {{ ui_text|engine_label:engine }}
+                                        </div>
+                                        <div class="small" style="color:#94a3b8;">{{ ui_text|engine_desc:engine }}</div>
                                     </div>
                                 </label>
                             </div>
-                            <div class="col-md-6">
-                                <label class="d-flex align-items-start gap-3 p-3 rounded cursor-pointer engine-opt {% if form_data.model_source == 'gpt' %}engine-selected{% endif %}" style="border:1px solid #2a2c31;border-radius:12px;cursor:pointer;transition:all .2s;">
-                                    <input type="radio" name="model_source" value="gpt" {% if form_data.model_source == 'gpt' %}checked{% endif %} class="mt-1 engine-radio" style="accent-color:#d4931f;">
-                                    <div>
-                                        <div class="fw-semibold" style="font-size:.88rem;"><i class="fas fa-sparkles me-1" style="color:#e0a845;"></i>{{ ui_text.pitch_form_engine_gpt }}</div>
-                                        <div class="small" style="color:#94a3b8;">{{ ui_text.pitch_form_engine_gpt_desc|default:"Análise mais profunda com GPT-4 — requer plano Pro" }}</div>
-                                    </div>
-                                </label>
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
