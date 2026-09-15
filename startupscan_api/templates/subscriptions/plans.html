@@ -13,7 +13,7 @@
     <p style="color:#94a3b8;font-size:1rem;">{{ ui_text.plans_subtitle|default:"Escolha o plano certo para o seu negócio" }}</p>
 
     <!-- Billing toggle -->
-    <div class="d-inline-flex align-items-center gap-2 mt-3 p-1" style="background:#0f172a;border:1px solid rgba(100,116,139,.2);border-radius:999px;">
+    <div class="d-inline-flex align-items-center gap-2 mt-3 p-1" style="background:#14161a;border:1px solid rgba(100,116,139,.2);border-radius:999px;">
         <button class="tab-btn active" data-billing="monthly" onclick="setBilling('monthly')"
             style="padding:.4rem 1.2rem;border-radius:999px;border:none;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s;">
             {{ ui_text.plans_billing_monthly|default:"Mensal" }}
@@ -46,14 +46,14 @@
 
     <!-- Trial -->
     <div class="col-md-4 col-lg-3 animate-fade-up animate-delay-1">
-        <div class="plan-card h-100 d-flex flex-column" style="border:1px solid rgba(100,116,139,.2);border-radius:16px;background:linear-gradient(180deg,#0f1929 0%,#0a1120 100%);padding:1.75rem;position:relative;overflow:hidden;transition:transform .22s,box-shadow .22s;">
+        <div class="plan-card h-100 d-flex flex-column" style="border:1px solid rgba(100,116,139,.2);border-radius:16px;background:linear-gradient(180deg,#14161a 0%,#0d0e12 100%);padding:1.75rem;position:relative;overflow:hidden;transition:transform .22s,box-shadow .22s;">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#475569,#94a3b8);"></div>
             <div class="mb-4">
                 <div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;">{{ ui_text.plan_name_trial|default:"Trial" }}</div>
                 <div style="font-size:2.8rem;font-weight:800;color:#f1f5f9;line-height:1;">$0</div>
                 <div style="font-size:.88rem;color:#94a3b8;margin-top:.25rem;">{{ ui_text.plans_trial_period|default:"7 dias grátis" }}</div>
                 {% if user_plan_tier == 'trial' %}
-                <span style="display:inline-block;margin-top:.5rem;background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.25);border-radius:4px;font-size:.72rem;padding:.2rem .5rem;">{{ ui_text.plans_current_plan|default:"Plano atual" }}</span>
+                <span style="display:inline-block;margin-top:.5rem;background:rgba(245, 88, 13,.12);color:#ff8a4d;border:1px solid rgba(245, 88, 13,.25);border-radius:4px;font-size:.72rem;padding:.2rem .5rem;">{{ ui_text.plans_current_plan|default:"Plano atual" }}</span>
                 {% endif %}
             </div>
             <ul class="list-unstyled flex-grow-1 mb-4" style="font-size:.88rem;line-height:2;">
@@ -76,10 +76,10 @@
 
     <!-- Basic -->
     <div class="col-md-4 col-lg-3 animate-fade-up animate-delay-2">
-        <div class="plan-card h-100 d-flex flex-column" style="border:1px solid rgba(59,130,246,.25);border-radius:16px;background:linear-gradient(180deg,#0f1929 0%,#0a1120 100%);padding:1.75rem;position:relative;overflow:hidden;transition:transform .22s,box-shadow .22s;">
-            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);"></div>
+        <div class="plan-card h-100 d-flex flex-column" style="border:1px solid rgba(245, 88, 13,.25);border-radius:16px;background:linear-gradient(180deg,#14161a 0%,#0d0e12 100%);padding:1.75rem;position:relative;overflow:hidden;transition:transform .22s,box-shadow .22s;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#c23f08,#ff8a4d);"></div>
             <div class="mb-4">
-                <div style="font-size:.72rem;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;">{{ ui_text.plan_name_basic|default:"Basic" }}</div>
+                <div style="font-size:.72rem;font-weight:700;color:#ff8a4d;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;">{{ ui_text.plan_name_basic|default:"Basic" }}</div>
 
                 <!-- Monthly prices -->
                 <div class="billing-monthly">
@@ -104,7 +104,7 @@
                 </div>
 
                 {% if user_plan_tier == 'basic' %}
-                <span style="display:inline-block;margin-top:.5rem;background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.25);border-radius:4px;font-size:.72rem;padding:.2rem .5rem;">{{ ui_text.plans_current_plan|default:"Plano atual" }}</span>
+                <span style="display:inline-block;margin-top:.5rem;background:rgba(245, 88, 13,.12);color:#ff8a4d;border:1px solid rgba(245, 88, 13,.25);border-radius:4px;font-size:.72rem;padding:.2rem .5rem;">{{ ui_text.plans_current_plan|default:"Plano atual" }}</span>
                 {% endif %}
             </div>
             <ul class="list-unstyled flex-grow-1 mb-4" style="font-size:.88rem;line-height:2;">
@@ -123,10 +123,10 @@
             <form method="post" action="{% url 'subscription_checkout' %}">
                 {% csrf_token %}
                 <input type="hidden" name="plan_id" id="basic-plan-id" value="{{ basic_monthly.pk }}">
-                <button type="submit" class="btn w-100 fw-semibold" style="background:rgba(37,99,235,.15);color:#60a5fa;border:1px solid rgba(37,99,235,.35);">{{ ui_text.plans_subscribe_basic|default:"Assinar Basic" }}</button>
+                <button type="submit" class="btn w-100 fw-semibold" style="background:rgba(217, 74, 10,.15);color:#ff8a4d;border:1px solid rgba(217, 74, 10,.35);">{{ ui_text.plans_subscribe_basic|default:"Assinar Basic" }}</button>
             </form>
             {% elif not user.is_authenticated %}
-            <a href="{% url 'register' %}" class="btn w-100 fw-semibold" style="background:rgba(37,99,235,.15);color:#60a5fa;border:1px solid rgba(37,99,235,.35);">{{ ui_text.plans_get_started|default:"Começar" }}</a>
+            <a href="{% url 'register' %}" class="btn w-100 fw-semibold" style="background:rgba(217, 74, 10,.15);color:#ff8a4d;border:1px solid rgba(217, 74, 10,.35);">{{ ui_text.plans_get_started|default:"Começar" }}</a>
             {% else %}
             <button class="btn w-100" disabled style="background:rgba(100,116,139,.08);color:#8b98ab;border:1px solid rgba(100,116,139,.15);cursor:default;">{{ ui_text.plans_active_btn|default:"Ativo" }}</button>
             {% endif %}
@@ -135,12 +135,12 @@
 
     <!-- Pro (featured) -->
     <div class="col-md-4 col-lg-3 animate-fade-up animate-delay-3">
-        <div class="plan-card h-100 d-flex flex-column" style="border:1px solid rgba(124,58,237,.45);border-radius:16px;background:linear-gradient(180deg,#0f1929 0%,#0a1120 100%);padding:1.75rem;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(124,58,237,.18), 0 16px 40px rgba(124,58,237,.12);transition:transform .22s,box-shadow .22s;">
-            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div>
+        <div class="plan-card h-100 d-flex flex-column" style="border:1px solid rgba(184, 114, 10,.45);border-radius:16px;background:linear-gradient(180deg,#14161a 0%,#0d0e12 100%);padding:1.75rem;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(184, 114, 10,.18), 0 16px 40px rgba(184, 114, 10,.12);transition:transform .22s,box-shadow .22s;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#b8720a,#e0a845);"></div>
             <div class="mb-4">
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <span style="font-size:.72rem;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;">{{ ui_text.plan_name_pro|default:"Pro" }}</span>
-                    <span style="background:#7c3aed;color:#fff;font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;">{{ ui_text.plans_recommended|default:"Recomendado" }}</span>
+                    <span style="font-size:.72rem;font-weight:700;color:#e0a845;text-transform:uppercase;letter-spacing:.08em;">{{ ui_text.plan_name_pro|default:"Pro" }}</span>
+                    <span style="background:#b8720a;color:#fff;font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;">{{ ui_text.plans_recommended|default:"Recomendado" }}</span>
                 </div>
 
                 <!-- Monthly prices -->
@@ -166,7 +166,7 @@
                 </div>
 
                 {% if user_plan_tier == 'pro' %}
-                <span style="display:inline-block;margin-top:.5rem;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25);border-radius:4px;font-size:.72rem;padding:.2rem .5rem;">{{ ui_text.plans_current_plan|default:"Plano atual" }}</span>
+                <span style="display:inline-block;margin-top:.5rem;background:rgba(184, 114, 10,.12);color:#e0a845;border:1px solid rgba(184, 114, 10,.25);border-radius:4px;font-size:.72rem;padding:.2rem .5rem;">{{ ui_text.plans_current_plan|default:"Plano atual" }}</span>
                 {% endif %}
             </div>
             <ul class="list-unstyled flex-grow-1 mb-4" style="font-size:.88rem;line-height:2;">
@@ -223,9 +223,9 @@ const CURRENCY_SYMBOLS = { usd: '$', eur: '€', aoa: 'Kz ' };
 function setCurrency(cur) {
     document.querySelectorAll('.currency-btn').forEach(b => {
         const active = b.dataset.currency === cur;
-        b.style.background = active ? 'rgba(59,130,246,.15)' : 'transparent';
-        b.style.color = active ? '#60a5fa' : '#64748b';
-        b.style.borderColor = active ? 'rgba(59,130,246,.4)' : 'rgba(100,116,139,.3)';
+        b.style.background = active ? 'rgba(245, 88, 13,.15)' : 'transparent';
+        b.style.color = active ? '#ff8a4d' : '#64748b';
+        b.style.borderColor = active ? 'rgba(245, 88, 13,.4)' : 'rgba(100,116,139,.3)';
     });
     document.querySelectorAll('.cur-symbol').forEach(el => {
         el.textContent = CURRENCY_SYMBOLS[cur] || '$';
@@ -240,7 +240,7 @@ function setCurrency(cur) {
 function setBilling(mode) {
     document.querySelectorAll('.tab-btn').forEach(b => {
         const active = b.dataset.billing === mode;
-        b.style.background = active ? '#7c3aed' : 'transparent';
+        b.style.background = active ? '#b8720a' : 'transparent';
         b.style.color = active ? '#fff' : '#64748b';
     });
     document.querySelectorAll('.billing-monthly').forEach(el => el.classList.toggle('d-none', mode !== 'monthly'));
@@ -259,7 +259,11 @@ function setBilling(mode) {
 
 // Init
 setBilling('monthly');
-setCurrency(localStorage.getItem('ss_currency') || 'usd');
+// Default currency by UI language when the user hasn't picked one yet:
+// EU languages -> EUR, Angola (Umbundu) -> AOA, everything else -> USD.
+const ssLangCurrencyDefaults = { pt: 'eur', de: 'eur', es: 'eur', umb: 'aoa' };
+const ssDefaultCurrency = ssLangCurrencyDefaults["{{ current_ui_language|default:'en' }}"] || 'usd';
+setCurrency(localStorage.getItem('ss_currency') || ssDefaultCurrency);
 
 // Plan card hover
 document.querySelectorAll('.plan-card').forEach(card => {

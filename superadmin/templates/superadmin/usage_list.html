@@ -1,0 +1,36 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Monthly usage{% endblock %}
+{% block header_title %}Monthly usage{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="User, email...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:usage_create' %}"><i class="fas fa-plus"></i> New record</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>User</th><th>Period</th><th>Analyses</th><th>Videos</th><th>Interests</th><th></th></tr></thead>
+        <tbody>
+        {% for u in usages %}
+        <tr>
+            <td>{{ u.user.username }}</td>
+            <td>{{ u.year }}/{{ u.month }}</td>
+            <td>{{ u.analyses_count }}</td>
+            <td>{{ u.videos_count }}</td>
+            <td>{{ u.investor_interests_count }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:usage_detail' u.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:usage_edit' u.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:usage_delete' u.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="sa-empty">No usage records yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

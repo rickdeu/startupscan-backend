@@ -1,0 +1,36 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Prompt templates{% endblock %}
+{% block header_title %}Prompt templates{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Engine, purpose...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:prompt_create' %}"><i class="fas fa-plus"></i> New prompt</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>Engine</th><th>Purpose</th><th>Active</th><th>Updated by</th><th>Updated at</th><th></th></tr></thead>
+        <tbody>
+        {% for p in prompts %}
+        <tr>
+            <td>{{ p.get_engine_display }}</td>
+            <td>{{ p.get_purpose_display }}</td>
+            <td>{% if p.is_active %}<span class="sa-badge sa-badge-success">Active</span>{% else %}<span class="sa-badge sa-badge-muted">Using default</span>{% endif %}</td>
+            <td>{{ p.updated_by|default:"—" }}</td>
+            <td>{{ p.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:prompt_detail' p.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:prompt_edit' p.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:prompt_delete' p.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="sa-empty">No prompt templates yet — they're seeded automatically on first migrate.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

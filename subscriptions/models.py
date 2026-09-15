@@ -5,10 +5,12 @@ from django.utils import timezone
 
 class SubscriptionPlan(models.Model):
     TIER_TRIAL = 'trial'
+    TIER_FREE = 'free'
     TIER_BASIC = 'basic'
     TIER_PRO = 'pro'
     TIER_CHOICES = [
         (TIER_TRIAL, 'Trial'),
+        (TIER_FREE, 'Free'),
         (TIER_BASIC, 'Basic'),
         (TIER_PRO, 'Pro'),
     ]
@@ -69,7 +71,10 @@ class SubscriptionPlan(models.Model):
     )
 
     # Boolean features
-    gpt_analysis = models.BooleanField(default=False, verbose_name='GPT analysis')
+    local_analysis = models.BooleanField(default=True, verbose_name='Fast (local) engine analysis')
+    gpt_analysis = models.BooleanField(default=False, verbose_name='Elite engine analysis')
+    deepseek_analysis = models.BooleanField(default=False, verbose_name='Advanced engine analysis')
+    ollama_analysis = models.BooleanField(default=False, verbose_name='Balanced engine analysis')
     audio_upload = models.BooleanField(default=False, verbose_name='Audio upload')
     video_upload = models.BooleanField(default=False, verbose_name='Video upload')
     youtube_url = models.BooleanField(default=False, verbose_name='YouTube URL')

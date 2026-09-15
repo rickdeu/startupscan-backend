@@ -1,0 +1,37 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Idea pitches{% endblock %}
+{% block header_title %}Idea pitches{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Startup, user...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:idea_create' %}"><i class="fas fa-plus"></i> New idea</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>#</th><th>Startup</th><th>User</th><th>Status</th><th>Source</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for i in ideas %}
+        <tr>
+            <td>{{ i.id }}</td>
+            <td>{{ i.startup_name }}</td>
+            <td>{{ i.user.username|default:"—" }}</td>
+            <td><span class="sa-badge {% if i.status == 'generated' %}sa-badge-success{% else %}sa-badge-muted{% endif %}">{{ i.get_status_display }}</span></td>
+            <td>{{ i.get_model_source_display }}</td>
+            <td>{{ i.created_at|date:"d/m/Y" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:idea_detail' i.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:idea_edit' i.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:idea_delete' i.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="sa-empty">No idea pitches found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

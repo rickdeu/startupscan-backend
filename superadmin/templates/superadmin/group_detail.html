@@ -1,0 +1,25 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Group — {{ group.name }}{% endblock %}
+{% block header_title %}Group — {{ group.name }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:group_edit' group.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:group_delete' group.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:group_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-section-title" style="margin-top:0;">Permissions ({{ group.permissions.count }})</div>
+    <div class="sa-detail-value">
+        {% for perm in group.permissions.all %}
+        <span class="sa-badge sa-badge-primary" style="margin:2px;">{{ perm.content_type.app_label }}.{{ perm.codename }}</span>
+        {% empty %}—{% endfor %}
+    </div>
+
+    <div class="sa-detail-section-title">Members ({{ group.user_set.count }})</div>
+    <div class="sa-detail-value">
+        {% for member in group.user_set.all %}
+        <a class="sa-badge sa-badge-muted" style="margin:2px;" href="{% url 'superadmin:user_detail' member.pk %}">{{ member.username }}</a>
+        {% empty %}—{% endfor %}
+    </div>
+</div>
+{% endblock %}

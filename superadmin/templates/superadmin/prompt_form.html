@@ -1,0 +1,114 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Prompt template{% endblock %}
+{% block header_title %}{% if object %}Edit prompt{% else %}New prompt{% endif %}{% endblock %}
+{% block content %}
+<div class="sa-card">
+    <form method="post" class="sa-simple-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="sa-detail-section-title" style="margin-top:0;">Identification</div>
+        <div class="sa-form-grid sa-form-grid-3">
+            {% include "superadmin/_field.html" with field=form.engine %}
+            {% include "superadmin/_field.html" with field=form.purpose %}
+            {% include "superadmin/_field.html" with field=form.is_active %}
+        </div>
+
+        <div class="sa-detail-section-title">Prompt content</div>
+        <p class="sa-detail-label" style="margin-bottom:8px;">
+            Uses <code>$variable</code> placeholders (not str.format — literal <code>{ }</code>, e.g. in JSON examples,
+            never need escaping). Click a variable below to insert it at the cursor. The list updates for the
+            selected purpose above.
+        </p>
+        <div class="sa-prompt-toolbar" id="promptVarToolbar"></div>
+        <div class="sa-prompt-editor-wrap" id="promptEditorWrap">
+            {% include "superadmin/_field.html" with field=form.content %}
+        </div>
+        <div class="sa-prompt-meta">
+            <span id="promptCharCount">0 chars</span>
+            <button type="button" class="sa-btn sa-btn-ghost sa-prompt-fullscreen-btn" id="promptFullscreenBtn">
+                <i class="fas fa-expand"></i> Full screen
+            </button>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:prompt_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    var PROMPT_VARS = {
+        analysis_system: ["output_language"],
+        analysis_user: ["startup_name", "uniqueness_key", "text", "financial_data_json", "metadata_json"],
+        generation_system: ["output_language"],
+        generation_user: [
+            "startup_name", "one_liner", "problem", "solution", "target_customer", "market_size",
+            "business_model", "competitive_advantage", "traction", "team", "funding_goal",
+            "use_of_funds", "call_to_action", "uniqueness_key"
+        ]
+    };
+
+    var purposeSelect = document.getElementById("id_purpose");
+    var contentField = document.getElementById("id_content");
+    var toolbar = document.getElementById("promptVarToolbar");
+    var charCount = document.getElementById("promptCharCount");
+    var fullscreenBtn = document.getElementById("promptFullscreenBtn");
+    var editorWrap = document.getElementById("promptEditorWrap");
+
+    function insertAtCursor(text) {
+        if (!contentField) return;
+        var start = contentField.selectionStart || 0;
+        var end = contentField.selectionEnd || 0;
+        var value = contentField.value;
+        contentField.value = value.slice(0, start) + text + value.slice(end);
+        contentField.focus();
+        contentField.selectionStart = contentField.selectionEnd = start + text.length;
+        updateCharCount();
+    }
+
+    function renderVarButtons() {
+        if (!purposeSelect || !toolbar) return;
+        var vars = PROMPT_VARS[purposeSelect.value] || [];
+        toolbar.innerHTML = "";
+        vars.forEach(function (name) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "sa-prompt-var-btn";
+            btn.textContent = "$" + name;
+            btn.title = "Insert $" + name;
+            btn.addEventListener("click", function () { insertAtCursor("$" + name); });
+            toolbar.appendChild(btn);
+        });
+    }
+
+    function updateCharCount() {
+        if (!contentField || !charCount) return;
+        var length = contentField.value.length;
+        charCount.textContent = length + " chars";
+    }
+
+    if (purposeSelect) {
+        purposeSelect.addEventListener("change", renderVarButtons);
+        renderVarButtons();
+    }
+    if (contentField) {
+        contentField.addEventListener("input", updateCharCount);
+        updateCharCount();
+    }
+    if (fullscreenBtn && editorWrap) {
+        fullscreenBtn.addEventListener("click", function () {
+            editorWrap.classList.toggle("is-fullscreen");
+            var expanding = editorWrap.classList.contains("is-fullscreen");
+            fullscreenBtn.innerHTML = expanding
+                ? '<i class="fas fa-compress"></i> Exit full screen'
+                : '<i class="fas fa-expand"></i> Full screen';
+        });
+    }
+})();
+</script>
+{% endblock %}

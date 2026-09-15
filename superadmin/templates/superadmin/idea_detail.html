@@ -1,0 +1,38 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Idea pitch #{{ idea.id }}{% endblock %}
+{% block header_title %}Idea pitch #{{ idea.id }} — {{ idea.startup_name }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:idea_edit' idea.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:idea_delete' idea.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:idea_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">User</div><div class="sa-detail-value">{{ idea.user.username|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Status</div><div class="sa-detail-value">{{ idea.get_status_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Model source</div><div class="sa-detail-value">{{ idea.get_model_source_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Created / updated</div><div class="sa-detail-value">{{ idea.created_at|date:"d/m/Y H:i" }} / {{ idea.updated_at|date:"d/m/Y H:i" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Generated at</div><div class="sa-detail-value">{{ idea.generated_at|date:"d/m/Y H:i"|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">One-liner</div><div class="sa-detail-value">{{ idea.one_liner|default:"—" }}</div></div>
+    </div>
+
+    <div class="sa-detail-grid sa-detail-grid-1">
+        <div class="sa-detail-row"><div class="sa-detail-label">Problem</div><div class="sa-detail-value">{{ idea.problem|linebreaksbr }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Solution</div><div class="sa-detail-value">{{ idea.solution|linebreaksbr }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Target customer</div><div class="sa-detail-value">{{ idea.target_customer|linebreaksbr }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Market size</div><div class="sa-detail-value">{{ idea.market_size|linebreaksbr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Business model</div><div class="sa-detail-value">{{ idea.business_model|linebreaksbr }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Competitive advantage</div><div class="sa-detail-value">{{ idea.competitive_advantage|linebreaksbr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Traction</div><div class="sa-detail-value">{{ idea.traction|linebreaksbr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Team</div><div class="sa-detail-value">{{ idea.team|linebreaksbr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Funding goal</div><div class="sa-detail-value">{{ idea.funding_goal|linebreaksbr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Use of funds</div><div class="sa-detail-value">{{ idea.use_of_funds|linebreaksbr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Call to action</div><div class="sa-detail-value">{{ idea.call_to_action|linebreaksbr|default:"—" }}</div></div>
+    </div>
+
+    <div class="sa-detail-section-title">Generated pitch (JSON)</div>
+    <div class="sa-detail-value"><pre>{{ idea.generated_pitch|pprint }}</pre></div>
+</div>
+{% endblock %}

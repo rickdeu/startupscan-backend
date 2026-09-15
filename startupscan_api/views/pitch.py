@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.engines import AnalysisEngine, normalize_engine
 from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.modeling import analyze_with_gpt, ensure_report_dict
 from startupscan_api.models import InvestorConnectionInterest, PitchAnalysis
@@ -31,9 +32,12 @@ from startupscan_api.services.pitch_builder import (
     get_pitch_design_mode_choices,
     get_pitch_design_template_choices,
 )
+from startupscan_api.services.ai_engines.deepseek_engine import analyze_with_deepseek
+from startupscan_api.services.ai_engines.ollama_engine import analyze_with_ollama
 from startupscan_api.services.pitch_input import extract_text_from_uploaded_file, merge_pitch_text
 from startupscan_api.services.report_export import export_analysis_pdf
 from startupscan_api.utils import generate_interpretable_report, prepare_features
+from startupscan_api.utils.currency import format_currency
 from .helpers import (
     _infer_error_field,
     _is_meaningful_pitch_text,
@@ -42,7 +46,22 @@ from .helpers import (
 )
 from .jobs import _video_generation_cache_key
 from .mixins import RoleRequiredMixin
-from subscriptions.mixins import SubscriptionGate, check_feature_access, check_limit_access
+from subscriptions.mixins import (
+    SubscriptionGate,
+    check_engine_access,
+    check_feature_access,
+    check_limit_access,
+    get_available_engines_for_user,
+    pick_default_engine_for_user,
+)
+
+_ENGINE_ANALYZE_FUNCS = {
+    AnalysisEngine.GPT: analyze_with_gpt,
+    AnalysisEngine.DEEPSEEK: analyze_with_deepseek,
+    AnalysisEngine.OLLAMA: analyze_with_ollama,
+}
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -83,13 +102,16 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
         cleaned = [str(v).strip() for v in values if str(v).strip()]
         return " ".join(cleaned[:3]) if cleaned else fallback
 
-    revenue = float(analysis.revenue or 0)
+    # This payload's prose is always Portuguese (see note above), so its
+    # currency follows the same Portuguese/Angola convention as the rest of
+    # the app (revenue is stored in EUR; displayed here converted to AOA).
+    currency_symbol, revenue = format_currency(analysis.revenue, "pt")
     growth_rate = float(analysis.growth_rate or 0)
     profit_margin = float(analysis.profit_margin or 0)
     success_score = float(analysis.success_score or 0)
 
-    funding_goal_aoa = max(8_000_000, int(max(revenue * 0.55, 0)))
-    funding_goal = f"AOA {funding_goal_aoa:,.0f} para acelerar escala e execução comercial."
+    funding_goal_amount = max(8_000_000, int(max(revenue * 0.55, 0)))
+    funding_goal = f"{currency_symbol} {funding_goal_amount:,.0f} para acelerar escala e execução comercial."
 
     return {
         "startup_name": startup_name,
@@ -101,7 +123,7 @@ def _build_pitch_payload_from_analysis(analysis: PitchAnalysis) -> dict:
         "business_model": "Modelo orientado a geração de receita recorrente e expansão comercial disciplinada.",
         "competitive_advantage": _join_list(strengths, "Execução rápida, leitura de métricas e adaptação contínua ao mercado."),
         "traction": (
-            f"Score {success_score:.1f}/10, receita AOA {revenue:,.0f}, "
+            f"Score {success_score:.1f}/10, receita {currency_symbol} {revenue:,.0f}, "
             f"crescimento {growth_rate:.1f}% e margem {profit_margin:.1f}%."
         ),
         "team": "Equipe focada em execução e melhoria contínua com orientação a metas de crescimento.",
@@ -121,11 +143,13 @@ class PitchFormView(RoleRequiredMixin, View):
     allowed_roles = {ROLE_ENTREPRENEUR, ROLE_ANALYST, ROLE_ADMIN}
 
     def get(self, request):
+        available_engines = get_available_engines_for_user(request.user) if request.user.is_authenticated else [AnalysisEngine.LOCAL]
         return render(request, 'analyzer/pitch_form.html', {
             'default_date': datetime.now().strftime('%Y-%m-%d'),
             'max_file_size': 50,
             'industries': PitchAnalysis.INDUSTRY_CHOICES,
             'form_data': {'model_source': 'local'},
+            'available_engines': available_engines,
         })
 
     def post(self, request):
@@ -240,9 +264,7 @@ class PitchFormView(RoleRequiredMixin, View):
                 messages.error(request, detail, extra_tags=f"{field}:{detail}")
                 return self._render_form_with_data(request)
 
-            model_source = str(request.POST.get("model_source", "local")).strip().lower()
-            if model_source not in {"local", "gpt"}:
-                model_source = "local"
+            model_source = normalize_engine(request.POST.get("model_source"))
 
             if request.user.is_authenticated and get_user_role(request.user) not in (ROLE_ADMIN, ROLE_ANALYST):
                 gate = self._check_pitch_gates(
@@ -254,7 +276,7 @@ class PitchFormView(RoleRequiredMixin, View):
                     return gate
 
             model = None
-            if model_source == "local":
+            if model_source == AnalysisEngine.LOCAL:
                 model = ensure_model_exists()
                 if model is None:
                     logger.critical("Modelo de análise não disponível")
@@ -282,8 +304,9 @@ class PitchFormView(RoleRequiredMixin, View):
                     engine_used = model_source
                     report_language = normalize_ui_language(getattr(request, "ui_language", None))
 
-                    if model_source == "gpt":
-                        prediction, report, engine_used = analyze_with_gpt(
+                    analyze_func = _ENGINE_ANALYZE_FUNCS.get(model_source)
+                    if analyze_func is not None:
+                        prediction, report, engine_used = analyze_func(
                             text, financial_data, metadata, language=report_language,
                         )
 
@@ -382,7 +405,7 @@ class PitchFormView(RoleRequiredMixin, View):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
-        return PitchAnalysis.objects.create(
+        analysis = PitchAnalysis.objects.create(
             user=request.user if request.user.is_authenticated else None,
             startup_name=startup_name or None,
             industry=industry,
@@ -399,6 +422,11 @@ class PitchFormView(RoleRequiredMixin, View):
             metadata=metadata,
             ip_address=ip,
         )
+        log_activity(
+            request, action=ActivityLog.ACTION_ANALYSIS_CREATED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
+        return analysis
 
     def _check_pitch_gates(self, request, *, model_source, has_audio, has_video, has_youtube):
         allowed, _ = check_limit_access(request.user, 'analyses_per_month', 'analyses_count')
@@ -409,13 +437,12 @@ class PitchFormView(RoleRequiredMixin, View):
             ))
             return redirect('subscription_plans')
 
-        if model_source == 'gpt':
-            allowed, _ = check_feature_access(request.user, 'gpt_analysis')
-            if not allowed:
-                messages.warning(request, _ui_text_for_request(request).get(
-                    "msg_gpt_analysis_requires_upgrade", "GPT analysis requires a higher plan.",
-                ))
-                return redirect('subscription_plans')
+        allowed, _ = check_engine_access(request.user, model_source)
+        if not allowed:
+            messages.warning(request, _ui_text_for_request(request).get(
+                f"msg_{model_source}_analysis_requires_upgrade", "This analysis engine requires a higher plan.",
+            ))
+            return redirect('subscription_plans')
 
         if has_audio:
             allowed, _ = check_feature_access(request.user, 'audio_upload')
@@ -470,6 +497,7 @@ class PitchFormView(RoleRequiredMixin, View):
             else:
                 general_errors.append(msg_text)
 
+        available_engines = get_available_engines_for_user(request.user) if request.user.is_authenticated else [AnalysisEngine.LOCAL]
         return render(request, 'analyzer/pitch_form.html', {
             'form_data': form_data,
             'errors': errors,
@@ -477,6 +505,7 @@ class PitchFormView(RoleRequiredMixin, View):
             'default_date': datetime.now().strftime('%Y-%m-%d'),
             'max_file_size': 50,
             'industries': PitchAnalysis.INDUSTRY_CHOICES,
+            'available_engines': available_engines,
         })
 
 
@@ -485,6 +514,10 @@ class PitchResultsView(RoleRequiredMixin, View):
 
     def get(self, request, analysis_id):
         analysis = PitchAnalysis.objects.get(id=analysis_id)
+        log_activity(
+            request, action=ActivityLog.ACTION_REPORT_VIEWED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
         user_role = get_user_role(request.user)
         interests_qs = InvestorConnectionInterest.objects.filter(analysis=analysis).select_related("investor", "entrepreneur")
 
@@ -591,6 +624,10 @@ class PitchReportPDFView(SubscriptionGate, RoleRequiredMixin, View):
             include_business_canvas=include_canvas,
         )
 
+        log_activity(
+            request, action=ActivityLog.ACTION_REPORT_DOWNLOADED,
+            target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+        )
         return FileResponse(
             open(output_path, "rb"),
             as_attachment=True,
@@ -616,9 +653,8 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
         try:
             payload = _build_pitch_payload_from_analysis(analysis)
             model_source = (request.GET.get("model_source", "") or "").strip().lower()
-            if model_source not in {"local", "gpt"}:
-                import os as _os
-                model_source = "gpt" if _os.getenv("OPENAI_API_KEY") else "local"
+            if model_source not in AnalysisEngine.values:
+                model_source = pick_default_engine_for_user(request.user)
 
             design_mode, design_template = _resolve_pitch_design_selection(
                 request, default_mode=PITCH_DESIGN_MODE_AUTO, default_template="orbit"
@@ -654,6 +690,10 @@ class PitchInvestorPDFView(SubscriptionGate, RoleRequiredMixin, View):
             analysis.metadata = metadata
             analysis.save(update_fields=["metadata", "updated_at"])
 
+            log_activity(
+                request, action=ActivityLog.ACTION_PITCH_PDF_GENERATED,
+                target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+            )
             return FileResponse(
                 open(output_path, "rb"),
                 as_attachment=True,

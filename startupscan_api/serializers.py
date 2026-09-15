@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from startupscan_api.engines import AnalysisEngine
+
 class PitchAnalysisSerializer(serializers.Serializer):
     text = serializers.CharField(required=False)
     text_file = serializers.FileField(required=False)
@@ -8,9 +10,9 @@ class PitchAnalysisSerializer(serializers.Serializer):
     youtube_url = serializers.URLField(required=False, allow_blank=True)
     financial_data = serializers.JSONField(required=False)
     model_source = serializers.ChoiceField(
-        choices=["local", "gpt"],
+        choices=AnalysisEngine.values,
         required=False,
-        default="local",
+        default=AnalysisEngine.LOCAL,
     )
 
 

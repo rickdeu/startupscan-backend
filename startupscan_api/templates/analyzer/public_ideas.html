@@ -6,17 +6,17 @@
 
 {% block content %}
 <!-- Hero -->
-<div class="hero-panel p-4 mb-4 animate-fade-up" style="background:linear-gradient(135deg,rgba(99,102,241,.3) 0%,rgba(139,92,246,.15) 100%);border:1px solid rgba(99,102,241,.2);">
+<div class="hero-panel p-4 mb-4 animate-fade-up" style="background:linear-gradient(135deg,rgba(245, 88, 13,.3) 0%,rgba(212, 147, 31,.15) 100%);border:1px solid rgba(245, 88, 13,.2);">
     <div class="d-flex align-items-center gap-3">
-        <div style="width:42px;height:42px;background:rgba(99,102,241,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="fas fa-globe" style="color:#a78bfa;font-size:1.1rem;"></i>
+        <div style="width:42px;height:42px;background:rgba(245, 88, 13,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-globe" style="color:#e0a845;font-size:1.1rem;"></i>
         </div>
         <div class="flex-grow-1">
             <h2 class="mb-0 fw-bold" style="color:#f1f5f9;font-size:1.35rem;">{{ ui_text.public_ideas_title }}</h2>
             <p class="mb-0" style="color:#94a3b8;font-size:.88rem;">{{ ui_text.public_ideas_subtitle }}</p>
         </div>
         <div class="text-end">
-            <div style="font-size:1.6rem;font-weight:800;color:#a78bfa;line-height:1;">{{ total_ideas }}</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#e0a845;line-height:1;">{{ total_ideas }}</div>
             <div style="font-size:.75rem;color:#94a3b8;">{{ ui_text.total_visible_ideas }}</div>
         </div>
     </div>
@@ -31,7 +31,7 @@
                     <i class="fas fa-search" style="position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:#8b98ab;font-size:.85rem;pointer-events:none;"></i>
                     <input type="text" class="form-control" id="id_q" name="q" value="{{ search_query }}"
                         placeholder="{{ ui_text.search_ideas_placeholder }}"
-                        style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;padding-left:2.5rem;">
+                        style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;padding-left:2.5rem;">
                 </div>
             </div>
             <div class="col-md-2 d-grid">
@@ -46,8 +46,8 @@
 <!-- Ideas List -->
 <div class="d-flex flex-column gap-3 animate-fade-up animate-delay-2">
     {% for idea in ideas %}
-    <div style="background:linear-gradient(180deg,#111b2f 0%,#0f182b 100%);border:1px solid rgba(100,116,139,.18);border-radius:14px;padding:1.25rem;transition:border-color .2s,box-shadow .2s;"
-         onmouseenter="this.style.borderColor='#2b3d63';this.style.boxShadow='0 8px 24px rgba(2,6,23,.4)'"
+    <div style="background:linear-gradient(180deg,#15171b 0%,#14161a 100%);border:1px solid rgba(100,116,139,.18);border-radius:14px;padding:1.25rem;transition:border-color .2s,box-shadow .2s;"
+         onmouseenter="this.style.borderColor='#3d4048';this.style.boxShadow='0 8px 24px rgba(2,6,23,.4)'"
          onmouseleave="this.style.borderColor='rgba(100,116,139,.18)';this.style.boxShadow=''">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
             <div>
@@ -83,8 +83,8 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
-                    <i class="fas fa-comment me-1" style="color:#60a5fa;"></i>
+                <div style="background:rgba(245, 88, 13,.06);border:1px solid rgba(245, 88, 13,.12);border-radius:8px;padding:.6rem .75rem;font-size:.82rem;">
+                    <i class="fas fa-comment me-1" style="color:#ff8a4d;"></i>
                     <strong style="color:#f1f5f9;">{{ idea.comments_count|default:0 }}</strong>
                     <span style="color:#94a3b8;margin-left:.3rem;">{{ ui_text.comments }}</span>
                 </div>
@@ -92,7 +92,7 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2 align-items-center">
-            <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-sm" style="background:rgba(99,102,241,.1);color:#a78bfa;border:1px solid rgba(99,102,241,.25);font-size:.82rem;">
+            <a href="{% url 'public_idea_detail' idea.id %}" class="btn btn-sm" style="background:rgba(245, 88, 13,.1);color:#e0a845;border:1px solid rgba(245, 88, 13,.25);font-size:.82rem;">
                 <i class="fas fa-comments me-1"></i>{{ ui_text.view_details_comment_rate }}
             </a>
             {% if idea.my_feedback %}
@@ -104,7 +104,7 @@
     </div>
     {% empty %}
     <div class="text-center py-5">
-        <i class="fas fa-lightbulb" style="font-size:3rem;color:#1e293b;display:block;margin-bottom:1rem;"></i>
+        <i class="fas fa-lightbulb" style="font-size:3rem;color:#22252a;display:block;margin-bottom:1rem;"></i>
         <h5 style="color:#8b98ab;">{{ ui_text.no_ideas_found }}</h5>
         <p style="color:#8b98ab;font-size:.9rem;">{{ ui_text.adjust_filters_for_ideas }}</p>
     </div>

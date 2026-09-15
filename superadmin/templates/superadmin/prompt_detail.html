@@ -1,0 +1,27 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Prompt — {{ prompt.get_engine_display }} / {{ prompt.get_purpose_display }}{% endblock %}
+{% block header_title %}{{ prompt.get_engine_display }} — {{ prompt.get_purpose_display }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:prompt_edit' prompt.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:prompt_delete' prompt.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:prompt_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Engine</div><div class="sa-detail-value">{{ prompt.get_engine_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Purpose</div><div class="sa-detail-value">{{ prompt.get_purpose_display }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Status</div><div class="sa-detail-value">{% if prompt.is_active %}<span class="sa-badge sa-badge-success">Active</span>{% else %}<span class="sa-badge sa-badge-muted">Inactive (falls back to built-in default)</span>{% endif %}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Last updated by</div><div class="sa-detail-value">{{ prompt.updated_by|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Last updated at</div><div class="sa-detail-value">{{ prompt.updated_at|date:"Y-m-d H:i" }}</div></div>
+    </div>
+
+    <div class="sa-detail-section-title">Current content</div>
+    <textarea class="sa-input sa-prompt-editor" readonly rows="20">{{ prompt.content }}</textarea>
+
+    {% if prompt.content != prompt.default_content %}
+    <div class="sa-detail-section-title">Built-in default (for comparison — not what's currently in use)</div>
+    <textarea class="sa-input sa-prompt-editor" readonly rows="20">{{ prompt.default_content }}</textarea>
+    {% endif %}
+</div>
+{% endblock %}

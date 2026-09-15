@@ -1,0 +1,48 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Idea pitch{% endblock %}
+{% block header_title %}{% if object %}Edit idea pitch{% else %}New idea pitch{% endif %}{% endblock %}
+{% block content %}
+<div class="sa-card">
+    <form method="post" class="sa-simple-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="sa-detail-section-title" style="margin-top:0;">Basic information</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.user %}
+            {% include "superadmin/_field.html" with field=form.status %}
+            {% include "superadmin/_field.html" with field=form.model_source %}
+            {% include "superadmin/_field.html" with field=form.startup_name %}
+            {% include "superadmin/_field.html" with field=form.one_liner extra_class="sa-field-full" %}
+        </div>
+
+        <div class="sa-detail-section-title">Idea details</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.problem extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.solution extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.target_customer extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.market_size extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.business_model extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.competitive_advantage extra_class="sa-field-full" %}
+        </div>
+
+        <div class="sa-detail-section-title">Traction &amp; team</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.traction extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.team extra_class="sa-field-full" %}
+        </div>
+
+        <div class="sa-detail-section-title">Funding</div>
+        <div class="sa-form-grid">
+            {% include "superadmin/_field.html" with field=form.funding_goal extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.use_of_funds extra_class="sa-field-full" %}
+            {% include "superadmin/_field.html" with field=form.call_to_action extra_class="sa-field-full" %}
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="sa-btn"><i class="fas fa-save"></i> Save</button>
+            <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:idea_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Pitch analyses{% endblock %}
+{% block header_title %}Pitch analyses{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Startup, user, email...">
+        <select class="sa-input" name="status">
+            <option value="">All statuses</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Filter</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:pitch_create' %}"><i class="fas fa-plus"></i> New analysis</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead>
+        <tr><th>#</th><th>Startup</th><th>User</th><th>Industry</th><th>Status</th><th>Score</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for a in analyses %}
+        <tr>
+            <td>{{ a.id }}</td>
+            <td>{{ a.startup_name|default:"—" }}</td>
+            <td>{{ a.user.username|default:"Anonymous" }}</td>
+            <td>{{ a.get_industry_display }}</td>
+            <td>
+                {% if a.status == 'completed' %}<span class="sa-badge sa-badge-success">{{ a.get_status_display }}</span>
+                {% elif a.status == 'failed' %}<span class="sa-badge sa-badge-danger">{{ a.get_status_display }}</span>
+                {% else %}<span class="sa-badge sa-badge-warning">{{ a.get_status_display }}</span>{% endif %}
+            </td>
+            <td>{{ a.success_score|default:"—" }}</td>
+            <td>{{ a.created_at|date:"d/m/Y H:i" }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:pitch_detail' a.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:pitch_edit' a.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:pitch_delete' a.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="sa-empty">No pitch analyses found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

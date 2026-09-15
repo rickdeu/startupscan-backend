@@ -1,0 +1,12 @@
+{% if field %}
+<div class="sa-field {{ extra_class }}">
+    {% if field.field.widget.input_type == 'checkbox' %}
+        <label>{{ field }} {{ field.label }}</label>
+    {% else %}
+        <label>{{ field.label }}</label>
+        {{ field }}
+    {% endif %}
+    {% if field.help_text %}<div class="sa-detail-label" style="margin-top:4px;">{{ field.help_text }}</div>{% endif %}
+    {% if field.errors %}<div class="sa-field-errors">{{ field.errors }}</div>{% endif %}
+</div>
+{% endif %}

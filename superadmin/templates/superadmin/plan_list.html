@@ -1,0 +1,36 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Subscription plans{% endblock %}
+{% block header_title %}Subscription plans{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Name, tier...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:plan_create' %}"><i class="fas fa-plus"></i> New plan</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>Name</th><th>Tier</th><th>Interval</th><th>Price</th><th>Active</th><th></th></tr></thead>
+        <tbody>
+        {% for p in plans %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.get_tier_display }}</td>
+            <td>{{ p.get_interval_display }}</td>
+            <td>${{ p.price_usd }}</td>
+            <td>{% if p.is_active %}<span class="sa-badge sa-badge-success">Active</span>{% else %}<span class="sa-badge sa-badge-muted">Inactive</span>{% endif %}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:plan_detail' p.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:plan_edit' p.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:plan_delete' p.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="sa-empty">No plans yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}

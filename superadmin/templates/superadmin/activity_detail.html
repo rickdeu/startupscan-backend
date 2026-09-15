@@ -1,0 +1,20 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Activity #{{ log.id }}{% endblock %}
+{% block header_title %}Activity log entry #{{ log.id }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:activity_delete' log.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:activity_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Action</div><div class="sa-detail-value"><span class="sa-badge sa-badge-primary">{{ log.get_action_display }}</span></div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">User</div><div class="sa-detail-value">{{ log.user.username|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Target</div><div class="sa-detail-value">{{ log.target_repr|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">IP address</div><div class="sa-detail-value">{{ log.ip_address|default:"—" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">When</div><div class="sa-detail-value">{{ log.created_at|date:"d/m/Y H:i:s" }}</div></div>
+    </div>
+    <div class="sa-detail-section-title">Metadata (JSON)</div>
+    <div class="sa-detail-value"><pre>{{ log.metadata|pprint }}</pre></div>
+</div>
+{% endblock %}

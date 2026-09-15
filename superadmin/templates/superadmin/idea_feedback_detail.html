@@ -1,0 +1,23 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Feedback #{{ feedback.id }}{% endblock %}
+{% block header_title %}Idea feedback #{{ feedback.id }}{% endblock %}
+{% block content %}
+<div class="sa-detail-actions">
+    <a class="sa-btn" href="{% url 'superadmin:idea_feedback_edit' feedback.pk %}"><i class="fas fa-pen"></i> Edit</a>
+    <a class="sa-btn sa-btn-danger" href="{% url 'superadmin:idea_feedback_delete' feedback.pk %}"><i class="fas fa-trash"></i> Delete</a>
+    <a class="sa-btn sa-btn-ghost" href="{% url 'superadmin:idea_feedback_list' %}"><i class="fas fa-arrow-left"></i> Back to list</a>
+</div>
+<div class="sa-card">
+    <div class="sa-detail-grid">
+        <div class="sa-detail-row"><div class="sa-detail-label">Idea</div><div class="sa-detail-value">
+            <a href="{% url 'superadmin:idea_detail' feedback.submission.pk %}">{{ feedback.submission.startup_name }}</a>
+        </div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">User</div><div class="sa-detail-value">{{ feedback.user.username }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Stars</div><div class="sa-detail-value">{{ feedback.stars }} ★</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Endorsed</div><div class="sa-detail-value">{{ feedback.endorsed|yesno:"Yes,No" }}</div></div>
+        <div class="sa-detail-row"><div class="sa-detail-label">Created / updated</div><div class="sa-detail-value">{{ feedback.created_at|date:"d/m/Y H:i" }} / {{ feedback.updated_at|date:"d/m/Y H:i" }}</div></div>
+    </div>
+    <div class="sa-detail-section-title">Comment</div>
+    <div class="sa-detail-value">{{ feedback.comment|linebreaksbr|default:"—" }}</div>
+</div>
+{% endblock %}

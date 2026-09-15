@@ -5,10 +5,10 @@
 
 {% block content %}
 <!-- Hero -->
-<div class="hero-panel p-4 mb-4 animate-fade-up" style="background:linear-gradient(135deg,rgba(67,56,202,.4) 0%,rgba(99,102,241,.18) 100%);border:1px solid rgba(99,102,241,.2);">
+<div class="hero-panel p-4 mb-4 animate-fade-up" style="background:linear-gradient(135deg,rgba(194, 63, 8,.4) 0%,rgba(245, 88, 13,.18) 100%);border:1px solid rgba(245, 88, 13,.2);">
     <div class="d-flex align-items-center gap-3">
-        <div style="width:42px;height:42px;background:rgba(99,102,241,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="fas fa-network-wired" style="color:#a78bfa;font-size:1.1rem;"></i>
+        <div style="width:42px;height:42px;background:rgba(245, 88, 13,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-network-wired" style="color:#e0a845;font-size:1.1rem;"></i>
         </div>
         <div>
             <h2 class="mb-0 fw-bold" style="color:#f1f5f9;font-size:1.35rem;">{{ ui_text.connections_hub_heading }}</h2>
@@ -26,11 +26,11 @@
                     <span class="kpi-label">{{ ui_text.connections_sent }}</span>
                     <h3 class="counter mb-0 mt-1" data-target="{{ kpi_sent }}">0</h3>
                 </div>
-                <div class="kpi-icon" style="background:rgba(59,130,246,.15);">
-                    <i class="fas fa-paper-plane" style="color:#60a5fa;"></i>
+                <div class="kpi-icon" style="background:rgba(245, 88, 13,.15);">
+                    <i class="fas fa-paper-plane" style="color:#ff8a4d;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-arrow-right me-1"></i>{{ ui_text.connections_trend_sent|default:"Enviadas" }}</div>
+            <div class="kpi-trend" style="color:#ff8a4d;"><i class="fas fa-arrow-right me-1"></i>{{ ui_text.connections_trend_sent|default:"Enviadas" }}</div>
         </div>
     </div>
     <div class="col-md-4 animate-fade-up animate-delay-2">
@@ -40,11 +40,11 @@
                     <span class="kpi-label">{{ ui_text.connections_received }}</span>
                     <h3 class="counter mb-0 mt-1" data-target="{{ kpi_received }}">0</h3>
                 </div>
-                <div class="kpi-icon" style="background:rgba(139,92,246,.15);">
-                    <i class="fas fa-inbox" style="color:#a78bfa;"></i>
+                <div class="kpi-icon" style="background:rgba(212, 147, 31,.15);">
+                    <i class="fas fa-inbox" style="color:#e0a845;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-arrow-left me-1"></i>{{ ui_text.connections_trend_received|default:"Recebidas" }}</div>
+            <div class="kpi-trend" style="color:#e0a845;"><i class="fas fa-arrow-left me-1"></i>{{ ui_text.connections_trend_received|default:"Recebidas" }}</div>
         </div>
     </div>
     <div class="col-md-4 animate-fade-up animate-delay-3">
@@ -66,10 +66,10 @@
 <!-- Sent Connections -->
 <div class="card mb-4 animate-fade-up animate-delay-2" style="border:1px solid rgba(100,116,139,.18);">
     <div class="card-header d-flex align-items-center gap-2" style="border-bottom:1px solid rgba(100,116,139,.15);background:transparent;padding:1rem 1.25rem;">
-        <i class="fas fa-paper-plane" style="color:#60a5fa;font-size:.9rem;"></i>
+        <i class="fas fa-paper-plane" style="color:#ff8a4d;font-size:.9rem;"></i>
         <h5 class="mb-0 fw-semibold" style="font-size:.95rem;">{{ ui_text.connections_i_sent }}</h5>
         {% if sent_interests %}
-        <span class="ms-auto badge" style="background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2);">{{ sent_interests|length }}</span>
+        <span class="ms-auto badge" style="background:rgba(245, 88, 13,.1);color:#ff8a4d;border:1px solid rgba(245, 88, 13,.2);">{{ sent_interests|length }}</span>
         {% endif %}
     </div>
     <div class="card-body p-3">
@@ -96,7 +96,7 @@
                     </div>
 
                     {% if interest.investor_message %}
-                    <div class="mb-2 p-2" style="background:rgba(59,130,246,.06);border-radius:6px;border-left:2px solid rgba(59,130,246,.3);">
+                    <div class="mb-2 p-2" style="background:rgba(245, 88, 13,.06);border-radius:6px;border-left:2px solid rgba(245, 88, 13,.3);">
                         <div style="font-size:.72rem;color:#94a3b8;margin-bottom:.2rem;text-transform:uppercase;letter-spacing:.05em;">{{ ui_text.connections_my_message }}</div>
                         <div style="font-size:.82rem;color:#cbd5e1;">{{ interest.investor_message }}</div>
                     </div>
@@ -130,7 +130,7 @@
         </div>
         {% else %}
         <div class="text-center py-4">
-            <i class="fas fa-paper-plane" style="font-size:2.5rem;color:#1e293b;margin-bottom:.75rem;display:block;"></i>
+            <i class="fas fa-paper-plane" style="font-size:2.5rem;color:#22252a;margin-bottom:.75rem;display:block;"></i>
             <p style="color:#8b98ab;margin:0;font-size:.9rem;">{{ ui_text.connections_none_sent }}</p>
         </div>
         {% endif %}
@@ -140,10 +140,10 @@
 <!-- Received Connections -->
 <div class="card animate-fade-up animate-delay-3" style="border:1px solid rgba(100,116,139,.18);">
     <div class="card-header d-flex align-items-center gap-2" style="border-bottom:1px solid rgba(100,116,139,.15);background:transparent;padding:1rem 1.25rem;">
-        <i class="fas fa-inbox" style="color:#a78bfa;font-size:.9rem;"></i>
+        <i class="fas fa-inbox" style="color:#e0a845;font-size:.9rem;"></i>
         <h5 class="mb-0 fw-semibold" style="font-size:.95rem;">{{ ui_text.connections_i_received }}</h5>
         {% if received_interests %}
-        <span class="ms-auto badge" style="background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2);">{{ received_interests|length }}</span>
+        <span class="ms-auto badge" style="background:rgba(212, 147, 31,.1);color:#e0a845;border:1px solid rgba(212, 147, 31,.2);">{{ received_interests|length }}</span>
         {% endif %}
     </div>
     <div class="card-body p-3">
@@ -154,7 +154,7 @@
                 <div class="connection-card h-100">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="user-avatar" style="width:36px;height:36px;font-size:.75rem;flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#4f46e5);">
+                            <div class="user-avatar" style="width:36px;height:36px;font-size:.75rem;flex-shrink:0;background:linear-gradient(135deg,#b8720a,#c23f08);">
                                 {{ interest.investor.first_name|default:interest.investor.username|slice:":2"|upper }}
                             </div>
                             <div>
@@ -170,7 +170,7 @@
                     </div>
 
                     {% if interest.investor_message %}
-                    <div class="mb-2 p-2" style="background:rgba(139,92,246,.06);border-radius:6px;border-left:2px solid rgba(139,92,246,.3);">
+                    <div class="mb-2 p-2" style="background:rgba(212, 147, 31,.06);border-radius:6px;border-left:2px solid rgba(212, 147, 31,.3);">
                         <div style="font-size:.72rem;color:#94a3b8;margin-bottom:.2rem;text-transform:uppercase;letter-spacing:.05em;">{{ ui_text.connections_investor_message }}</div>
                         <div style="font-size:.82rem;color:#cbd5e1;">{{ interest.investor_message }}</div>
                     </div>
@@ -191,7 +191,7 @@
                         {% csrf_token %}
                         <div class="mb-2">
                             <textarea class="form-control form-control-sm" name="entrepreneur_reply" rows="2"
-                                style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;font-size:.82rem;resize:none;"
+                                style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;font-size:.82rem;resize:none;"
                                 placeholder="{{ ui_text.connections_optional_reply_placeholder }}"></textarea>
                         </div>
                         <div class="d-flex flex-wrap gap-2">
@@ -215,7 +215,7 @@
         </div>
         {% else %}
         <div class="text-center py-4">
-            <i class="fas fa-inbox" style="font-size:2.5rem;color:#1e293b;margin-bottom:.75rem;display:block;"></i>
+            <i class="fas fa-inbox" style="font-size:2.5rem;color:#22252a;margin-bottom:.75rem;display:block;"></i>
             <p style="color:#8b98ab;margin:0;font-size:.9rem;">{{ ui_text.connections_none_received }}</p>
         </div>
         {% endif %}

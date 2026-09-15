@@ -28,15 +28,15 @@
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label" style="font-size:.8rem;color:#94a3b8;margin-bottom:.3rem;">{{ ui_text.score_min_label }}</label>
-                <input type="number" class="form-control form-control-sm" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}" style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
+                <input type="number" class="form-control form-control-sm" name="min_score" step="0.1" min="0" max="10" value="{{ filter_min_score }}" style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
             </div>
             <div class="col-md-3">
                 <label class="form-label" style="font-size:.8rem;color:#94a3b8;margin-bottom:.3rem;">{{ ui_text.score_max_label }}</label>
-                <input type="number" class="form-control form-control-sm" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}" style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
+                <input type="number" class="form-control form-control-sm" name="max_score" step="0.1" min="0" max="10" value="{{ filter_max_score }}" style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
             </div>
             <div class="col-md-2">
                 <label class="form-label" style="font-size:.8rem;color:#94a3b8;margin-bottom:.3rem;">{{ ui_text.time_window_label }}</label>
-                <select class="form-select form-select-sm" name="days" style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
+                <select class="form-select form-select-sm" name="days" style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
                     <option value="30" {% if filter_days == 30 %}selected{% endif %}>{{ ui_text.last_30_days }}</option>
                     <option value="90" {% if filter_days == 90 %}selected{% endif %}>{{ ui_text.last_90_days }}</option>
                     <option value="180" {% if filter_days == 180 %}selected{% endif %}>{{ ui_text.last_180_days }}</option>
@@ -46,7 +46,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label" style="font-size:.8rem;color:#94a3b8;margin-bottom:.3rem;">{{ ui_text.engine_label }}</label>
-                <select class="form-select form-select-sm" name="engine" style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
+                <select class="form-select form-select-sm" name="engine" style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;">
                     <option value="all" {% if filter_engine == "all" %}selected{% endif %}>{{ ui_text.all_label }}</option>
                     <option value="local" {% if filter_engine == "local" %}selected{% endif %}>{{ ui_text.local_label }}</option>
                     <option value="gpt" {% if filter_engine == "gpt" %}selected{% endif %}>GPT</option>
@@ -70,11 +70,11 @@
                     <span class="kpi-label">{{ ui_text.startups_analyzed }}</span>
                     <h3 class="counter mb-0 mt-1" data-target="{{ kpi_total }}">0</h3>
                 </div>
-                <div class="kpi-icon" style="background:rgba(59,130,246,.15);">
-                    <i class="fas fa-rocket" style="color:#60a5fa;"></i>
+                <div class="kpi-icon" style="background:rgba(245, 88, 13,.15);">
+                    <i class="fas fa-rocket" style="color:#ff8a4d;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#60a5fa;"><i class="fas fa-chart-bar me-1"></i>{{ ui_text.trend_total_analyzed|default:"Total analisadas" }}</div>
+            <div class="kpi-trend" style="color:#ff8a4d;"><i class="fas fa-chart-bar me-1"></i>{{ ui_text.trend_total_analyzed|default:"Total analisadas" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-2">
@@ -98,11 +98,11 @@
                     <span class="kpi-label">{{ ui_text.avg_score }}</span>
                     <h3 class="counter-dec mb-0 mt-1" data-target="{{ kpi_avg_score }}">0.0</h3>
                 </div>
-                <div class="kpi-icon" style="background:rgba(139,92,246,.15);">
-                    <i class="fas fa-gauge-high" style="color:#a78bfa;"></i>
+                <div class="kpi-icon" style="background:rgba(212, 147, 31,.15);">
+                    <i class="fas fa-gauge-high" style="color:#e0a845;"></i>
                 </div>
             </div>
-            <div class="kpi-trend" style="color:#a78bfa;"><i class="fas fa-calculator me-1"></i>{{ ui_text.trend_avg_10|default:"Média /10" }}</div>
+            <div class="kpi-trend" style="color:#e0a845;"><i class="fas fa-calculator me-1"></i>{{ ui_text.trend_avg_10|default:"Média /10" }}</div>
         </div>
     </div>
     <div class="col-md-3 animate-fade-up animate-delay-4">
@@ -126,9 +126,9 @@
     <div class="col-lg-8">
         <div class="card h-100" style="border:1px solid rgba(100,116,139,.18);">
             <div class="card-header d-flex align-items-center gap-2" style="border-bottom:1px solid rgba(100,116,139,.15);background:transparent;">
-                <i class="fas fa-chart-bar" style="color:#60a5fa;font-size:.9rem;"></i>
+                <i class="fas fa-chart-bar" style="color:#ff8a4d;font-size:.9rem;"></i>
                 <span style="font-weight:600;font-size:.9rem;">{{ ui_text.visual_ranking_potential }}</span>
-                <span class="ms-auto badge" style="background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2);font-size:.72rem;text-transform:uppercase;">{{ ui_text.click_to_view_badge|default:"CLIQUE PARA VER" }}</span>
+                <span class="ms-auto badge" style="background:rgba(245, 88, 13,.12);color:#ff8a4d;border:1px solid rgba(245, 88, 13,.2);font-size:.72rem;text-transform:uppercase;">{{ ui_text.click_to_view_badge|default:"CLIQUE PARA VER" }}</span>
             </div>
             <div class="card-body">
                 <canvas id="investorScoreChart" height="120"></canvas>
@@ -152,10 +152,10 @@
 <div class="card animate-fade-up animate-delay-3" style="border:1px solid rgba(100,116,139,.18);">
     <div class="card-header d-flex justify-content-between align-items-center" style="border-bottom:1px solid rgba(100,116,139,.15);background:transparent;padding:1rem 1.25rem;">
         <div class="d-flex align-items-center gap-2">
-            <i class="fas fa-radar" style="color:#a78bfa;"></i>
+            <i class="fas fa-radar" style="color:#e0a845;"></i>
             <h5 class="mb-0 fw-bold" style="font-size:1rem;">{{ ui_text.opportunity_radar }}</h5>
         </div>
-        <span class="badge" style="background:rgba(99,102,241,.12);color:#a78bfa;border:1px solid rgba(99,102,241,.25);font-size:.75rem;">
+        <span class="badge" style="background:rgba(245, 88, 13,.12);color:#e0a845;border:1px solid rgba(245, 88, 13,.25);font-size:.75rem;">
             <i class="fas fa-cpu me-1"></i>{{ ui_text.active_model }}: {{ active_model }}
         </span>
     </div>
@@ -214,7 +214,7 @@
 
                     <!-- Actions -->
                     <div class="d-flex gap-2 flex-wrap mt-auto pt-2" style="border-top:1px solid rgba(100,116,139,.15);">
-                        <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm" style="background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2);font-size:.8rem;">
+                        <a href="{% url 'pitch_results' analysis.id %}" class="btn btn-sm" style="background:rgba(245, 88, 13,.1);color:#ff8a4d;border:1px solid rgba(245, 88, 13,.2);font-size:.8rem;">
                             <i class="fas fa-eye me-1"></i>{{ ui_text.view_full_analysis }}
                         </a>
 
@@ -241,7 +241,7 @@
                         <form method="post" action="{% url 'investor_interest_create' analysis.id %}">
                             {% csrf_token %}
                             <textarea class="form-control form-control-sm mb-2" name="investor_message" rows="2"
-                                style="background:#0f172a;border-color:rgba(100,116,139,.3);color:#e2e8f0;font-size:.82rem;"
+                                style="background:#14161a;border-color:rgba(100,116,139,.3);color:#e2e8f0;font-size:.82rem;"
                                 placeholder="{{ ui_text.optional_message_to_entrepreneur }}"></textarea>
                             <button class="btn btn-sm w-100" type="submit"
                                 style="background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);font-size:.82rem;">
@@ -256,7 +256,7 @@
             {% empty %}
             <div class="col-12">
                 <div class="text-center py-5">
-                    <i class="fas fa-binoculars" style="font-size:3rem;color:#334155;margin-bottom:1rem;display:block;"></i>
+                    <i class="fas fa-binoculars" style="font-size:3rem;color:#383b42;margin-bottom:1rem;display:block;"></i>
                     <p style="color:#8b98ab;margin:0;">{{ ui_text.no_scored_analyses }}</p>
                 </div>
             </div>

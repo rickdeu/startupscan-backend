@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
+from startupscan_api.engines import AnalysisEngine
 from startupscan_api.i18n import build_ui_text, normalize_ui_language
 from startupscan_api.models import InvestorConnectionInterest, PitchAnalysis
 from startupscan_api.roles import (
@@ -20,6 +21,8 @@ from startupscan_api.services.model_registry import get_active_model_name
 from .helpers import _redirect_back_or_default
 from .mixins import RoleRequiredMixin
 from subscriptions.mixins import check_limit_access
+from superadmin.activity import log_activity
+from superadmin.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +52,7 @@ class InvestorDashboardView(RoleRequiredMixin, View):
             days = 180
 
         engine = str(request.GET.get("engine", "all")).strip().lower()
-        if engine not in {"all", "local", "gpt"}:
+        if engine not in ({"all"} | set(AnalysisEngine.values)):
             engine = "all"
 
         min_score = max(0.0, min(10.0, min_score))
@@ -182,6 +185,10 @@ class InvestorInterestCreateView(RoleRequiredMixin, View):
             if get_user_role(investor) != ROLE_ADMIN:
                 from subscriptions.models import MonthlyUsage
                 MonthlyUsage.increment(investor, 'investor_interests_count')
+            log_activity(
+                request, action=ActivityLog.ACTION_INVESTOR_INTEREST_SENT,
+                target=f"PitchAnalysis #{analysis.id} ({analysis.startup_name or 'untitled'})",
+            )
             messages.success(request, _ui_text_for_request(request).get(
                 "msg_interest_registered_success",
                 "Interest registered successfully. The entrepreneur has been notified internally.",

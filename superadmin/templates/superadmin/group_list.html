@@ -1,0 +1,34 @@
+{% extends "superadmin/base.html" %}
+{% block page_title %}Groups{% endblock %}
+{% block header_title %}Groups &amp; permissions{% endblock %}
+{% block content %}
+<div class="sa-toolbar">
+    <form method="get">
+        <input class="sa-input" type="text" name="q" value="{{ query }}" placeholder="Search group name...">
+        <button class="sa-btn sa-btn-ghost" type="submit"><i class="fas fa-search"></i> Search</button>
+    </form>
+    <a class="sa-btn" href="{% url 'superadmin:group_create' %}"><i class="fas fa-plus"></i> New group</a>
+</div>
+<div class="sa-table-wrap">
+    <table class="sa-table">
+        <thead><tr><th>Name</th><th>Permissions</th><th>Members</th><th></th></tr></thead>
+        <tbody>
+        {% for g in groups %}
+        <tr>
+            <td>{{ g.name }}</td>
+            <td>{{ g.permissions.count }}</td>
+            <td>{{ g.user_set.count }}</td>
+            <td>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:group_detail' g.pk %}"><i class="fas fa-eye"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-ghost" href="{% url 'superadmin:group_edit' g.pk %}"><i class="fas fa-pen"></i></a>
+                <a class="sa-btn sa-btn-sm sa-btn-danger" href="{% url 'superadmin:group_delete' g.pk %}"><i class="fas fa-trash"></i></a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="sa-empty">No groups yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "superadmin/_pagination.html" %}
+{% endblock %}
