@@ -108,6 +108,16 @@
                     <i class="fas fa-right-from-bracket me-1"></i>{{ ui_text.logout }}
                 </button>
             </form>
+
+            {% if user_role_access.is_admin or user_role_access.is_analyst %}
+            <form action="{% url 'generate_sample_data' %}" method="post" class="mt-2">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-light w-100" style="font-size:.8rem;">
+                    <i class="fas fa-database me-1"></i>{{ ui_text.sidebar_generate_sample_data }}
+                </button>
+            </form>
+            {% endif %}
             {% else %}
             <a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100 mb-2">
                 <i class="fas fa-right-to-bracket me-1"></i>{{ ui_text.login }}

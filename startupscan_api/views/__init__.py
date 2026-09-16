@@ -29,6 +29,7 @@ from .pitch_video import (
     PitchExplainerVideoProgressView,
     PitchPresenterGenderDetectView,
 )
+from .sample_data import generate_sample_data
 
 __all__ = [
     "BatchAnalysisResultsView",
@@ -60,6 +61,7 @@ __all__ = [
     "RoleHomeView",
     "StartupPitchAnalyzer",
     "TrainingStatusView",
+    "generate_sample_data",
     "register_view",
     "set_ui_language",
 ]
